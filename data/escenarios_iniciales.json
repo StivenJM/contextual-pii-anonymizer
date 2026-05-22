@@ -1,0 +1,36 @@
+[
+  {
+    "id": "S01",
+    "texto": "Me llamo Carlos Andres Perez, mi correo es carlos.perez@gmail.com y estudio Ingenieria de Software. Necesito escribirle a la docente Maria Fernanda Lopez porque saque 6.2 en el examen de Seguridad Informatica y quiero pedir recalificacion.",
+    "entidades_esperadas": [
+      {"texto": "Carlos Andres Perez", "tipo": "PERSONA", "sensibilidad": "alta", "peso": 3},
+      {"texto": "carlos.perez@gmail.com", "tipo": "CORREO", "sensibilidad": "alta", "peso": 3},
+      {"texto": "Ingenieria de Software", "tipo": "DATO_ACADEMICO", "sensibilidad": "media", "peso": 2},
+      {"texto": "Maria Fernanda Lopez", "tipo": "PERSONA", "sensibilidad": "media", "peso": 2},
+      {"texto": "6.2", "tipo": "NOTA", "sensibilidad": "alta", "peso": 3},
+      {"texto": "Seguridad Informatica", "tipo": "MATERIA", "sensibilidad": "media", "peso": 2}
+    ]
+  },
+  {
+    "id": "S02",
+    "texto": "Soy Andrea Salazar y mi cedula es 1723456784. Quiero preguntar al modelo de lenguaje grande como redactar un reclamo porque mi matricula no aparece registrada en el sistema academico.",
+    "entidades_esperadas": [
+      {"texto": "Andrea Salazar", "tipo": "PERSONA", "sensibilidad": "alta", "peso": 3},
+      {"texto": "1723456784", "tipo": "CEDULA_EC", "sensibilidad": "alta", "peso": 3},
+      {"texto": "matricula", "tipo": "DATO_ACADEMICO", "sensibilidad": "media", "peso": 2},
+      {"texto": "sistema academico", "tipo": "DATO_ACADEMICO", "sensibilidad": "media", "peso": 2}
+    ]
+  },
+  {
+    "id": "S10",
+    "texto": "Soy Esteban Molina, cedula 1711122232, telefono 0998887776. Necesito escribir una solicitud porque reprobe Calculo II con 4.8 y perdi mi beca.",
+    "entidades_esperadas": [
+      {"texto": "Esteban Molina", "tipo": "PERSONA", "sensibilidad": "alta", "peso": 3},
+      {"texto": "1711122232", "tipo": "CEDULA_EC", "sensibilidad": "alta", "peso": 3},
+      {"texto": "0998887776", "tipo": "TELEFONO_EC", "sensibilidad": "alta", "peso": 3},
+      {"texto": "Calculo II", "tipo": "MATERIA", "sensibilidad": "media", "peso": 2},
+      {"texto": "4.8", "tipo": "NOTA", "sensibilidad": "alta", "peso": 3},
+      {"texto": "beca", "tipo": "DATO_FINANCIERO", "sensibilidad": "critica", "peso": 4}
+    ]
+  }
+]

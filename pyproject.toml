@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contextual-pii-anonymizer"
+version = "0.1.0"
+description = "Capa intermedia contextual para desidentificar informacion sensible en texto academico."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+contextual-pii-anonymizer = "contextual_pii_anonymizer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
