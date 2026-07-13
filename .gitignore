@@ -1,5 +1,6 @@
 #  Personal ignore
 workspace/
+.opencode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
