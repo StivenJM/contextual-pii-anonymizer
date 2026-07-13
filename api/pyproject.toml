@@ -1,0 +1,22 @@
+[project]
+name = "api"
+version = "0.1.0"
+description = "FastAPI service for the contextual PII anonymizer"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.139.0",
+]
+
+[project.scripts]
+contextual-pii-api = "main:run"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["app", "main"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
