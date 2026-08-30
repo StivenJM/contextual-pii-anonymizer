@@ -1,0 +1,1 @@
+"""Inference controller DTOs."""

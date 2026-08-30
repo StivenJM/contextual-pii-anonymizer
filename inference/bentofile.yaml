@@ -1,0 +1,10 @@
+service: "service:PiiInferenceService"
+include:
+  - "src/**/*.py"
+  - "pyproject.toml"
+python:
+  packages:
+    - bentoml>=1.4.39
+    - pydantic>=2.13.4
+    - torch
+    - transformers

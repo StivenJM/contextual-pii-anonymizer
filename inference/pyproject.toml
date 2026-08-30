@@ -1,0 +1,22 @@
+[project]
+name = "inference"
+version = "0.1.0"
+description = "BentoML inference service for contextual PII detection"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bentoml>=1.4.39",
+    "pydantic>=2.13.4",
+    "torch",
+    "transformers",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["service"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
