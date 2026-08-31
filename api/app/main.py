@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.lifespan import lifespan
 from app.routers import router
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         title="Contextual PII Anonymizer API",
         version="1.0.0",
         summary="API for contextual PII anonymization workflows.",
+        lifespan=lifespan,
     )
     app.add_exception_handler(404, not_found_handler)
     app.add_exception_handler(Exception, internal_error_handler)

@@ -26,6 +26,7 @@ Edita `.env` y reemplaza `POSTGRES_PASSWORD` con una contraseña exclusiva para 
 | `POSTGRES_DB` | Base de datos creada al inicializar el volumen. |
 | `POSTGRES_USER` | Usuario propietario de la base de desarrollo. |
 | `POSTGRES_PASSWORD` | Credencial local no versionada. |
+| `POSTGRES_HOST` | Host utilizado por el Privacy Middleware; localmente es `127.0.0.1`. |
 | `POSTGRES_PORT` | Puerto publicado en `127.0.0.1`; el valor inicial es `5432`. |
 
 La plantilla es configuración compartible. Los valores efectivos de `.env`, especialmente la contraseña, pertenecen a cada entorno local.
@@ -65,6 +66,34 @@ docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.
 
 Desde procesos ejecutados directamente en el equipo, PostgreSQL está disponible en `127.0.0.1` y en el puerto configurado por `POSTGRES_PORT`.
 
+### Iniciar el Privacy Middleware
+
+Con PostgreSQL saludable, inicia FastAPI desde `api/` cargando la misma configuración local:
+
+```powershell
+uv run --locked --env-file ../.env uvicorn app.main:app --reload --loop app.runtime:create_selector_event_loop
+```
+
+El startup verifica una conexión real mediante SQLAlchemy. Si PostgreSQL no está disponible o la configuración es inválida, la aplicación no comienza a aceptar solicitudes.
+
+La factory explícita conserva un loop compatible con Psycopg 3 async también en Windows, donde el loop Proactor predeterminado no está soportado por el driver.
+
+### Ejecutar verificaciones
+
+La suite normal no requiere Docker:
+
+```powershell
+uv run --locked python -m unittest discover -s tests -v
+```
+
+La comprobación real contra PostgreSQL se activa explícitamente:
+
+```powershell
+$env:RUN_DATABASE_INTEGRATION='1'
+uv run --locked --env-file ../.env python -m unittest tests.test_database_integration -v
+Remove-Item Env:RUN_DATABASE_INTEGRATION
+```
+
 ### Detener sin eliminar datos
 
 ```powershell
@@ -96,7 +125,7 @@ Detener el entorno y destruir la base son operaciones distintas. No uses `--volu
 
 | Tema | Decisión local |
 |---|---|
-| Imagen | PostgreSQL `18.4-alpine`, con versión explícita. |
+| Imagen | PostgreSQL `18.6-alpine`, con versión explícita. |
 | Persistencia | Volumen nombrado administrado por Compose. |
 | Disponibilidad | Healthcheck con `pg_isready`. |
 | Exposición | Solo `127.0.0.1`, mediante el puerto configurado. |
@@ -115,6 +144,6 @@ Compose puede incorporar otros recursos cuando exista una necesidad real. La con
 
 ## Fuera de alcance
 
-Este entorno no configura SQLAlchemy, drivers PostgreSQL, tablas, migraciones, Alembic, APIs administrativas, autenticación ni servicios de frontend. Tampoco modifica la inferencia ML ni introduce mapping canónico o fusión de detecciones.
+Este entorno no crea tablas, modelos ORM, repositories, migraciones, Alembic, APIs administrativas, autenticación ni servicios de frontend. Tampoco modifica la inferencia ML ni introduce mapping canónico o fusión de detecciones.
 
-La conexión del Privacy Middleware mediante SQLAlchemy 2.0 pertenece al siguiente paso de desarrollo.
+El Privacy Middleware utiliza SQLAlchemy 2.0 y Psycopg 3 para la conexión asíncrona. El modelado y la persistencia de capacidades concretas pertenecen a los siguientes pasos de desarrollo.

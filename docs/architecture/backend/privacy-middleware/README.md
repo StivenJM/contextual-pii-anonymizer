@@ -35,6 +35,7 @@ Quedan fuera de sus límites la interacción con las páginas de modelos comerci
 ### Datos
 
 - [`taxonomia-canonica.md`](data/taxonomia-canonica.md): contrato semántico compartido por detección, políticas y desidentificación.
+- [`infraestructura-de-persistencia.md`](data/infraestructura-de-persistencia.md): lifecycle y scopes de la conexión asíncrona a PostgreSQL.
 
 ### Decisiones
 
