@@ -7,7 +7,7 @@ The service performs only ML inference and technical output adaptation. It does 
 ## Structure
 
 ```text
-src/
+app/
   service.py              # BentoML service entrypoint
   controllers/
     dtos/                 # BentoML API request/response DTOs
@@ -29,14 +29,14 @@ The first server startup downloads the Hugging Face model if it is not already c
 
 ```powershell
 $env:PYTHONUTF8='1'
-$env:PYTHONPATH='src'
+$env:PYTHONPATH='app'
 .\.venv\Scripts\python.exe -m bentoml serve service:PiiInferenceService --reload
 ```
 
 ## Test
 
 ```powershell
-$env:PYTHONPATH='src'
+$env:PYTHONPATH='app'
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 

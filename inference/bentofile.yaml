@@ -1,6 +1,6 @@
 service: "service:PiiInferenceService"
 include:
-  - "src/**/*.py"
+  - "app/**/*.py"
   - "pyproject.toml"
 python:
   packages:

@@ -5,7 +5,7 @@ FastAPI service entrypoint for the contextual PII anonymizer project.
 ## Structure
 
 ```text
-src/
+app/
   app.py          # Creates and configures the FastAPI application
   main.py         # ASGI entrypoint and local development runner
   routes/         # HTTP route declarations with APIRouter
@@ -17,7 +17,7 @@ src/
 ## Run
 
 ```bash
-uv run fastapi dev src/main.py
+uv run fastapi dev
 ```
 
 The initial health endpoint is available at `GET /api/health`.
