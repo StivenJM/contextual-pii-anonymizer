@@ -1,7 +1,11 @@
 from pydantic import BaseModel
 
 
-class HealthResponse(BaseModel):
+class RootResponse(BaseModel):
     message: str
     version: str
     status: str
+
+
+class HealthResponse(RootResponse):
+    pass

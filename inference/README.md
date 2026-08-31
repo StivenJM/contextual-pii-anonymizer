@@ -8,12 +8,12 @@ The service performs only ML inference and technical output adaptation. It does 
 
 ```text
 app/
-  service.py              # BentoML service entrypoint
-  controllers/
-    dtos/                 # BentoML API request/response DTOs
-  models/                 # OpenMed loading and native output adaptation
-  use_cases/              # ML inference orchestration
-tests/                    # Isolated tests with controlled model output
+  service.py              # BentoML adapter and composition root
+  entities/               # Framework-independent inference data
+  schemas/                # BentoML request and response contracts
+  services/               # Model contract and OpenMed implementation
+  use_cases/              # Framework-independent inference orchestration
+tests/                    # Tests split by architectural boundary
 ```
 
 ## Install
@@ -29,14 +29,12 @@ The first server startup downloads the Hugging Face model if it is not already c
 
 ```powershell
 $env:PYTHONUTF8='1'
-$env:PYTHONPATH='app'
-.\.venv\Scripts\python.exe -m bentoml serve service:PiiInferenceService --reload
+.\.venv\Scripts\python.exe -m bentoml serve app.service:PiiInferenceService --reload
 ```
 
 ## Test
 
 ```powershell
-$env:PYTHONPATH='app'
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 

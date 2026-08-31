@@ -8,15 +8,13 @@ dependencies = [
     "fastapi[standard]>=0.139.0",
 ]
 
-[project.scripts]
-contextual-pii-api = "main:run"
-
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-py-modules = ["app", "main"]
+[tool.fastapi]
+entrypoint = "app.main:app"
 
 [tool.setuptools.packages.find]
-where = ["app"]
+where = ["."]
+include = ["app*"]

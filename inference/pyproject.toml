@@ -15,8 +15,6 @@ dependencies = [
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-py-modules = ["service"]
-
 [tool.setuptools.packages.find]
-where = ["app"]
+where = ["."]
+include = ["app*"]

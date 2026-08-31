@@ -1,0 +1,1 @@
+"""Concrete external capability adapters."""

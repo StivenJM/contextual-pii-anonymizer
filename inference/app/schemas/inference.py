@@ -16,7 +16,7 @@ class InferenceRequest(BaseModel):
         return value
 
 
-class ModelDetection(BaseModel):
+class DetectionResponse(BaseModel):
     native_type: str = Field(min_length=1)
     text: str
     start: int = Field(ge=0)
@@ -24,7 +24,7 @@ class ModelDetection(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
     @model_validator(mode="after")
-    def validate_span(self) -> "ModelDetection":
+    def validate_span(self) -> "DetectionResponse":
         if self.end < self.start:
             raise ValueError("Detection end must be greater than or equal to start.")
         return self
@@ -32,4 +32,4 @@ class ModelDetection(BaseModel):
 
 class InferenceResponse(BaseModel):
     model_id: str = Field(min_length=1)
-    detections: list[ModelDetection]
+    detections: list[DetectionResponse]
