@@ -1,10 +1,73 @@
 from collections.abc import Callable
 from typing import Any
 
-from app.entities.detections import Detection
+from app.entities.models import Detection, ModelMetadata
 
 
-MODEL_ID = "OpenMed/OpenMed-PII-Spanish-QwenMed-XLarge-600M-v1"
+MODEL_ID = "openmed-pii-spanish-600m"
+ARTIFACT_ID = "OpenMed/OpenMed-PII-Spanish-QwenMed-XLarge-600M-v1"
+OPENMED_METADATA = ModelMetadata(
+    id=MODEL_ID,
+    name="OpenMed PII Spanish 600M",
+    version="v1",
+    description="Spanish PII token-classification model.",
+    native_entity_types=(
+        "ACCOUNTNAME",
+        "AGE",
+        "AMOUNT",
+        "BANKACCOUNT",
+        "BIC",
+        "BITCOINADDRESS",
+        "BUILDINGNUMBER",
+        "CITY",
+        "COUNTY",
+        "CREDITCARD",
+        "CREDITCARDISSUER",
+        "CURRENCY",
+        "CURRENCYCODE",
+        "CURRENCYNAME",
+        "CURRENCYSYMBOL",
+        "CVV",
+        "DATE",
+        "DATEOFBIRTH",
+        "EMAIL",
+        "ETHEREUMADDRESS",
+        "EYECOLOR",
+        "FIRSTNAME",
+        "GENDER",
+        "GPSCOORDINATES",
+        "HEIGHT",
+        "IBAN",
+        "IMEI",
+        "IPADDRESS",
+        "JOBDEPARTMENT",
+        "JOBTITLE",
+        "LASTNAME",
+        "LITECOINADDRESS",
+        "MACADDRESS",
+        "MASKEDNUMBER",
+        "MIDDLENAME",
+        "OCCUPATION",
+        "ORDINALDIRECTION",
+        "ORGANIZATION",
+        "PASSWORD",
+        "PHONE",
+        "PIN",
+        "PREFIX",
+        "SECONDARYADDRESS",
+        "SEX",
+        "SSN",
+        "STATE",
+        "STREET",
+        "TIME",
+        "URL",
+        "USERAGENT",
+        "USERNAME",
+        "VIN",
+        "VRM",
+        "ZIPCODE",
+    ),
+)
 
 
 class OpenMedModel:
@@ -12,8 +75,11 @@ class OpenMedModel:
         self,
         pipeline: Callable[[str], list[dict[str, Any]]] | None = None,
     ) -> None:
-        self.model_id = MODEL_ID
         self.pipeline = pipeline or self._load_pipeline()
+
+    @property
+    def metadata(self) -> ModelMetadata:
+        return OPENMED_METADATA
 
     def detect(self, text: str) -> list[Detection]:
         return [self._to_detection(raw, text) for raw in self.pipeline(text)]
@@ -32,8 +98,8 @@ class OpenMedModel:
 
         return pipeline(
             task="token-classification",
-            model=self.model_id,
-            tokenizer=self.model_id,
+            model=ARTIFACT_ID,
+            tokenizer=ARTIFACT_ID,
             aggregation_strategy="simple",
             device=device,
             trust_remote_code=True,

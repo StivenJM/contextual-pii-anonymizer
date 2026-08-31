@@ -1,10 +1,12 @@
 from typing import Protocol
 
-from app.entities.detections import Detection
+from app.entities.models import Detection, ModelMetadata
 
 
 class PiiDetectionModel(Protocol):
-    model_id: str
+    @property
+    def metadata(self) -> ModelMetadata:
+        ...
 
     def detect(self, text: str) -> list[Detection]:
         ...

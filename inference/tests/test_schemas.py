@@ -10,11 +10,17 @@ class InferenceRequestTests(unittest.TestCase):
         for text in ("", "   "):
             with self.subTest(text=text):
                 with self.assertRaises(ValidationError):
-                    InferenceRequest(text=text)
+                    InferenceRequest(model_id="model-a", text=text)
 
     def test_rejects_non_string_text(self) -> None:
         with self.assertRaises(ValidationError):
-            InferenceRequest(text=123)  # type: ignore[arg-type]
+            InferenceRequest(model_id="model-a", text=123)  # type: ignore[arg-type]
+
+    def test_requires_a_non_blank_logical_model_id(self) -> None:
+        for model_id in ("", "   "):
+            with self.subTest(model_id=model_id):
+                with self.assertRaises(ValidationError):
+                    InferenceRequest(model_id=model_id, text="Juan")
 
 
 if __name__ == "__main__":

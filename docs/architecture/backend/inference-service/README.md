@@ -1,48 +1,88 @@
-# Servicio de inferencia
+# ML Inference Service
 
 ## Propósito técnico
 
-El servicio de inferencia ofrece mediante BentoML modelos de aprendizaje automático para detectar información sensible. Se mantiene separado del middleware para que los modelos puedan evolucionar y desplegarse sin trasladar al entorno de inferencia las políticas de privacidad del sistema.
+El ML Inference Service aloja modelos de aprendizaje automático, declara cuáles puede ejecutar y produce sus detecciones nativas. Su frontera permite que los modelos evolucionen sin incorporar las decisiones de privacidad que corresponden al resto del sistema.
 
-## Límites
+El servicio representa una capacidad multimodelo aunque la instancia actual tenga un único modelo real habilitado. La capacidad arquitectónica y la cantidad de modelos desplegados son conceptos distintos.
 
-El módulo declara los modelos disponibles, describe sus contratos y ejecuta el modelo solicitado sobre un texto.
+## Frontera del servicio
 
-Quedan fuera de sus límites la selección administrativa del modelo activo, el mapeo hacia la taxonomía canónica, la detección basada en patrones o diccionarios, la fusión, las reglas de protección y la transformación del texto.
+```mermaid
+flowchart LR
+    Middleware[Privacy Middleware<br/>integración pendiente]
+    Inferencia[ML Inference Service]
+    Modelos[Modelos de aprendizaje automático]
+
+    Middleware -.->|identidad solicitada y texto| Inferencia
+    Inferencia -.->|detecciones nativas| Middleware
+    Inferencia --> Modelos
+```
+
+El ML Inference Service termina cuando entrega detecciones con la semántica nativa del modelo. La interpretación canónica, la combinación con otras fuentes y la protección del texto pertenecen al Privacy Middleware.
+
+| Dentro del ML Inference Service | Fuera del ML Inference Service |
+|---|---|
+| Alojar modelos habilitados | Definir la taxonomía canónica |
+| Descubrir modelos y capacidades | Mapear categorías nativas |
+| Resolver el modelo solicitado | Ejecutar Pattern Recognizers o Gazetteers |
+| Ejecutar inferencia ML | Fusionar o priorizar detecciones |
+| Adaptar técnicamente la salida del modelo | Aplicar políticas de protección |
+| Devolver detecciones nativas | Seudonimizar o transformar el texto |
+| Reutilizar modelos ya inicializados | Administrar cuál modelo debe usar el sistema |
+
+Esta separación evita que cambios en taxonomías, políticas o mecanismos de protección obliguen a modificar o desplegar nuevamente cada modelo. También impide que decisiones globales de privacidad queden ocultas dentro del entorno de inferencia.
+
+## Arquitectura lógica multimodelo
+
+```mermaid
+flowchart TD
+    Servicio[ML Inference Service]
+    Catalogo[Catálogo de modelos]
+    ModeloA[Modelo A]
+    ModeloB[Modelo B]
+    ModeloC[Modelo C]
+
+    Servicio --> Catalogo
+    Catalogo --> ModeloA
+    Catalogo --> ModeloB
+    Catalogo --> ModeloC
+```
+
+Todos los modelos atraviesan una frontera común de identidad, metadata e inferencia. El catálogo mantiene el conjunto ejecutable por una instancia y permite que el servicio trabaje con modelos distintos sin conocer sus detalles internos.
 
 ## Capacidades principales
 
-- Servir varios modelos de detección con identidades y versiones explícitas.
-- Informar qué modelos están disponibles.
-- Declarar la versión y las categorías nativas producidas por cada modelo.
-- Permitir que el modelo se seleccione en cada solicitud válida.
-- Devolver detecciones con fragmentos, límites, categoría nativa y confianza.
+- Descubrir modelos disponibles y sus capacidades nativas.
+- Seleccionar explícitamente un modelo mediante su identidad lógica.
+- Ejecutar únicamente el modelo solicitado.
+- Informar qué modelo y versión produjeron cada resultado.
+- Conservar categorías, fragmentos, posiciones, confianza y solapamientos nativos.
+- Reutilizar modelos costosos entre solicitudes.
+- Rechazar identidades desconocidas sin elegir un modelo alternativo.
 
-## Relación con el middleware
+## Estado de materialización
 
-```mermaid
-sequenceDiagram
-    participant Middleware as Middleware de privacidad
-    participant Inferencia as Servicio de inferencia
+El servicio de inferencia materializa actualmente discovery, selección explícita, inferencia nativa y reutilización de modelos. La instancia actual registra un único modelo real, pero el contrato y el catálogo admiten varias implementaciones.
 
-    Middleware->>Inferencia: Consulta modelos disponibles
-    Inferencia-->>Middleware: Devuelve catálogo y contratos
-    Middleware->>Inferencia: Solicita detección con un modelo
-    Inferencia-->>Middleware: Devuelve detecciones nativas
-```
+La adaptación hacia la taxonomía canónica y la fusión están asignadas al Privacy Middleware. El estado de esa integración se detalla en la decisión de [`separación entre privacidad e inferencia`](../privacy-middleware/decisions/separacion-de-inferencia.md).
 
-El middleware conserva la configuración que selecciona un modelo y traduce sus categorías. Esta frontera evita que el servicio de inferencia dependa de políticas, diccionarios o taxonomías internas del sistema.
+## Documentación
 
-## Restricciones
+### Capacidades
 
-- Cada resultado identifica el modelo y la versión utilizados.
-- Las categorías declaradas en el catálogo coinciden con las que el modelo puede devolver.
-- Un modelo no disponible produce un error explícito y no activa una sustitución silenciosa.
-- El servicio no conserva decisiones de protección entre solicitudes.
-- Incorporar un modelo nuevo es una operación de infraestructura, no una acción administrativa ordinaria.
+- [`Catálogo, discovery y selección`](capabilities/catalogo-y-seleccion.md): contrato común, metadata, catálogo, descubrimiento y resolución explícita.
 
-## Documentación relacionada
+### Flujos
 
-- [`Taxonomía canónica`](../privacy-middleware/data/taxonomia-canonica.md): explica por qué las categorías nativas se adaptan fuera del servicio.
-- [`Detección híbrida`](../privacy-middleware/capabilities/deteccion-hibrida.md): describe cómo sus resultados participan en la detección completa.
-- [`Separación entre privacidad e inferencia`](../privacy-middleware/decisions/separacion-de-inferencia.md): registra el motivo y las consecuencias de esta frontera.
+- [`Inferencia y detecciones nativas`](flows/inferencia-nativa.md): recorrido de una solicitud, adaptación técnica, detecciones y frontera semántica.
+
+### Decisiones
+
+- [`Identidad y ciclo de vida de modelos`](decisions/identidad-y-ciclo-de-vida.md): identidad lógica, artefactos, reutilización y preguntas operacionales abiertas.
+- [`Separación entre privacidad e inferencia`](../privacy-middleware/decisions/separacion-de-inferencia.md): motivo y consecuencias de la frontera con el Privacy Middleware.
+
+### Relación con el Privacy Middleware
+
+- [`Taxonomía canónica`](../privacy-middleware/data/taxonomia-canonica.md): contrato semántico que recibe posteriormente las categorías adaptadas.
+- [`Detección híbrida`](../privacy-middleware/capabilities/deteccion-hibrida.md): arquitectura objetivo para combinar modelos con otras fuentes de detección.

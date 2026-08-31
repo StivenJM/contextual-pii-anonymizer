@@ -2,17 +2,22 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class InferenceRequest(BaseModel):
+    model_id: str = Field(
+        min_length=1,
+        strict=True,
+        description="Logical identifier of the model to execute.",
+    )
     text: str = Field(
         min_length=1,
         strict=True,
         description="Text to process with the ML model.",
     )
 
-    @field_validator("text")
+    @field_validator("model_id", "text")
     @classmethod
     def reject_blank_text(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("Text must contain at least one non-whitespace character.")
+            raise ValueError("Value must contain at least one non-whitespace character.")
         return value
 
 
@@ -32,4 +37,17 @@ class DetectionResponse(BaseModel):
 
 class InferenceResponse(BaseModel):
     model_id: str = Field(min_length=1)
+    model_version: str = Field(min_length=1)
     detections: list[DetectionResponse]
+
+
+class ModelMetadataResponse(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    version: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    native_entity_types: list[str]
+
+
+class ModelDiscoveryResponse(BaseModel):
+    models: list[ModelMetadataResponse]

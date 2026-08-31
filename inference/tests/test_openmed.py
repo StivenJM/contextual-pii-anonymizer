@@ -1,6 +1,10 @@
 import unittest
 
-from app.services.implementations.openmed import MODEL_ID, OpenMedModel
+from app.services.implementations.openmed import (
+    ARTIFACT_ID,
+    MODEL_ID,
+    OpenMedModel,
+)
 
 
 class OpenMedModelTests(unittest.TestCase):
@@ -9,14 +13,14 @@ class OpenMedModelTests(unittest.TestCase):
         model = self._model_returning(
             [
                 {
-                    "entity_group": "PER",
+                    "entity_group": "FIRSTNAME",
                     "score": 0.98765,
                     "word": "Juan",
                     "start": 0,
                     "end": 4,
                 },
                 {
-                    "entity_group": "LOC",
+                    "entity_group": "CITY",
                     "score": 0.87654,
                     "word": "Quito",
                     "start": 13,
@@ -27,19 +31,19 @@ class OpenMedModelTests(unittest.TestCase):
 
         detections = model.detect(text)
 
-        self.assertEqual(model.model_id, MODEL_ID)
+        self.assertEqual(model.metadata.id, MODEL_ID)
         self.assertEqual(
             [detection.__dict__ for detection in detections],
             [
                 {
-                    "native_type": "PER",
+                    "native_type": "FIRSTNAME",
                     "text": "Juan",
                     "start": 0,
                     "end": 4,
                     "confidence": 0.98765,
                 },
                 {
-                    "native_type": "LOC",
+                    "native_type": "CITY",
                     "text": "Quito",
                     "start": 13,
                     "end": 18,
@@ -48,11 +52,21 @@ class OpenMedModelTests(unittest.TestCase):
             ],
         )
 
+    def test_separates_logical_identity_from_upstream_artifact(self) -> None:
+        model = self._model_returning([])
+
+        self.assertEqual(model.metadata.id, "openmed-pii-spanish-600m")
+        self.assertNotEqual(model.metadata.id, ARTIFACT_ID)
+        self.assertEqual(model.metadata.version, "v1")
+        self.assertIn("EMAIL", model.metadata.native_entity_types)
+        self.assertIn("ORGANIZATION", model.metadata.native_entity_types)
+        self.assertNotIn("O", model.metadata.native_entity_types)
+
     def test_preserves_overlapping_detections(self) -> None:
         model = self._model_returning(
             [
-                self._raw_detection(entity_group="PER", score=0.9),
-                self._raw_detection(entity_group="LOC", score=0.8),
+                self._raw_detection(entity_group="FIRSTNAME", score=0.9),
+                self._raw_detection(entity_group="ORGANIZATION", score=0.8),
             ]
         )
 
@@ -60,11 +74,15 @@ class OpenMedModelTests(unittest.TestCase):
 
         self.assertEqual(
             [detection.native_type for detection in detections],
-            ["PER", "LOC"],
+            ["FIRSTNAME", "ORGANIZATION"],
         )
 
     def test_normalizes_only_bio_prefixes(self) -> None:
-        for label, expected in (("B-PER", "PER"), ("I-PER", "PER"), ("PER", "PER")):
+        for label, expected in (
+            ("B-FIRSTNAME", "FIRSTNAME"),
+            ("I-FIRSTNAME", "FIRSTNAME"),
+            ("FIRSTNAME", "FIRSTNAME"),
+        ):
             with self.subTest(label=label):
                 raw = self._raw_detection(entity=label)
                 raw.pop("entity_group")
@@ -106,8 +124,8 @@ class OpenMedModelTests(unittest.TestCase):
 
     def _raw_detection(self, **overrides: object) -> dict[str, object]:
         detection: dict[str, object] = {
-            "entity_group": "PER",
-            "entity": "B-PER",
+            "entity_group": "FIRSTNAME",
+            "entity": "B-FIRSTNAME",
             "score": 0.9,
             "word": "Juan",
             "start": 0,
