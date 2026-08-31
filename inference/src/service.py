@@ -1,8 +1,9 @@
-import bentoml
 from typing import Any
 
-from controllers.dtos.analyze_dto import AnalyzeRequest, AnalyzeResponse
-from use_cases.pii_usecases import PiiAnalyzer
+import bentoml
+
+from controllers.dtos.inference_dto import InferenceRequest, InferenceResponse
+from use_cases.model_inference import ModelInference
 
 
 @bentoml.service(
@@ -11,9 +12,9 @@ from use_cases.pii_usecases import PiiAnalyzer
 )
 class PiiInferenceService:
     def __init__(self) -> None:
-        self.analyzer = PiiAnalyzer()
+        self.inference = ModelInference()
 
-    @bentoml.api(input_spec=AnalyzeRequest, output_spec=AnalyzeResponse)
-    def analyze(self, **params: Any) -> AnalyzeResponse:
-        request = AnalyzeRequest(**params)
-        return self.analyzer.analyze(request)
+    @bentoml.api(input_spec=InferenceRequest, output_spec=InferenceResponse)
+    def detect(self, **params: Any) -> InferenceResponse:
+        request = InferenceRequest(**params)
+        return self.inference.detect(request)
