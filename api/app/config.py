@@ -22,3 +22,12 @@ class Settings(BaseSettings):
         validation_alias="POSTGRES_PASSWORD",
         min_length=1,
     )
+    bentoml_url: RequiredText = Field(
+        default="http://127.0.0.1:3000",
+        validation_alias="BENTOML_URL",
+    )
+    bentoml_timeout_seconds: float = Field(
+        default=120.0,
+        validation_alias="BENTOML_TIMEOUT_SECONDS",
+        gt=0,
+    )

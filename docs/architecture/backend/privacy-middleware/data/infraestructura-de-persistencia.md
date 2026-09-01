@@ -2,7 +2,7 @@
 
 ## Propósito
 
-El Privacy Middleware mantiene una única infraestructura asíncrona de conexión a PostgreSQL por instancia de aplicación. Esta base permite que futuras operaciones incorporen persistencia sin acoplar el núcleo a SQLAlchemy ni compartir sesiones entre solicitudes.
+El Privacy Middleware mantiene una única infraestructura asíncrona de conexión a PostgreSQL por instancia de aplicación. Allí conserva la configuración administrable que gobierna detección y protección sin compartir sesiones entre solicitudes.
 
 ## Flujo
 
@@ -33,7 +33,7 @@ La configuración se valida antes de construir la infraestructura. Durante start
 | Engine y pool | Aplicación | Son costosos y seguros para reutilizar entre solicitudes. |
 | Factory de sesiones | Aplicación | Produce sesiones nuevas sobre el engine compartido. |
 | Sesión | Solicitud | Conserva estado de una operación y debe cerrarse al finalizarla. |
-| Repository futuro | Solicitud u operación | Quedará ligado a la sesión requerida por un caso de uso concreto. |
+| Repositorio de configuración | Solicitud | Queda ligado a la sesión usada por la operación administrativa o de protección. |
 
 La factory compartida no equivale a una sesión compartida. Cada solicitud que necesita persistencia recibe una sesión propia mediante una dependency con cleanup garantizado.
 
@@ -60,13 +60,15 @@ SQLAlchemy 2.0 administra el engine, el pool y las sesiones mediante su API así
 
 El recurso compartido se construye dentro del lifespan de FastAPI y la factory queda disponible en el container de aplicación. Las dependencies de la frontera FastAPI crean y cierran cada sesión; el container nunca almacena la sesión actual.
 
+Las migraciones versionadas crean y evolucionan la configuración persistente. La configuración inicial de desarrollo queda almacenada como datos reales y puede modificarse posteriormente por la API administrativa. El arranque de la aplicación no crea tablas automáticamente.
+
+La persistencia contiene únicamente el modelo activo, mappings, reconocedores estructurales, gazetteers y sus entradas, settings de detección y reglas de protección. La taxonomía canónica permanece en el sistema y no es editable.
+
 En Windows, el runtime utiliza un event loop basado en selector porque Psycopg 3 async no es compatible con el loop Proactor predeterminado. Esta adaptación pertenece a la composición de la aplicación y no altera los contratos internos.
 
 ## Límites
 
 - La dependency administra apertura y cierre, pero no hace commit automático.
-- La estrategia transaccional se definirá cuando existan operaciones de aplicación reales.
-- No existen repositories hasta que un use case necesite un contrato de persistencia.
-- No existen modelos ORM, tablas, metadata de schema ni creación automática de estructuras.
-- No existen migraciones porque todavía no hay un schema de aplicación.
+- Las operaciones administrativas confirman sus cambios de forma explícita; las lecturas del pipeline no abren una transacción de escritura intencional.
+- No se utiliza un repository genérico: el contrato expone únicamente las operaciones requeridas por configuración y protección.
 - El endpoint general de health no consulta PostgreSQL en cada solicitud.

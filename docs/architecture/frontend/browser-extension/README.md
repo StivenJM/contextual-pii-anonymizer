@@ -13,10 +13,10 @@ El envío al modelo comercial ocurre desde el navegador. El middleware devuelve 
 ## Capacidades principales
 
 - Leer el texto del prompt.
-- Extraer texto de adjuntos compatibles.
+- Leer y proteger adjuntos de texto compatibles.
 - Interceptar la acción de envío antes de que el contenido abandone el navegador.
 - Solicitar protección al middleware.
-- Mostrar avisos o una revisión cuando el resultado lo requiera.
+- Mostrar un error visible cuando la protección no puede completarse.
 - Sustituir el contenido original por el contenido protegido.
 - Reanudar o cancelar el envío según la decisión de la persona usuaria.
 
@@ -26,10 +26,9 @@ El envío al modelo comercial ocurre desde el navegador. El middleware devuelve 
 flowchart TD
     Captura[Capturar interacción] --> Extraccion[Obtener texto]
     Extraccion --> Proteccion[Solicitar protección]
-    Proteccion --> Revision{¿Requiere revisión?}
-    Revision -->|Sí| Usuario[Presentar resultado]
-    Revision -->|No| Sustitucion[Sustituir contenido]
-    Usuario --> Sustitucion
+    Proteccion --> Resultado{¿Protección correcta?}
+    Resultado -->|Sí| Sustitucion[Sustituir contenido]
+    Resultado -->|No| Bloqueo[Bloquear y mostrar error]
     Sustitucion --> Envio[Continuar envío]
 ```
 
@@ -37,7 +36,7 @@ flowchart TD
 
 - El contenido no se envía al proveedor comercial antes de finalizar la protección.
 - Los fallos del middleware no deben convertirse en un envío silencioso del texto original.
-- La extracción de adjuntos se limita a formatos cuyo texto pueda obtenerse de forma controlada.
+- Los adjuntos TXT se leen y protegen localmente antes de reinsertarse. Los PDF y documentos Office se bloquean porque la extensión no incluye todavía extractores binarios locales y nunca envía esos binarios al middleware.
 - La extensión conserva la capacidad de explicar a la persona qué contenido será enviado.
 
 ## Documentación relacionada

@@ -33,6 +33,8 @@ sequenceDiagram
 6. El motor de desidentificación aplica las operaciones sobre los fragmentos seleccionados.
 7. El middleware devuelve el texto protegido y la información necesaria para que la extensión presente una revisión.
 
+Las detecciones nativas sin mapeo permanecen en el resultado como brechas observables. Sus fragmentos se enmascaran cuando otra operación seleccionada no los protege ya.
+
 ## Separación de responsabilidades
 
 La evaluación de reglas produce decisiones, pero no modifica texto. El motor de desidentificación recibe esas decisiones y las ejecuta mediante operaciones compatibles, como:
@@ -50,3 +52,4 @@ Esta separación permite modificar políticas sin alterar la detección ni la me
 - La transformación debe evitar que un reemplazo desplace los límites de operaciones pendientes.
 - El resultado enviado a la extensión debe permitir distinguir el texto original del texto protegido.
 - El middleware no envía el texto al modelo comercial.
+- Un fallo de inferencia, persistencia o transformación produce un error; nunca autoriza devolver el texto original como si estuviera protegido.
