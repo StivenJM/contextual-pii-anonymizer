@@ -15,14 +15,14 @@ flowchart LR
     Modelo[Modelo ML]
     Nativa[Detección nativa]
     Inferencia[ML Inference Service]
-    subgraph Middleware[Privacy Middleware - arquitectura objetivo]
+    subgraph Middleware[Privacy Middleware]
         Adaptacion[Adaptación canónica]
         Fusion[Fusión y políticas]
     end
 
     Modelo --> Nativa
     Nativa --> Inferencia
-    Inferencia -.->|integración pendiente| Adaptacion
+    Inferencia -->|detecciones nativas| Adaptacion
     Adaptacion --> Fusion
 ```
 
@@ -37,9 +37,9 @@ flowchart LR
 
 ## Estado de materialización
 
-El ML Inference Service materializa actualmente el catálogo, discovery, selección explícita, inferencia nativa y reutilización de modelos sobre BentoML.
+El ML Inference Service materializa el catálogo, discovery, selección explícita, inferencia nativa y reutilización de modelos sobre BentoML.
 
-La API FastAPI del Privacy Middleware todavía no materializa el consumo remoto, el mapping canónico ni la fusión. Esas responsabilidades forman parte de la arquitectura objetivo del middleware y no deben trasladarse temporalmente al servicio de inferencia.
+La API FastAPI del Privacy Middleware consume esa frontera remota, traduce las categorías nativas mediante mappings administrables y fusiona el resultado con reconocedores estructurales y diccionarios antes de evaluar las políticas de protección.
 
 ## Restricciones
 

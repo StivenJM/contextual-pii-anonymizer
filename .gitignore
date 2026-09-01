@@ -1,6 +1,7 @@
 #  Personal ignore
 workspace/
 .opencode/
+Tesis3_SinCopilot/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

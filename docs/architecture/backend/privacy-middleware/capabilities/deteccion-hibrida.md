@@ -62,4 +62,5 @@ Cada detección debe conservar, como mínimo, el fragmento localizado, sus lími
 - Los reconocedores y diccionarios producen categorías existentes en la taxonomía canónica.
 - La fusión determina qué entidades son coherentes, pero no decide cómo protegerlas.
 - Una entidad que no pueda mapearse no se descarta silenciosamente; se trata como una brecha de taxonomía observable.
+- Una brecha de mapeo conserva el modelo, versión, categoría nativa, confianza y límites originales. Su fragmento se protege de forma conservadora cuando no queda cubierto por otra entidad final.
 - La prioridad entre fuentes y los umbrales son configuración, no reglas embebidas en cada detector.

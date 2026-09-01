@@ -13,9 +13,13 @@ class LifespanTests(unittest.IsolatedAsyncioTestCase):
         session_factory = MagicMock()
         connection_check = AsyncMock()
         app = FastAPI()
+        settings = MagicMock(
+            bentoml_url="http://127.0.0.1:3000",
+            bentoml_timeout_seconds=120.0,
+        )
 
         with (
-            patch("app.lifespan.Settings"),
+            patch("app.lifespan.Settings", return_value=settings),
             patch("app.lifespan.create_database_engine", return_value=engine),
             patch(
                 "app.lifespan.create_session_factory",

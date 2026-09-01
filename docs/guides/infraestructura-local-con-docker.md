@@ -28,6 +28,8 @@ Edita `.env` y reemplaza `POSTGRES_PASSWORD` con una contraseña exclusiva para 
 | `POSTGRES_PASSWORD` | Credencial local no versionada. |
 | `POSTGRES_HOST` | Host utilizado por el Privacy Middleware; localmente es `127.0.0.1`. |
 | `POSTGRES_PORT` | Puerto publicado en `127.0.0.1`; el valor inicial es `5432`. |
+| `BENTOML_URL` | URL local del ML Inference Service; el valor inicial es `http://127.0.0.1:3000`. |
+| `BENTOML_TIMEOUT_SECONDS` | Tiempo máximo de espera para una inferencia. |
 
 La plantilla es configuración compartible. Los valores efectivos de `.env`, especialmente la contraseña, pertenecen a cada entorno local.
 
@@ -66,6 +68,27 @@ docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.
 
 Desde procesos ejecutados directamente en el equipo, PostgreSQL está disponible en `127.0.0.1` y en el puerto configurado por `POSTGRES_PORT`.
 
+### Aplicar migraciones
+
+Con PostgreSQL saludable, ejecuta desde `api/`:
+
+```powershell
+uv run --locked --env-file ../.env alembic upgrade head
+```
+
+Este paso crea el esquema versionado y la configuración inicial administrable. El startup no sustituye las migraciones mediante creación automática de tablas.
+
+### Iniciar el ML Inference Service
+
+Desde `inference/`:
+
+```powershell
+$env:PYTHONUTF8='1'
+.\.venv\Scripts\python.exe -m bentoml serve app.service:PiiInferenceService --port 3000
+```
+
+Comprueba disponibilidad en `http://127.0.0.1:3000/readyz` y el catálogo mediante `POST http://127.0.0.1:3000/models` con un objeto JSON vacío.
+
 ### Iniciar el Privacy Middleware
 
 Con PostgreSQL saludable, inicia FastAPI desde `api/` cargando la misma configuración local:
@@ -86,11 +109,11 @@ La suite normal no requiere Docker:
 uv run --locked python -m unittest discover -s tests -v
 ```
 
-La comprobación real contra PostgreSQL se activa explícitamente:
+Las comprobaciones reales contra PostgreSQL se activan explícitamente:
 
 ```powershell
 $env:RUN_DATABASE_INTEGRATION='1'
-uv run --locked --env-file ../.env python -m unittest tests.test_database_integration -v
+uv run --locked --env-file ../.env python -m unittest tests.test_database_integration tests.test_privacy_integration -v
 Remove-Item Env:RUN_DATABASE_INTEGRATION
 ```
 
@@ -142,8 +165,22 @@ Compose puede incorporar otros recursos cuando exista una necesidad real. La con
 - Conserva el volumen durante las detenciones normales.
 - Elimina el volumen únicamente como una acción consciente de reinicio total.
 
+### Comprobar las APIs
+
+- Health: `GET http://127.0.0.1:8000/api/health`.
+- Administración: `http://127.0.0.1:8000/docs` o rutas bajo `/api/admin`.
+- Protección: `POST http://127.0.0.1:8000/api/interactions/protect` con `{"text":"..."}`.
+
+### Cargar la extensión
+
+1. Abre la administración de extensiones del navegador.
+2. Activa el modo desarrollador.
+3. Carga sin empaquetar la carpeta `Tesis3_SinCopilot/extension`.
+4. Recarga una pestaña de ChatGPT, Claude o Gemini.
+5. Mantén PostgreSQL, BentoML y FastAPI activos antes de enviar un prompt.
+
+La extensión reemplaza el editor por `protected_text` y continúa el envío una sola vez. Si la API falla, mantiene el envío bloqueado y muestra un error. Los adjuntos TXT se protegen; PDF y Office permanecen bloqueados hasta incorporar extracción binaria local.
+
 ## Fuera de alcance
 
-Este entorno no crea tablas, modelos ORM, repositories, migraciones, Alembic, APIs administrativas, autenticación ni servicios de frontend. Tampoco modifica la inferencia ML ni introduce mapping canónico o fusión de detecciones.
-
-El Privacy Middleware utiliza SQLAlchemy 2.0 y Psycopg 3 para la conexión asíncrona. El modelado y la persistencia de capacidades concretas pertenecen a los siguientes pasos de desarrollo.
+El entorno local no implementa autenticación administrativa ni un Admin Frontend. Tampoco empaqueta las aplicaciones en contenedores ni incorpora extractores locales para adjuntos PDF/Office.

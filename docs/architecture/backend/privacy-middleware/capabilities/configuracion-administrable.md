@@ -17,7 +17,7 @@ La administración puede gestionar:
 
 ## Funcionamiento
 
-La aplicación administrativa consulta y modifica la configuración mediante las capacidades administrativas del middleware. El procesamiento de interacciones consume posteriormente una versión válida de esa configuración; la interfaz administrativa no participa en dicho procesamiento.
+La configuración se consulta y modifica mediante una API administrativa bajo `/api/admin`. Esta API permite operar temporalmente desde Postman o la documentación interactiva sin depender de una interfaz administrativa. El procesamiento de interacciones consume posteriormente la configuración válida persistida; el cliente administrativo no participa en dicho procesamiento.
 
 La selección de modelos se limita al catálogo declarado por el servicio de inferencia. Desplegar o retirar modelos pertenece a la infraestructura de inferencia y no a la administración funcional.
 
@@ -33,3 +33,5 @@ La selección de modelos se limita al catálogo declarado por el servicio de inf
 ## Límites
 
 La administración define qué recursos y reglas utiliza el sistema. No ejecuta modelos, no fusiona detecciones y no transforma texto.
+
+La API administrativa de desarrollo no implementa autenticación, usuarios, roles ni permisos. Esta exposición es adecuada únicamente para el entorno local previsto.
