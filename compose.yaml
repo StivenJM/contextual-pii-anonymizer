@@ -1,16 +1,26 @@
-name: contextual-pii-anonymizer-dev
+name: contextual-pii-anonymizer
 
 services:
-  postgres:
+
+  # ─────────────────────────────────────
+  # private PostgreSQL for API 
+  # ─────────────────────────────────────
+  db:
     image: postgres:18.6-alpine
-    environment:
-      POSTGRES_DB: "${POSTGRES_DB:?Set POSTGRES_DB in .env}"
-      POSTGRES_USER: "${POSTGRES_USER:?Set POSTGRES_USER in .env}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:?Set POSTGRES_PORT in .env}:5432"
+
+    networks:
+      - api-database
+      - pgadmin
+
+    env_file:
+      - path: ./api/.db.dev.env
+
+      - path: ./api/.db.env
+        required: false
+
     volumes:
       - postgres_data:/var/lib/postgresql
+
     healthcheck:
       test:
         - CMD-SHELL
@@ -23,5 +33,156 @@ services:
       retries: 10
       start_period: 10s
 
+  # ─────────────────────────────────────
+  # pgAdmin
+  # ─────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+
+    networks:
+      - default
+      - pgadmin
+
+    profiles: ["dev"]
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    
+    ports:
+      - "127.0.0.1:9001:80"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ─────────────────────────────────────
+  # BentoML
+  # ─────────────────────────────────────
+  inference:
+    build:
+      context: ./inference
+      dockerfile: Dockerfile
+    
+    networks:
+      - api-inference
+
+    environment:
+      HF_HOME: /cache/huggingface # To cache models and avoid re downloads
+    
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/readyz', timeout=2)"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5m
+
+    develop:
+      watch:
+        - action: sync
+          path: ./inference/app
+          target: /app/app
+
+        - action: sync
+          path: ./inference/tests
+          target: /app/tests
+
+        - action: rebuild
+          path: ./inference/pyproject.toml
+
+        - action: rebuild
+          path: ./inference/uv.lock
+    
+    volumes:
+      - huggingface_cache:/cache/huggingface # To cache models and avoid re downloads
+
+  # ─────────────────────────────────────
+  # FastAPI
+  # ─────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    
+    networks:
+      - api-database
+      - api-inference
+    
+    env_file:
+      - path: ./api/.api.dev.env
+
+      - path: ./api/.db.dev.env
+
+      - path: ./api/.api.env
+        required: false
+        
+      - path: ./api/.db.env
+        required: false
+
+    depends_on:
+      db:
+        condition: service_healthy
+      
+      inference:
+        condition: service_healthy
+    
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    command: > # Overrides CMD in Dockerfile
+        sh -c "
+          uv run alembic upgrade head &&
+          uv run fastapi dev app/main.py --host 0.0.0.0 --port 8000
+        "
+
+    develop:
+      watch:
+        - path: ./api/app
+          action: sync
+          target: /app/app
+
+        - action: sync
+          path: ./api/tests
+          target: /app/tests
+
+        - action: sync
+          path: ./api/alembic
+          target: /app/alembic
+        
+        - action: sync
+          path: ./api/alembic.ini
+          target: /app/alembic.ini
+
+        - action: rebuild
+          path: ./api/pyproject.toml
+
+        - action: rebuild
+          path: ./api/uv.lock
+
+# ─────────────────────────────────────────
+# Redes
+# ─────────────────────────────────────────
+
+networks:
+  
+  api-database:
+    internal: true
+  
+  api-inference:
+
+  pgadmin:
+    internal: true
+
+# ─────────────────────────────────────────
+# Persistencia
+# ─────────────────────────────────────────
+
 volumes:
   postgres_data:
+  huggingface_cache:

@@ -1,0 +1,45 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+cover/
+
+# Type checker / linter caches
+.mypy_cache/
+.ruff_cache/
+
+# Build / packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.whl
+
+# Environment files
+.api.env
+.db.env
+.api.dev.env
+.db.dev.env
+.env
+.env.*
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
