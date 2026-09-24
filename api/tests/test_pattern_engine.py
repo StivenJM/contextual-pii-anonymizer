@@ -11,11 +11,17 @@ class PatternRecognizerEngineTests(unittest.TestCase):
 
     def test_detects_email_and_ecuador_phone(self) -> None:
         recognizers = [
-            PatternRecognizer(None, "email", "EMAIL", (r"\b[\w.+-]+@[\w.-]+\.\w+\b",), 0.95),
+            PatternRecognizer(
+                None, "email", "EMAIL", (r"\b[\w.+-]+@[\w.-]+\.\w+\b",), 0.95
+            ),
             PatternRecognizer(None, "phone", "PHONE", (r"(?<!\d)09\d{8}(?!\d)",), 0.8),
         ]
-        detections = self.engine.detect("Escriba a ana@example.com o llame al 0991234567", recognizers)
-        self.assertEqual([item.canonical_type for item in detections], ["EMAIL", "PHONE"])
+        detections = self.engine.detect(
+            "Escriba a ana@example.com o llame al 0991234567", recognizers
+        )
+        self.assertEqual(
+            [item.canonical_type for item in detections], ["EMAIL", "PHONE"]
+        )
 
     def test_validates_ecuador_national_id(self) -> None:
         self.assertTrue(validate_ecuador_national_id("1710034065"))
@@ -38,7 +44,9 @@ class PatternRecognizerEngineTests(unittest.TestCase):
         self.assertEqual(detections[0].confidence, 0.98)
 
     def test_ignores_disabled_recognizer(self) -> None:
-        recognizer = PatternRecognizer(None, "email", "EMAIL", (r".+@.+",), 0.9, enabled=False)
+        recognizer = PatternRecognizer(
+            None, "email", "EMAIL", (r".+@.+",), 0.9, enabled=False
+        )
         self.assertEqual(self.engine.detect("a@example.com", [recognizer]), [])
 
 

@@ -15,7 +15,9 @@ class PatternRecognizerEngine:
         for recognizer in recognizers:
             if not recognizer.enabled:
                 continue
-            validator = VALIDATORS.get(recognizer.validator) if recognizer.validator else None
+            validator = (
+                VALIDATORS.get(recognizer.validator) if recognizer.validator else None
+            )
             if recognizer.validator and validator is None:
                 raise ValueError(f"Unknown validator: {recognizer.validator}")
             for pattern in recognizer.patterns:
@@ -25,8 +27,13 @@ class PatternRecognizerEngine:
                         continue
                     confidence = recognizer.score
                     if recognizer.context_words:
-                        context = text[max(0, match.start() - 60) : match.end() + 60].casefold()
-                        if any(word.casefold() in context for word in recognizer.context_words):
+                        context = text[
+                            max(0, match.start() - 60) : match.end() + 60
+                        ].casefold()
+                        if any(
+                            word.casefold() in context
+                            for word in recognizer.context_words
+                        ):
                             confidence = min(1.0, confidence + 0.1)
                     detections.append(
                         CanonicalDetection(

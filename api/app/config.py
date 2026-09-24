@@ -3,7 +3,6 @@ from typing import Annotated
 from pydantic import Field, SecretStr, StringConstraints
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 RequiredText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 

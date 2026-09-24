@@ -91,7 +91,11 @@ class PostgresConfigurationRepository:
         return self._pattern(row) if row else None
 
     async def save_pattern(self, recognizer: PatternRecognizer) -> PatternRecognizer:
-        row = await self._session.get(PatternRecognizerModel, recognizer.id) if recognizer.id else None
+        row = (
+            await self._session.get(PatternRecognizerModel, recognizer.id)
+            if recognizer.id
+            else None
+        )
         if row is None:
             row = PatternRecognizerModel()
             self._session.add(row)
@@ -107,13 +111,17 @@ class PostgresConfigurationRepository:
 
     async def delete_pattern(self, recognizer_id: int) -> bool:
         result = await self._session.execute(
-            delete(PatternRecognizerModel).where(PatternRecognizerModel.id == recognizer_id)
+            delete(PatternRecognizerModel).where(
+                PatternRecognizerModel.id == recognizer_id
+            )
         )
         return bool(result.rowcount)
 
     async def list_gazetteers(self) -> list[Gazetteer]:
         rows = (
-            await self._session.scalars(select(GazetteerModel).order_by(GazetteerModel.id))
+            await self._session.scalars(
+                select(GazetteerModel).order_by(GazetteerModel.id)
+            )
         ).all()
         return [self._gazetteer(row) for row in rows]
 
@@ -122,7 +130,11 @@ class PostgresConfigurationRepository:
         return self._gazetteer(row) if row else None
 
     async def save_gazetteer(self, gazetteer: Gazetteer) -> Gazetteer:
-        row = await self._session.get(GazetteerModel, gazetteer.id) if gazetteer.id else None
+        row = (
+            await self._session.get(GazetteerModel, gazetteer.id)
+            if gazetteer.id
+            else None
+        )
         if row is None:
             row = GazetteerModel(entries=[])
             self._session.add(row)
@@ -145,7 +157,9 @@ class PostgresConfigurationRepository:
         gazetteer_id: int,
         entry: GazetteerEntry,
     ) -> GazetteerEntry:
-        row = await self._session.get(GazetteerEntryModel, entry.id) if entry.id else None
+        row = (
+            await self._session.get(GazetteerEntryModel, entry.id) if entry.id else None
+        )
         if row is None:
             row = GazetteerEntryModel(gazetteer_id=gazetteer_id)
             self._session.add(row)
@@ -170,10 +184,14 @@ class PostgresConfigurationRepository:
             model_enabled=row.model_enabled,
             pattern_enabled=row.pattern_enabled,
             gazetteer_enabled=row.gazetteer_enabled,
-            source_priority=tuple(DetectionSource(value) for value in row.source_priority),
+            source_priority=tuple(
+                DetectionSource(value) for value in row.source_priority
+            ),
         )
 
-    async def save_detection_settings(self, settings: DetectionSettings) -> DetectionSettings:
+    async def save_detection_settings(
+        self, settings: DetectionSettings
+    ) -> DetectionSettings:
         row = await self._session.get(DetectionSettingsModel, 1)
         if row is None:
             row = DetectionSettingsModel(id=1)
@@ -219,7 +237,9 @@ class PostgresConfigurationRepository:
 
     @staticmethod
     def _mapping(row: ModelMappingModel) -> ModelMapping:
-        return ModelMapping(row.id, row.model_id, row.native_entity_type, row.canonical_type)
+        return ModelMapping(
+            row.id, row.model_id, row.native_entity_type, row.canonical_type
+        )
 
     @staticmethod
     def _pattern(row: PatternRecognizerModel) -> PatternRecognizer:

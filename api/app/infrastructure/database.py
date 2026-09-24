@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import (
 
 from app.config import Settings
 
-
 AsyncSessionFactory = async_sessionmaker[AsyncSession]
 
 

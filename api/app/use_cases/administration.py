@@ -79,7 +79,8 @@ class AdministrationUseCases:
         model = await self._inference.get_model(mapping.model_id)
         if mapping.native_entity_type not in model.native_entity_types:
             raise InvalidConfigurationError(
-                f"Native entity type '{mapping.native_entity_type}' is not declared by model '{mapping.model_id}'."
+                f"Native entity type '{mapping.native_entity_type}' is not declared "
+                f" by model '{mapping.model_id}'."
             )
 
     async def list_patterns(self) -> list[PatternRecognizer]:
@@ -99,9 +100,13 @@ class AdministrationUseCases:
             for pattern in recognizer.patterns:
                 re.compile(pattern)
         except re.error as exc:
-            raise InvalidConfigurationError(f"Invalid regular expression: {exc}") from exc
+            raise InvalidConfigurationError(
+                f"Invalid regular expression: {exc}"
+            ) from exc
         if recognizer.validator and recognizer.validator not in VALIDATORS:
-            raise InvalidConfigurationError(f"Unknown validator: {recognizer.validator}")
+            raise InvalidConfigurationError(
+                f"Unknown validator: {recognizer.validator}"
+            )
         saved = await self._repository.save_pattern(recognizer)
         await self._repository.commit()
         return saved
@@ -151,13 +156,19 @@ class AdministrationUseCases:
     async def get_detection_settings(self) -> DetectionSettings:
         return await self._repository.get_detection_settings()
 
-    async def save_detection_settings(self, settings: DetectionSettings) -> DetectionSettings:
+    async def save_detection_settings(
+        self, settings: DetectionSettings
+    ) -> DetectionSettings:
         if not 0 <= settings.threshold <= 1:
             raise InvalidConfigurationError("Threshold must be between 0 and 1.")
         if len(settings.source_priority) != len(set(settings.source_priority)):
-            raise InvalidConfigurationError("Source priority cannot contain duplicates.")
+            raise InvalidConfigurationError(
+                "Source priority cannot contain duplicates."
+            )
         if set(settings.source_priority) != set(DetectionSource):
-            raise InvalidConfigurationError("Source priority must include every detection source.")
+            raise InvalidConfigurationError(
+                "Source priority must include every detection source."
+            )
         saved = await self._repository.save_detection_settings(settings)
         await self._repository.commit()
         return saved

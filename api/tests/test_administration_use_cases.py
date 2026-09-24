@@ -15,7 +15,12 @@ class MappingRepository:
         return [item for item in self.mappings if item.model_id == model_id]
 
     async def create_mapping(self, mapping: ModelMapping) -> ModelMapping:
-        created = ModelMapping(len(self.mappings) + 1, mapping.model_id, mapping.native_entity_type, mapping.canonical_type)
+        created = ModelMapping(
+            len(self.mappings) + 1,
+            mapping.model_id,
+            mapping.native_entity_type,
+            mapping.canonical_type,
+        )
         self.mappings.append(created)
         return created
 
@@ -32,17 +37,25 @@ class AdministrationUseCaseTests(unittest.IsolatedAsyncioTestCase):
     async def test_creates_valid_mapping_and_reports_unmapped_labels(self) -> None:
         repository = MappingRepository()
         use_cases = AdministrationUseCases(repository, MetadataInferenceService())
-        mapping = await use_cases.create_mapping(ModelMapping(None, "model-a", "EMAIL", "EMAIL"))
+        mapping = await use_cases.create_mapping(
+            ModelMapping(None, "model-a", "EMAIL", "EMAIL")
+        )
         self.assertEqual(mapping.id, 1)
         self.assertEqual(await use_cases.mapping_gaps("model-a"), ["ORGANIZATION"])
         self.assertEqual(repository.commits, 1)
 
     async def test_rejects_invalid_canonical_and_native_types(self) -> None:
-        use_cases = AdministrationUseCases(MappingRepository(), MetadataInferenceService())
+        use_cases = AdministrationUseCases(
+            MappingRepository(), MetadataInferenceService()
+        )
         with self.assertRaises(ValueError):
-            await use_cases.create_mapping(ModelMapping(None, "model-a", "EMAIL", "OTHER"))
+            await use_cases.create_mapping(
+                ModelMapping(None, "model-a", "EMAIL", "OTHER")
+            )
         with self.assertRaises(InvalidConfigurationError):
-            await use_cases.create_mapping(ModelMapping(None, "model-a", "CITY", "LOCATION"))
+            await use_cases.create_mapping(
+                ModelMapping(None, "model-a", "CITY", "LOCATION")
+            )
 
 
 if __name__ == "__main__":

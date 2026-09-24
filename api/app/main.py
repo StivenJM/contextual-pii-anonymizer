@@ -1,8 +1,8 @@
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -26,6 +26,7 @@ async def not_found_handler(
         status_code=404,
         content={"message": "Endpoint not found"},
     )
+
 
 async def internal_error_handler(
     _request: Request,
