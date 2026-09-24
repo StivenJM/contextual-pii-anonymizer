@@ -25,7 +25,9 @@ class HttpInferenceServiceTests(unittest.IsolatedAsyncioTestCase):
                         ]
                     },
                 )
-            self.assertEqual(json.loads(request.content), {"model_id": "model-a", "text": "a@b.com"})
+            self.assertEqual(
+                json.loads(request.content), {"model_id": "model-a", "text": "a@b.com"}
+            )
             return httpx.Response(
                 200,
                 json={
@@ -57,7 +59,9 @@ class HttpInferenceServiceTests(unittest.IsolatedAsyncioTestCase):
     async def test_reports_model_and_bento_unavailability(self) -> None:
         async with httpx.AsyncClient(
             base_url="http://inference",
-            transport=httpx.MockTransport(lambda _request: httpx.Response(404, json={})),
+            transport=httpx.MockTransport(
+                lambda _request: httpx.Response(404, json={})
+            ),
         ) as client:
             with self.assertRaises(ModelUnavailableError):
                 await HttpInferenceService(client).detect("missing", "text")

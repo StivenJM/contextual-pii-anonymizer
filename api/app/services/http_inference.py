@@ -17,7 +17,9 @@ class HttpInferenceService:
         try:
             return [self._metadata(item) for item in data["models"]]
         except (KeyError, TypeError, ValueError) as exc:
-            raise InferenceUnavailableError("BentoML returned invalid model metadata.") from exc
+            raise InferenceUnavailableError(
+                "BentoML returned invalid model metadata."
+            ) from exc
 
     async def get_model(self, model_id: str) -> ModelMetadata:
         models = await self.list_models()
@@ -49,7 +51,9 @@ class HttpInferenceService:
                 ),
             )
         except (KeyError, TypeError, ValueError) as exc:
-            raise InferenceUnavailableError("BentoML returned an invalid inference response.") from exc
+            raise InferenceUnavailableError(
+                "BentoML returned an invalid inference response."
+            ) from exc
 
     async def _request(
         self,
@@ -73,7 +77,9 @@ class HttpInferenceService:
                 f"BentoML request failed with status {response.status_code}."
             ) from exc
         if not isinstance(payload, dict):
-            raise InferenceUnavailableError("BentoML returned an invalid JSON response.")
+            raise InferenceUnavailableError(
+                "BentoML returned an invalid JSON response."
+            )
         return payload
 
     @staticmethod
@@ -85,5 +91,7 @@ class HttpInferenceService:
             name=str(item["name"]),
             version=str(item["version"]),
             description=str(item["description"]),
-            native_entity_types=tuple(str(value) for value in item["native_entity_types"]),
+            native_entity_types=tuple(
+                str(value) for value in item["native_entity_types"]
+            ),
         )

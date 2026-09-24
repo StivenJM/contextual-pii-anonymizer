@@ -1,8 +1,8 @@
 import unittest
 
 from app.domain.taxonomy import (
-    IdentifierKind,
     TAXONOMY,
+    IdentifierKind,
     TaxonomyScope,
     ancestors,
     get_node,

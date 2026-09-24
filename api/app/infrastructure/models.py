@@ -1,6 +1,13 @@
-from typing import Any
-
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -47,7 +54,7 @@ class GazetteerModel(Base):
     score: Mapped[float] = mapped_column(Float, default=0.85)
     case_sensitive: Mapped[bool] = mapped_column(Boolean, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    entries: Mapped[list["GazetteerEntryModel"]] = relationship(
+    entries: Mapped[list[GazetteerEntryModel]] = relationship(
         back_populates="gazetteer",
         cascade="all, delete-orphan",
         lazy="selectin",

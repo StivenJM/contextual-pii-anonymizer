@@ -117,14 +117,19 @@ class PrivacyIntegrationTests(unittest.TestCase):
             settings = client.get("/api/admin/detection-settings")
             self.assertEqual(settings.status_code, 200)
             self.assertEqual(
-                client.put("/api/admin/detection-settings", json=settings.json()).status_code,
+                client.put(
+                    "/api/admin/detection-settings", json=settings.json()
+                ).status_code,
                 200,
             )
 
             protected = client.post(
                 "/api/interactions/protect",
                 json={
-                    "text": "Juan estudia en EPN, escribe a juan@example.com con cédula 1710034065 y guarda secreto"
+                    "text": (
+                        "Juan estudia en EPN, escribe a juan@example.com "
+                        "con cédula 1710034065 y guarda secreto"
+                    )
                 },
             )
             self.assertEqual(protected.status_code, 200, protected.text)
@@ -134,17 +139,35 @@ class PrivacyIntegrationTests(unittest.TestCase):
                 {item["provenance"]["source"] for item in body["detections"]},
                 {"MODEL", "PATTERN", "GAZETTEER"},
             )
-            self.assertEqual(body["mapping_gaps"][0]["native_entity_type"], "UNKNOWN_SECRET")
+            self.assertEqual(
+                body["mapping_gaps"][0]["native_entity_type"], "UNKNOWN_SECRET"
+            )
             self.assertNotIn("secreto", body["protected_text"])
 
             if created_mapping:
-                self.assertEqual(client.delete(f"/api/admin/mappings/{created_mapping}").status_code, 204)
+                self.assertEqual(
+                    client.delete(f"/api/admin/mappings/{created_mapping}").status_code,
+                    204,
+                )
             if created_pattern:
-                self.assertEqual(client.delete(f"/api/admin/patterns/{created_pattern}").status_code, 204)
+                self.assertEqual(
+                    client.delete(f"/api/admin/patterns/{created_pattern}").status_code,
+                    204,
+                )
             if created_gazetteer:
-                self.assertEqual(client.delete(f"/api/admin/gazetteers/{created_gazetteer}").status_code, 204)
+                self.assertEqual(
+                    client.delete(
+                        f"/api/admin/gazetteers/{created_gazetteer}"
+                    ).status_code,
+                    204,
+                )
             if created_rule:
-                self.assertEqual(client.delete(f"/api/admin/protection-rules/{created_rule}").status_code, 204)
+                self.assertEqual(
+                    client.delete(
+                        f"/api/admin/protection-rules/{created_rule}"
+                    ).status_code,
+                    204,
+                )
 
 
 if __name__ == "__main__":

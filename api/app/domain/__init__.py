@@ -21,7 +21,7 @@ __all__ = [
     "GazetteerEntry",
     "MappingGap",
     "PatternRecognizer",
-    "Provenance",
     "ProtectionAction",
     "ProtectionRule",
+    "Provenance",
 ]

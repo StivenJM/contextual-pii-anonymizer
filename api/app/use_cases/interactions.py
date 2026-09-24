@@ -62,9 +62,15 @@ class ProtectInteractionUseCase:
             }
             model_detections: list[CanonicalDetection] = []
             for native in result.detections:
-                if native.start < 0 or native.end > len(text) or native.end <= native.start:
+                if (
+                    native.start < 0
+                    or native.end > len(text)
+                    or native.end <= native.start
+                ):
                     continue
-                start, end = self._expand_word_boundaries(text, native.start, native.end)
+                start, end = self._expand_word_boundaries(
+                    text, native.start, native.end
+                )
                 while start < end and text[start].isspace():
                     start += 1
                 while end > start and text[end - 1].isspace():
@@ -106,7 +112,9 @@ class ProtectInteractionUseCase:
                         ),
                     )
                 )
-            canonical.extend(self._merge_adjacent_model_detections(text, model_detections))
+            canonical.extend(
+                self._merge_adjacent_model_detections(text, model_detections)
+            )
 
         if settings.pattern_enabled:
             canonical.extend(

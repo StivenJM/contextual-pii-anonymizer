@@ -22,7 +22,9 @@ class DetectionFusion:
 
         exact_groups: dict[tuple[int, int], list[CanonicalDetection]] = {}
         for detection in candidates:
-            exact_groups.setdefault((detection.start, detection.end), []).append(detection)
+            exact_groups.setdefault((detection.start, detection.end), []).append(
+                detection
+            )
 
         reduced: list[CanonicalDetection] = []
         for group in exact_groups.values():
@@ -43,7 +45,9 @@ class DetectionFusion:
         for candidate in ranked:
             if not any(self._overlaps(candidate, current) for current in selected):
                 selected.append(candidate)
-        return sorted(selected, key=lambda item: (item.start, item.end, item.canonical_type))
+        return sorted(
+            selected, key=lambda item: (item.start, item.end, item.canonical_type)
+        )
 
     @staticmethod
     def _select_exact(

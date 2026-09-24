@@ -57,7 +57,9 @@ class DetectionFusionTests(unittest.TestCase):
         )
         self.assertEqual(result[0].canonical_type, "PHONE")
 
-    def test_resolves_partial_overlap_and_containment_without_returning_overlap(self) -> None:
+    def test_resolves_partial_overlap_and_containment_without_returning_overlap(
+        self,
+    ) -> None:
         result = self.fusion.fuse(
             [
                 detection("PERSON_NAME", 0, 10, DetectionSource.MODEL, 0.9),

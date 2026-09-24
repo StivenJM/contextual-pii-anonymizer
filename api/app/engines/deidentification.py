@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import hashlib
+from dataclasses import dataclass
 
 from app.domain.configuration import ProtectionAction
 from app.engines.protection import ProtectionDecision
@@ -56,7 +56,10 @@ class DeidentificationEngine:
             occupied.append((detection.start, detection.end))
 
         for start, end, value in gap_spans or []:
-            if any(start < used_end and used_start < end for used_start, used_end in occupied):
+            if any(
+                start < used_end and used_start < end
+                for used_start, used_end in occupied
+            ):
                 continue
             operations.append(
                 AppliedOperation(
@@ -73,7 +76,11 @@ class DeidentificationEngine:
 
         protected = text
         for operation in sorted(operations, key=lambda item: item.start, reverse=True):
-            protected = protected[: operation.start] + operation.replacement + protected[operation.end :]
+            protected = (
+                protected[: operation.start]
+                + operation.replacement
+                + protected[operation.end :]
+            )
         return DeidentificationResult(
             protected_text=protected,
             operations=tuple(sorted(operations, key=lambda item: item.start)),
@@ -99,7 +106,9 @@ class DeidentificationEngine:
         return cache[key]
 
     def _pseudonym(self, canonical_type: str, value: str) -> str:
-        digest = int(hashlib.sha256(f"{canonical_type}:{value}".encode()).hexdigest()[:8], 16)
+        digest = int(
+            hashlib.sha256(f"{canonical_type}:{value}".encode()).hexdigest()[:8], 16
+        )
         if canonical_type == "PERSON_NAME":
             return self._NAMES[digest % len(self._NAMES)]
         if canonical_type == "EMAIL":
