@@ -6,7 +6,6 @@ from pydantic import ValidationError
 
 from app.config import Settings
 
-
 VALID_SETTINGS = {
     "POSTGRES_HOST": "127.0.0.1",
     "POSTGRES_PORT": 5432,
@@ -26,9 +25,8 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.postgres_user, "contextual_pii")
 
     def test_rejects_missing_database_configuration(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(ValidationError):
-                Settings()
+        with patch.dict(os.environ, {}, clear=True), self.assertRaises(ValidationError):
+            Settings()
 
     def test_rejects_invalid_database_configuration(self) -> None:
         invalid_values = (

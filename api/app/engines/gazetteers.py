@@ -5,7 +5,9 @@ from app.domain.detections import CanonicalDetection, DetectionSource, Provenanc
 
 
 class GazetteerMatcher:
-    def detect(self, text: str, gazetteers: list[Gazetteer]) -> list[CanonicalDetection]:
+    def detect(
+        self, text: str, gazetteers: list[Gazetteer]
+    ) -> list[CanonicalDetection]:
         detections: list[CanonicalDetection] = []
         for gazetteer in gazetteers:
             if not gazetteer.enabled:

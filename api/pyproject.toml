@@ -23,3 +23,8 @@ entrypoint = "app.main:app"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+]

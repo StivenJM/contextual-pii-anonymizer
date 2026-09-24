@@ -29,19 +29,43 @@ _NODES = (
     TaxonomyNode("EMAIL", "CONTACT", TaxonomyScope.CORE, IdentifierKind.DIRECT),
     TaxonomyNode("PHONE", "CONTACT", TaxonomyScope.CORE, IdentifierKind.DIRECT),
     TaxonomyNode("DIGITAL_IDENTITY", "PII"),
-    TaxonomyNode("USERNAME", "DIGITAL_IDENTITY", TaxonomyScope.CORE, IdentifierKind.DIRECT),
-    TaxonomyNode("PERSONAL_URL", "DIGITAL_IDENTITY", TaxonomyScope.CORE, IdentifierKind.DIRECT),
+    TaxonomyNode(
+        "USERNAME", "DIGITAL_IDENTITY", TaxonomyScope.CORE, IdentifierKind.DIRECT
+    ),
+    TaxonomyNode(
+        "PERSONAL_URL", "DIGITAL_IDENTITY", TaxonomyScope.CORE, IdentifierKind.DIRECT
+    ),
     TaxonomyNode("IDENTIFIER", "PII"),
-    TaxonomyNode("NATIONAL_ID", "IDENTIFIER", TaxonomyScope.CORE, IdentifierKind.DIRECT),
-    TaxonomyNode("STUDENT_ID", "IDENTIFIER", TaxonomyScope.DOMAIN_SPECIFIC, IdentifierKind.DIRECT),
+    TaxonomyNode(
+        "NATIONAL_ID", "IDENTIFIER", TaxonomyScope.CORE, IdentifierKind.DIRECT
+    ),
+    TaxonomyNode(
+        "STUDENT_ID", "IDENTIFIER", TaxonomyScope.DOMAIN_SPECIFIC, IdentifierKind.DIRECT
+    ),
     TaxonomyNode("GEOGRAPHIC", "PII"),
-    TaxonomyNode("STREET_ADDRESS", "GEOGRAPHIC", TaxonomyScope.CORE, IdentifierKind.DIRECT),
-    TaxonomyNode("LOCATION", "GEOGRAPHIC", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT),
-    TaxonomyNode("NATIONALITY", "GEOGRAPHIC", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT),
+    TaxonomyNode(
+        "STREET_ADDRESS", "GEOGRAPHIC", TaxonomyScope.CORE, IdentifierKind.DIRECT
+    ),
+    TaxonomyNode(
+        "LOCATION",
+        "GEOGRAPHIC",
+        TaxonomyScope.CONTEXT_DEPENDENT,
+        IdentifierKind.INDIRECT,
+    ),
+    TaxonomyNode(
+        "NATIONALITY",
+        "GEOGRAPHIC",
+        TaxonomyScope.CONTEXT_DEPENDENT,
+        IdentifierKind.INDIRECT,
+    ),
     TaxonomyNode("DEMOGRAPHIC", "PII"),
-    TaxonomyNode("AGE", "DEMOGRAPHIC", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT),
+    TaxonomyNode(
+        "AGE", "DEMOGRAPHIC", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT
+    ),
     TaxonomyNode("TEMPORAL", "PII"),
-    TaxonomyNode("DATE", "TEMPORAL", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT),
+    TaxonomyNode(
+        "DATE", "TEMPORAL", TaxonomyScope.CONTEXT_DEPENDENT, IdentifierKind.INDIRECT
+    ),
     TaxonomyNode("AFFILIATION", "PII"),
     TaxonomyNode(
         "EDUCATIONAL_AFFILIATION",
@@ -96,7 +120,9 @@ def taxonomy_tree() -> dict[str, object]:
         return {
             "name": node.name,
             "scope": node.scope.value if node.scope else None,
-            "identifier_kind": node.identifier_kind.value if node.identifier_kind else None,
+            "identifier_kind": node.identifier_kind.value
+            if node.identifier_kind
+            else None,
             "children": [serialize(child) for child in children],
         }
 

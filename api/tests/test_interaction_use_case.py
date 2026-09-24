@@ -56,7 +56,13 @@ class FakeInferenceService:
             "v1",
             (
                 NativeDetection("FIRSTNAME", "Juan", 0, 4, 0.9),
-                NativeDetection("UNKNOWN_SECRET", "secreto", text.index("secreto"), text.index("secreto") + 7, 0.99),
+                NativeDetection(
+                    "UNKNOWN_SECRET",
+                    "secreto",
+                    text.index("secreto"),
+                    text.index("secreto") + 7,
+                    0.99,
+                ),
             ),
         )
 

@@ -31,7 +31,6 @@ from app.schemas.administration import (
 )
 from app.use_cases.administration import AdministrationUseCases
 
-
 router = APIRouter(prefix="/api/admin", tags=["administration"])
 AdminDep = Annotated[AdministrationUseCases, Depends(get_administration_use_cases)]
 
@@ -43,7 +42,10 @@ async def get_taxonomy(use_cases: AdminDep) -> dict[str, object]:
 
 @router.get("/models", response_model=list[ModelMetadataResponse])
 async def list_models(use_cases: AdminDep) -> list[ModelMetadataResponse]:
-    return [ModelMetadataResponse.model_validate(item) for item in await use_cases.list_models()]
+    return [
+        ModelMetadataResponse.model_validate(item)
+        for item in await use_cases.list_models()
+    ]
 
 
 @router.get("/models/active", response_model=ModelMetadataResponse | None)
@@ -69,7 +71,10 @@ async def get_model(model_id: str, use_cases: AdminDep) -> ModelMetadataResponse
 
 @router.get("/models/{model_id}/mappings", response_model=list[MappingResponse])
 async def list_mappings(model_id: str, use_cases: AdminDep) -> list[MappingResponse]:
-    return [MappingResponse.model_validate(item) for item in await use_cases.list_mappings(model_id)]
+    return [
+        MappingResponse.model_validate(item)
+        for item in await use_cases.list_mappings(model_id)
+    ]
 
 
 @router.get("/models/{model_id}/mapping-gaps", response_model=list[str])
@@ -116,7 +121,9 @@ async def delete_mapping(mapping_id: int, use_cases: AdminDep) -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _pattern(body: PatternRequest, recognizer_id: int | None = None) -> PatternRecognizer:
+def _pattern(
+    body: PatternRequest, recognizer_id: int | None = None
+) -> PatternRecognizer:
     return PatternRecognizer(
         recognizer_id,
         body.name,
@@ -131,7 +138,9 @@ def _pattern(body: PatternRequest, recognizer_id: int | None = None) -> PatternR
 
 @router.get("/patterns", response_model=list[PatternResponse])
 async def list_patterns(use_cases: AdminDep) -> list[PatternResponse]:
-    return [PatternResponse.model_validate(item) for item in await use_cases.list_patterns()]
+    return [
+        PatternResponse.model_validate(item) for item in await use_cases.list_patterns()
+    ]
 
 
 @router.get("/patterns/{recognizer_id}", response_model=PatternResponse)
@@ -139,7 +148,9 @@ async def get_pattern(recognizer_id: int, use_cases: AdminDep) -> PatternRespons
     return PatternResponse.model_validate(await use_cases.get_pattern(recognizer_id))
 
 
-@router.post("/patterns", response_model=PatternResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/patterns", response_model=PatternResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_pattern(body: PatternRequest, use_cases: AdminDep) -> PatternResponse:
     return PatternResponse.model_validate(await use_cases.save_pattern(_pattern(body)))
 
@@ -195,7 +206,10 @@ def _gazetteer(body: GazetteerRequest, gazetteer_id: int | None = None) -> Gazet
 
 @router.get("/gazetteers", response_model=list[GazetteerResponse])
 async def list_gazetteers(use_cases: AdminDep) -> list[GazetteerResponse]:
-    return [GazetteerResponse.model_validate(item) for item in await use_cases.list_gazetteers()]
+    return [
+        GazetteerResponse.model_validate(item)
+        for item in await use_cases.list_gazetteers()
+    ]
 
 
 @router.get("/gazetteers/{gazetteer_id}", response_model=GazetteerResponse)
@@ -203,8 +217,12 @@ async def get_gazetteer(gazetteer_id: int, use_cases: AdminDep) -> GazetteerResp
     return GazetteerResponse.model_validate(await use_cases.get_gazetteer(gazetteer_id))
 
 
-@router.post("/gazetteers", response_model=GazetteerResponse, status_code=status.HTTP_201_CREATED)
-async def create_gazetteer(body: GazetteerRequest, use_cases: AdminDep) -> GazetteerResponse:
+@router.post(
+    "/gazetteers", response_model=GazetteerResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_gazetteer(
+    body: GazetteerRequest, use_cases: AdminDep
+) -> GazetteerResponse:
     return GazetteerResponse.model_validate(
         await use_cases.save_gazetteer(_gazetteer(body))
     )
@@ -340,7 +358,9 @@ async def list_protection_rules(use_cases: AdminDep) -> list[ProtectionRuleRespo
 
 
 @router.get("/protection-rules/{rule_id}", response_model=ProtectionRuleResponse)
-async def get_protection_rule(rule_id: int, use_cases: AdminDep) -> ProtectionRuleResponse:
+async def get_protection_rule(
+    rule_id: int, use_cases: AdminDep
+) -> ProtectionRuleResponse:
     return ProtectionRuleResponse.model_validate(
         await use_cases.get_protection_rule(rule_id)
     )

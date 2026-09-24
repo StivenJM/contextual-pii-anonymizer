@@ -52,10 +52,10 @@ class LifespanTests(unittest.IsolatedAsyncioTestCase):
                 "app.lifespan.verify_database_connection",
                 new=connection_check,
             ),
+            self.assertRaises(ConnectionError),
         ):
-            with self.assertRaises(ConnectionError):
-                async with lifespan(app):
-                    self.fail("Startup must not complete when PostgreSQL is unavailable.")
+            async with lifespan(app):
+                self.fail("Startup must not complete when PostgreSQL is unavailable.")
 
         engine.dispose.assert_awaited_once_with()
 
