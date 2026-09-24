@@ -18,7 +18,8 @@ select = [
     "C4",
     "PIE",
     "RET",
-    "RUF"
+    "RUF",
+    "PT",
 ]
 
 [format]
