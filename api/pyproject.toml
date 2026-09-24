@@ -26,5 +26,15 @@ include = ["app*"]
 
 [dependency-groups]
 dev = [
+    "anyio>=4,<5",
+    "pytest>=9.1.1",
     "ruff>=0.16.8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["--import-mode=importlib", "--strict-markers"]
+markers = [
+    "integration: tests that require a real PostgreSQL service",
 ]

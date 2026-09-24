@@ -1,6 +1,6 @@
 import os
-import unittest
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.dependencies.services import get_inference_service
@@ -11,6 +11,14 @@ from app.services.inference import (
     NativeDetection,
     NativeInferenceResult,
 )
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        os.getenv("RUN_DATABASE_INTEGRATION") != "1",
+        reason="Set RUN_DATABASE_INTEGRATION=1 to verify privacy persistence and APIs.",
+    ),
+]
 
 
 class FakeInferenceService:
@@ -40,34 +48,30 @@ class FakeInferenceService:
         return NativeInferenceResult(model_id, "v1", tuple(detections))
 
 
-@unittest.skipUnless(
-    os.getenv("RUN_DATABASE_INTEGRATION") == "1",
-    "Set RUN_DATABASE_INTEGRATION=1 to verify privacy persistence and APIs.",
-)
-class PrivacyIntegrationTests(unittest.TestCase):
-    def test_admin_crud_and_interaction_pipeline_use_real_postgresql(self) -> None:
-        app = create_app()
-        app.dependency_overrides[get_inference_service] = lambda: FakeInferenceService()
-        created_mapping: int | None = None
-        created_pattern: int | None = None
-        created_gazetteer: int | None = None
-        created_rule: int | None = None
+def test_admin_crud_and_interaction_pipeline_use_real_postgresql() -> None:
+    app = create_app()
+    app.dependency_overrides[get_inference_service] = lambda: FakeInferenceService()
+    created_mapping: int | None = None
+    created_pattern: int | None = None
+    created_gazetteer: int | None = None
+    created_rule: int | None = None
 
+    try:
         with TestClient(
             app,
             backend_options={"loop_factory": create_selector_event_loop},
         ) as client:
-            self.assertEqual(client.get("/api/admin/taxonomy").status_code, 200)
-            self.assertEqual(client.get("/api/admin/models").status_code, 200)
+            assert client.get("/api/admin/taxonomy").status_code == 200
+            assert client.get("/api/admin/models").status_code == 200
             active = client.get("/api/admin/models/active")
-            self.assertEqual(active.status_code, 200)
-            self.assertEqual(active.json()["id"], "openmed-pii-spanish-600m")
+            assert active.status_code == 200
+            assert active.json()["id"] == "openmed-pii-spanish-600m"
 
             mapping = client.post(
                 "/api/admin/models/openmed-pii-spanish-600m/mappings",
                 json={"native_entity_type": "URL", "canonical_type": "PERSONAL_URL"},
             )
-            self.assertEqual(mapping.status_code, 201, mapping.text)
+            assert mapping.status_code == 201, mapping.text
             created_mapping = mapping.json()["id"]
 
             pattern = client.post(
@@ -81,13 +85,13 @@ class PrivacyIntegrationTests(unittest.TestCase):
                     "enabled": True,
                 },
             )
-            self.assertEqual(pattern.status_code, 201, pattern.text)
+            assert pattern.status_code == 201, pattern.text
             created_pattern = pattern.json()["id"]
             disabled = client.patch(
                 f"/api/admin/patterns/{created_pattern}/enabled",
                 json={"enabled": False},
             )
-            self.assertFalse(disabled.json()["enabled"])
+            assert not disabled.json()["enabled"]
 
             gazetteer = client.post(
                 "/api/admin/gazetteers",
@@ -99,28 +103,29 @@ class PrivacyIntegrationTests(unittest.TestCase):
                     "enabled": True,
                 },
             )
-            self.assertEqual(gazetteer.status_code, 201, gazetteer.text)
+            assert gazetteer.status_code == 201, gazetteer.text
             created_gazetteer = gazetteer.json()["id"]
             entry = client.post(
                 f"/api/admin/gazetteers/{created_gazetteer}/entries",
                 json={"value": "EPN"},
             )
-            self.assertEqual(entry.status_code, 201, entry.text)
+            assert entry.status_code == 201, entry.text
 
             rule = client.post(
                 "/api/admin/protection-rules",
                 json={"canonical_type": "LOCATION", "action": "KEEP"},
             )
-            self.assertEqual(rule.status_code, 201, rule.text)
+            assert rule.status_code == 201, rule.text
             created_rule = rule.json()["id"]
 
             settings = client.get("/api/admin/detection-settings")
-            self.assertEqual(settings.status_code, 200)
-            self.assertEqual(
+            assert settings.status_code == 200
+            assert (
                 client.put(
-                    "/api/admin/detection-settings", json=settings.json()
-                ).status_code,
-                200,
+                    "/api/admin/detection-settings",
+                    json=settings.json(),
+                ).status_code
+                == 200
             )
 
             protected = client.post(
@@ -132,43 +137,40 @@ class PrivacyIntegrationTests(unittest.TestCase):
                     )
                 },
             )
-            self.assertEqual(protected.status_code, 200, protected.text)
+            assert protected.status_code == 200, protected.text
             body = protected.json()
-            self.assertNotEqual(body["original_text"], body["protected_text"])
-            self.assertEqual(
-                {item["provenance"]["source"] for item in body["detections"]},
-                {"MODEL", "PATTERN", "GAZETTEER"},
-            )
-            self.assertEqual(
-                body["mapping_gaps"][0]["native_entity_type"], "UNKNOWN_SECRET"
-            )
-            self.assertNotIn("secreto", body["protected_text"])
+            assert body["original_text"] != body["protected_text"]
+            assert {item["provenance"]["source"] for item in body["detections"]} == {
+                "MODEL",
+                "PATTERN",
+                "GAZETTEER",
+            }
+            assert body["mapping_gaps"][0]["native_entity_type"] == "UNKNOWN_SECRET"
+            assert "secreto" not in body["protected_text"]
 
             if created_mapping:
-                self.assertEqual(
-                    client.delete(f"/api/admin/mappings/{created_mapping}").status_code,
-                    204,
+                assert (
+                    client.delete(f"/api/admin/mappings/{created_mapping}").status_code
+                    == 204
                 )
             if created_pattern:
-                self.assertEqual(
-                    client.delete(f"/api/admin/patterns/{created_pattern}").status_code,
-                    204,
+                assert (
+                    client.delete(f"/api/admin/patterns/{created_pattern}").status_code
+                    == 204
                 )
             if created_gazetteer:
-                self.assertEqual(
+                assert (
                     client.delete(
                         f"/api/admin/gazetteers/{created_gazetteer}"
-                    ).status_code,
-                    204,
+                    ).status_code
+                    == 204
                 )
             if created_rule:
-                self.assertEqual(
+                assert (
                     client.delete(
                         f"/api/admin/protection-rules/{created_rule}"
-                    ).status_code,
-                    204,
+                    ).status_code
+                    == 204
                 )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    finally:
+        app.dependency_overrides.clear()

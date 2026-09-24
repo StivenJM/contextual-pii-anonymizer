@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 from app.domain.configuration import (
     DetectionSettings,
@@ -12,6 +12,8 @@ from app.domain.configuration import (
 from app.domain.detections import DetectionSource
 from app.services.inference import NativeDetection, NativeInferenceResult
 from app.use_cases.interactions import ProtectInteractionUseCase
+
+pytestmark = pytest.mark.anyio
 
 
 class FakeConfigurationRepository:
@@ -67,23 +69,20 @@ class FakeInferenceService:
         )
 
 
-class ProtectInteractionUseCaseTests(unittest.IsolatedAsyncioTestCase):
-    async def test_runs_all_sources_and_masks_mapping_gaps(self) -> None:
-        text = "Juan estudia en EPN, escribe a juan@example.com y guarda secreto"
-        result = await ProtectInteractionUseCase(
-            FakeConfigurationRepository(),
-            FakeInferenceService(),
-        ).execute(text)
+async def test_runs_all_sources_and_masks_mapping_gaps() -> None:
+    text = "Juan estudia en EPN, escribe a juan@example.com y guarda secreto"
 
-        self.assertEqual(
-            {item.provenance.source for item in result.detections},
-            {DetectionSource.MODEL, DetectionSource.PATTERN, DetectionSource.GAZETTEER},
-        )
-        self.assertEqual(result.mapping_gaps[0].native_entity_type, "UNKNOWN_SECRET")
-        self.assertNotIn("secreto", result.protected_text)
-        self.assertIn("<PERSON_NAME>", result.protected_text)
-        self.assertTrue(result.warnings)
+    result = await ProtectInteractionUseCase(
+        FakeConfigurationRepository(),
+        FakeInferenceService(),
+    ).execute(text)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    assert {item.provenance.source for item in result.detections} == {
+        DetectionSource.MODEL,
+        DetectionSource.PATTERN,
+        DetectionSource.GAZETTEER,
+    }
+    assert result.mapping_gaps[0].native_entity_type == "UNKNOWN_SECRET"
+    assert "secreto" not in result.protected_text
+    assert "<PERSON_NAME>" in result.protected_text
+    assert result.warnings

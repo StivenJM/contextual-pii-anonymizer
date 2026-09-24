@@ -11,3 +11,12 @@ format:
 
 format-fix:
     uv run ruff format .
+
+test:
+    uv run pytest
+
+test-unit:
+    uv run pytest tests/unit
+
+test-integration:
+    $env:RUN_DATABASE_INTEGRATION="1"; uv run pytest tests/integration -m integration

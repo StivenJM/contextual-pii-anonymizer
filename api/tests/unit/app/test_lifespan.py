@@ -1,0 +1,59 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi import FastAPI
+
+from app.lifespan import lifespan
+
+pytestmark = pytest.mark.anyio
+
+
+async def test_builds_container_after_check_and_disposes_engine() -> None:
+    engine = MagicMock()
+    engine.dispose = AsyncMock()
+    session_factory = MagicMock()
+    connection_check = AsyncMock()
+    app = FastAPI()
+    settings = MagicMock(
+        bentoml_url="http://127.0.0.1:3000",
+        bentoml_timeout_seconds=120.0,
+    )
+
+    with (
+        patch("app.lifespan.Settings", return_value=settings),
+        patch("app.lifespan.create_database_engine", return_value=engine),
+        patch(
+            "app.lifespan.create_session_factory",
+            return_value=session_factory,
+        ),
+        patch(
+            "app.lifespan.verify_database_connection",
+            new=connection_check,
+        ),
+    ):
+        async with lifespan(app):
+            assert app.state.container.session_factory is session_factory
+            connection_check.assert_awaited_once_with(engine)
+
+    engine.dispose.assert_awaited_once_with()
+
+
+async def test_connection_failure_aborts_startup_and_disposes_engine() -> None:
+    engine = MagicMock()
+    engine.dispose = AsyncMock()
+    connection_check = AsyncMock(side_effect=ConnectionError("unavailable"))
+    app = FastAPI()
+
+    with (
+        patch("app.lifespan.Settings"),
+        patch("app.lifespan.create_database_engine", return_value=engine),
+        patch(
+            "app.lifespan.verify_database_connection",
+            new=connection_check,
+        ),
+        pytest.raises(ConnectionError),
+    ):
+        async with lifespan(app):
+            pytest.fail("Startup must not complete when PostgreSQL is unavailable.")
+
+    engine.dispose.assert_awaited_once_with()
