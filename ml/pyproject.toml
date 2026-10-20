@@ -1,0 +1,48 @@
+[project]
+name = "pii-ml"
+version = "0.1.0"
+description = "Dataset auditing, preparation, and experiments for the contextual PII anonymizer"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.9,<4",
+    "openpyxl>=3.1,<4",
+    "pandas>=2.2,<3",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pii_ml*"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29",
+    "markdown>=3.7",
+    "nbconvert>=7.16",
+    "nbformat>=5.10",
+    "ruff>=0.16.8",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+extend-exclude = [".venv", "datasets"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+    "SIM",
+    "C4",
+    "PIE",
+    "RET",
+    "RUF",
+    "PT",
+]
