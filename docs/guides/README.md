@@ -1,15 +1,19 @@
-# Guías de desarrollo
+# Development guides
 
-Estas guías explican procedimientos recurrentes para preparar y operar el proyecto durante el desarrollo.
+These guides explain recurring procedures to prepare and operate the project during development.
 
-## Flujo de trabajo
+## Data
 
-- [`Nombres de ramas`](nombres-de-ramas.md): define cómo identificar el tipo, el alcance y el resultado de cada rama de trabajo en el monorepo.
+- [`Datasets and audits`](datasets-and-audits.md): registers a dataset with DVC and turns each audit into reviewable, reproducible evidence.
 
-## Calidad de código
+## Workflow
 
-- [`Calidad de código con Ruff`](calidad-de-codigo-con-ruff.md): ejecuta el linting, el formateo y las verificaciones de calidad de la API con `uv`.
+- [`Branch names`](nombres-de-ramas.md): defines how to identify the type, scope, and result of each work branch in the monorepo.
 
-## Entorno local
+## Code quality
 
-- [`Infraestructura local con Docker`](infraestructura-local-con-docker.md): configura y opera PostgreSQL para desarrollo sin contenerizar las aplicaciones.
+- [`Code quality with Ruff`](calidad-de-codigo-con-ruff.md): runs linting, formatting, and quality checks with `uv`.
+
+## Local environment
+
+- [`Local infrastructure with Docker`](infraestructura-local-con-docker.md): configures and operates PostgreSQL for development without containerizing the applications.
