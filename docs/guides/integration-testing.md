@@ -10,6 +10,7 @@ The suite has two tiers:
 |---|---|---|---|
 | Fast (default) | `pytest -m "not integration"` | No | Seconds after the browser starts |
 | Full system | `pytest -m integration` | Yes | Minutes on the first run (image build) |
+| Debug | add `--headed`, `--slowmo MS`, or `--pw-trace` | No | Interactive |
 
 ## What each tier proves
 
@@ -61,6 +62,47 @@ the conversion image, starts PostgreSQL and the inference stub, applies migratio
 exposes the API and conversion service on free local ports. The project, its containers,
 and its database are removed with `down -v` when the test ends. The development
 `compose.yaml` and its volume are never touched.
+
+## Debug a failing test
+
+All debugging stays off by default. Turn on only what the session needs:
+
+```powershell
+# Watch the browser while one test runs.
+uv run --directory e2e pytest -v -k test_drop_zone --headed
+
+# Slow every browser operation so the flow is followable.
+uv run --directory e2e pytest -v -k test_drop_zone --headed --slowmo 500
+
+# Record a trace for failing tests and open it afterwards.
+uv run --directory e2e pytest -v --pw-trace=retain-on-failure
+uv run --directory e2e playwright show-trace e2e/test-results/<name>.zip
+
+# Step through with the Inspector (interactive; it waits for you).
+$env:PWDEBUG = "1"
+uv run --directory e2e pytest -v -k test_drop_zone
+Remove-Item Env:PWDEBUG
+```
+
+| Flag | Effect |
+|---|---|
+| `--headed` | Shows the Chromium window; `PWDEBUG=1` implies it |
+| `--slowmo MS` | Slows browser operations by `MS` milliseconds |
+| `--pw-trace=off\|on\|retain-on-failure` | Records a per-test trace; `off` is the default |
+
+Two naming notes:
+
+- The trace flag is `--pw-trace`, not `--trace`, because pytest already owns `--trace`.
+- Playwright's `--ui` mode belongs to the Node test runner. It does not exist for
+  Python. `--headed` plus `PWDEBUG=1` and the trace viewer cover the same debugging
+  needs here; see decision D9 in the decision page.
+
+### Artifact handling rule
+
+Traces serialize DOM snapshots, network headers, cookies, and request bodies. In this
+repository the suite only builds synthetic fixtures, and the archives land in
+`e2e/test-results/`, which is git-ignored. Do not enable tracing for a test that uses a
+real document, and do not upload a trace recorded from real data.
 
 ## How the extension copy is built
 
