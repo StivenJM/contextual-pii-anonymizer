@@ -1,0 +1,1541 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+backend/app.py
+backend/requirements.txt
+extension/background.js
+extension/bridge.js
+extension/content.js
+extension/manifest.json
+extension/popup.html
+extension/popup.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".gitignore">
+venv/
+__pycache__/
+.env
+</file>
+
+<file path="backend/app.py">
+from fastapi import FastAPI, UploadFile, File, Header
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from markitdown import MarkItDown
+import tempfile
+import os
+import traceback
+import contextlib
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = FastAPI()
+
+# Configuración desde .env
+EXTENSION_ID_CHROME = os.getenv("EXTENSION_ID_CHROME", "")
+EXTENSION_ID_EDGE = os.getenv("EXTENSION_ID_EDGE", "")
+EXTENSION_ID_FIREFOX = os.getenv("EXTENSION_ID_FIREFOX", "")
+SECRET_TOKEN    = os.getenv("MIDDLEWARE_SECRET", "token-por-defecto")
+TAMANO_MAXIMO   = 20 * 1024 * 1024  # 20 MB
+TIPOS_PERMITIDOS = {'.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx'}
+
+# CORS: solo acepta peticiones de tu extension
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        f"chrome-extension://{EXTENSION_ID_CHROME}",
+        f"chrome-extension://{EXTENSION_ID_EDGE}",
+        f"moz-extension://{EXTENSION_ID_FIREFOX}",
+    ],
+    allow_methods=["POST"],
+    allow_headers=["*"],
+)
+
+md = MarkItDown()
+
+@app.post("/convertir")
+async def convertir(
+    archivo: UploadFile = File(...),
+    x_token: str = Header(...)        # espera el header X-Token
+):
+    # 1. Verificar token secreto
+    if x_token != SECRET_TOKEN:
+        return JSONResponse(status_code=401, content={'ok': False, 'error': 'No autorizado'})
+
+    # 2. Sanitizar nombre y validar extensión
+    nombre = os.path.basename(archivo.filename)
+    extension = os.path.splitext(nombre)[1].lower()
+
+    if extension not in TIPOS_PERMITIDOS:
+        return JSONResponse(status_code=400, content={'ok': False, 'error': f'Tipo "{extension}" no permitido'})
+
+    # 3. Leer y validar tamaño
+    contenido = await archivo.read()
+    if len(contenido) > TAMANO_MAXIMO:
+        return JSONResponse(status_code=400, content={'ok': False, 'error': 'Archivo supera el límite de 20 MB'})
+
+    # 4. Guardar temporal, convertir y borrar garantizado
+    with tempfile.NamedTemporaryFile(suffix=extension, delete=False) as tmp:
+        tmp.write(contenido)
+        ruta_tmp = tmp.name
+
+    try:
+        resultado = md.convert(ruta_tmp)
+        markdown_texto = resultado.text_content
+        return JSONResponse({'ok': True, 'markdown': markdown_texto, 'nombre_original': nombre})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={'ok': False, 'error': str(e), 'detalle': traceback.format_exc()}
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            os.unlink(ruta_tmp)  # siempre se borra, pase lo que pase
+</file>
+
+<file path="backend/requirements.txt">
+fastapi
+uvicorn
+python-multipart
+markitdown[all]
+python-dotenv
+</file>
+
+<file path="extension/bridge.js">
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+// MAIN → background (peticiones con respuesta)
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  if (!event.data || event.data.direction !== 'MAIN_TO_BACKGROUND') return;
+
+  browserAPI.runtime.sendMessage(event.data.payload, (respuesta) => {
+    if (browserAPI.runtime.lastError) {
+      console.error('[Middleware] Bridge:', browserAPI.runtime.lastError.message);
+      return;
+    }
+
+    window.postMessage({
+      direction: 'BACKGROUND_TO_MAIN',
+      requestId: event.data.requestId,
+      respuesta
+    }, '*');
+  });
+});
+
+// background → MAIN (difusiones sin respuesta)
+browserAPI.runtime.onMessage.addListener((message) => {
+  if (message?.type !== 'ESTADO_CAMBIADO') return;
+
+  window.postMessage({
+    direction: 'BACKGROUND_TO_MAIN_BROADCAST',
+    payload: message
+  }, '*');
+});
+</file>
+
+<file path="extension/content.js">
+const TIPOS_SOPORTADOS = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+];
+
+// ============================================================
+// Estado de la extensión (controlado desde el popup)
+// ============================================================
+let middlewareActivo = true;
+
+// Escuchamos cambios de estado difundidos por el background (vía bridge)
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  if (event.data?.direction !== 'BACKGROUND_TO_MAIN_BROADCAST') return;
+  if (event.data.payload?.type !== 'ESTADO_CAMBIADO') return;
+
+  middlewareActivo = event.data.payload.activo;
+  console.log(`[Middleware] Extensión ${middlewareActivo ? 'ACTIVADA' : 'DESACTIVADA'}`);
+});
+
+function esSoportado(file) {
+  return TIPOS_SOPORTADOS.includes(file.type);
+}
+
+// Anti-bucle: identifica archivos que ya pasaron por el middleware
+function esArchivoConvertido(file) {
+  return file.type === 'text/plain' && file.name.endsWith('_converted.txt');
+}
+
+// Durante un drag (antes del drop) no hay acceso al File completo,
+// pero sí al MIME type vía dataTransfer.items
+function dragContieneTipoSoportado(dataTransfer) {
+  if (!dataTransfer?.items) return false;
+  for (const item of dataTransfer.items) {
+    if (item.kind === 'file') {
+      if (TIPOS_SOPORTADOS.includes(item.type)) return true;
+      // En Firefox, por seguridad, item.type es un string vacío durante dragenter/dragover.
+      // Al no poder ver el tipo real, asumimos true para que el supresor de drag
+      // actúe preventivamente y evite que se abra el overlay transparente del sitio.
+      if (item.type === "") return true;
+    }
+  }
+  return false;
+}
+
+// Manda mensaje al background a través del bridge y espera respuesta
+function enviarAlBackground(payload) {
+  return new Promise((resolve, reject) => {
+    const requestId = Math.random().toString(36).slice(2);
+
+    const handler = (event) => {
+      if (event.data?.direction !== 'BACKGROUND_TO_MAIN') return;
+      if (event.data.requestId !== requestId) return;
+      window.removeEventListener('message', handler);
+
+      if (event.data.respuesta?.ok) {
+        resolve(event.data.respuesta);
+      } else {
+        reject(new Error(event.data.respuesta?.error || 'Error desconocido'));
+      }
+    };
+
+    window.addEventListener('message', handler);
+
+    window.postMessage({
+      direction: 'MAIN_TO_BACKGROUND',
+      requestId,
+      payload
+    }, '*');
+  });
+}
+
+// Al cargar la página, consultamos el estado guardado.
+// Reintentamos porque el bridge puede tardar unos ms en estar listo.
+(function consultarEstadoInicial(intento = 0) {
+  enviarAlBackground({ type: 'OBTENER_ESTADO' })
+    .then(r => {
+      middlewareActivo = r.activo;
+      console.log(`[Middleware] Estado inicial: ${middlewareActivo ? 'ACTIVADA' : 'DESACTIVADA'}`);
+    })
+    .catch(() => {
+      if (intento < 3) setTimeout(() => consultarEstadoInicial(intento + 1), 500);
+    });
+})();
+
+async function processFile(file) {
+  const TAMANO_MAXIMO = 20 * 1024 * 1024;
+  if (file.size > TAMANO_MAXIMO) {
+    console.error('[Middleware] Archivo demasiado grande:', file.size, 'bytes');
+    return null;
+  }
+  console.log(`[Middleware] Interceptado: ${file.name}`);
+
+  // Convertimos a base64
+  const base64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // Enviamos al background via bridge
+  const respuesta = await enviarAlBackground({
+    type: 'CONVERTIR_ARCHIVO',
+    base64,
+    nombre: file.name,
+    mimeType: file.type
+  });
+
+  console.log('[Middleware] Conversión exitosa');
+  console.log('[Middleware] Vista previa:', respuesta.markdown.substring(0, 300));
+
+  const nombreSalida = file.name.replace(/\.[^.]+$/, '') + '_converted.txt';
+  return new File([respuesta.markdown], nombreSalida, {
+    type: 'text/plain',
+    lastModified: Date.now()
+  });
+}
+
+// ============================================================
+// Interceptor: selector de archivos (botón "+")
+// ============================================================
+document.addEventListener('change', async (event) => {
+  if (!middlewareActivo) return;
+
+  const target = event.target;
+  if (target.tagName !== 'INPUT' || target.type !== 'file') return;
+
+  const file = target.files[0];
+  if (!file || esArchivoConvertido(file) || !esSoportado(file)) return;
+
+  // Anti-bucle: verificamos por nombre de archivo, no por flag fijo
+  if (target.dataset.lastProcessed === file.name + file.size) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  try {
+    const archivoModificado = await processFile(file);
+    if (!archivoModificado) return;
+
+    const dt = new DataTransfer();
+    dt.items.add(archivoModificado);
+    target.files = dt.files;
+
+    // Guardamos el identificador del archivo YA CONVERTIDO, que es el que
+    // viajará en el evento change sintético que disparamos a continuación
+    target.dataset.lastProcessed = archivoModificado.name + archivoModificado.size;
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+  } catch (error) {
+    console.error('[Middleware] Error en change:', error);
+  }
+}, true);
+
+// ============================================================
+// Utilidades para drag & drop
+// ============================================================
+
+// Crea un DragEvent con un dataTransfer real adjunto (con fallback para navegadores
+// que no aceptan "dataTransfer" en el constructor de DragEventInit)
+function crearDragEvent(type, dataTransfer, coords) {
+  const init = {
+    bubbles: true,
+    cancelable: true,
+    composed: true, // permite cruzar shadow DOM si la zona de drop lo usa
+    clientX: coords.clientX,
+    clientY: coords.clientY,
+    screenX: coords.screenX,
+    screenY: coords.screenY,
+  };
+
+  try {
+    return new DragEvent(type, { ...init, dataTransfer });
+  } catch (e) {
+    const evt = new DragEvent(type, init);
+    Object.defineProperty(evt, 'dataTransfer', { value: dataTransfer, configurable: true });
+    return evt;
+  }
+}
+
+function esperar(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// Busca el input[type=file] oculto que usa el botón "+" del sitio.
+// Algunos sitios lo crean tarde, así que reintentamos unas cuantas veces.
+async function buscarFileInput(intentos = 4, espera = 250) {
+  for (let i = 0; i < intentos; i++) {
+    const inputs = Array.from(document.querySelectorAll('input[type="file"]'))
+      .filter(el => el.isConnected);
+    
+    if (inputs.length > 0) {
+      const validos = inputs.filter(el => {
+        if (!el.accept) return true;
+        const accept = el.accept.toLowerCase();
+        return !(accept.includes('image/') && !accept.includes('*') && !accept.includes('text'));
+      });
+
+      if (validos.length > 0) {
+        return validos.find(el => el.accept.includes('text') || el.accept.includes('*')) || validos[validos.length - 1];
+      }
+    }
+    await esperar(espera);
+  }
+  return null;
+}
+
+// Busca el editor de texto del chat (contenteditable o textarea)
+function buscarEditor() {
+  return (
+    document.querySelector('rich-textarea div[contenteditable="true"]') || // Gemini
+    document.querySelector('#prompt-textarea') || // ChatGPT moderno
+    document.querySelector('div[contenteditable="true"].ProseMirror') ||  // ChatGPT / Claude
+    document.querySelector('div[contenteditable="true"]') ||
+    document.querySelector('textarea')
+  );
+}
+
+// Estrategia A: inyectar el archivo convertido en el input de archivos del sitio.
+// Es el mismo camino que el selector convencional, que ya sabemos que funciona.
+async function inyectarEnInput(archivo) {
+  const input = await buscarFileInput();
+  if (!input) return false;
+
+  const dt = new DataTransfer();
+  dt.items.add(archivo);
+
+  input.value = '';
+  input.files = dt.files;
+  input.dataset.lastProcessed = archivo.name + archivo.size;
+
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// Estrategia B: paste sintético sobre el editor del chat.
+// Es el mismo mecanismo por el que funciona pegar una imagen con Ctrl+V.
+// Útil en sitios sin input[type=file] permanente en el DOM (Gemini).
+function inyectarPorPaste(archivo) {
+  const editor = buscarEditor();
+  if (!editor) return false;
+
+  const dt = new DataTransfer();
+  dt.items.add(archivo);
+
+  let pasteEvent;
+  try {
+    pasteEvent = new ClipboardEvent('paste', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clipboardData: dt
+    });
+  } catch (e) {
+    pasteEvent = new ClipboardEvent('paste', { bubbles: true, cancelable: true, composed: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', { value: dt, configurable: true });
+  }
+
+  editor.focus();
+  editor.dispatchEvent(pasteEvent);
+  return true;
+}
+
+// Estrategia C (último recurso): replicar drop (y opcionalmente dragenter/dragover)
+// sobre un elemento que siga vivo en el DOM.
+function despacharDropSintetico(archivo, coords, targetOriginal, omitirDragEnter = false) {
+  const dt = new DataTransfer();
+  dt.items.add(archivo);
+  dt.effectAllowed = 'all';
+
+  let target = targetOriginal;
+  if (!target || !target.isConnected) {
+    target = document.elementFromPoint(coords.clientX, coords.clientY) || document.body;
+  }
+
+  if (!omitirDragEnter) {
+    target.dispatchEvent(crearDragEvent('dragenter', dt, coords));
+    target.dispatchEvent(crearDragEvent('dragover', dt, coords));
+  }
+  
+  target.dispatchEvent(crearDragEvent('drop', dt, coords));
+  return true;
+}
+
+// ============================================================
+// Supresor de drag: si se arrastra un tipo soportado, ocultamos
+// el drag al sitio (nunca ve dragenter/dragover → no muestra su
+// overlay ni arma su zona de drop). Hacemos preventDefault()
+// nosotros mismos para que el navegador siga permitiendo el drop.
+//
+// IMPORTANTE: en window + captura, porque window recibe los eventos
+// antes que document, ya que algunos sitios escuchan en window.
+// Nuestro script corre en document_start, así que nos registramos
+// antes que ellos y stopImmediatePropagation() sí los bloquea.
+// ============================================================
+['dragenter', 'dragover'].forEach((tipo) => {
+  window.addEventListener(tipo, (event) => {
+    if (!middlewareActivo) return;
+    if (!dragContieneTipoSoportado(event.dataTransfer)) return;
+
+    event.preventDefault();           // el navegador permite soltar aquí
+    event.stopImmediatePropagation(); // el sitio no se entera del drag
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }, true);
+});
+
+// ============================================================
+// Interceptor: drag & drop
+// ============================================================
+window.addEventListener('drop', async (event) => {
+  if (!middlewareActivo) return;
+  if (!event.dataTransfer?.files?.length) return;
+
+  const file = event.dataTransfer.files[0];
+
+  // Anti-bucle: nunca interceptar archivos ya convertidos, ni tipos no soportados
+  if (esArchivoConvertido(file) || !esSoportado(file)) return;
+
+  event.preventDefault(); // Detiene el archivo antes de que llegue a la IA
+  event.stopImmediatePropagation();
+
+  const targetOriginal = event.target instanceof Element ? event.target : document.body;
+  const coords = {
+    clientX: event.clientX,
+    clientY: event.clientY,
+    screenX: event.screenX,
+    screenY: event.screenY,
+  };
+
+  // En Firefox, el supresor de dragenter a veces no detecta los mimetypes y no bloquea el overlay.
+  // Al cancelar el drop real, el overlay se queda pegado.
+  // Despachamos un dragleave para engañar al sitio (React) y que cierre su overlay.
+  const evtLeave = crearDragEvent('dragleave', event.dataTransfer, coords);
+  targetOriginal.dispatchEvent(evtLeave);
+  document.dispatchEvent(evtLeave);
+
+  try {
+    const archivoModificado = await processFile(file);
+    if (!archivoModificado) return;
+
+    const esFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+    const esChatGPT = window.location.hostname.includes('chatgpt.com');
+
+    // En Firefox (para todos) y en ChatGPT (para todos los navegadores),
+    // las Estrategias A y B fallan o son inestables (ej. agarran input multimodal).
+    // Usamos la Estrategia C (Drop) como prioridad absoluta.
+    if (esFirefox || esChatGPT) {
+      // Si estamos en ChatGPT, omitimos dragenter para no dejar pegado el overlay.
+      const omitirDragEnter = esChatGPT;
+      if (despacharDropSintetico(archivoModificado, coords, targetOriginal, omitirDragEnter)) {
+        console.log('[Middleware][C] Drop sintético despachado (Modo Optimizado):', archivoModificado.name);
+        return;
+      }
+    } else {
+      // MODO CHROME / EDGE (Flujo Original)
+      // Restauramos el comportamiento original que funcionaba perfectamente en Chromium
+      // para Claude, Gemini, etc.
+
+      // 1. Estrategia A: input oculto
+      if (await inyectarEnInput(archivoModificado)) {
+        console.log('[Middleware][A] Drop redirigido al input de archivos:', archivoModificado.name);
+        return;
+      }
+
+      // 2. Estrategia B: paste sintético (Gemini)
+      if (inyectarPorPaste(archivoModificado)) {
+        console.log('[Middleware][B] Archivo inyectado por paste sintético:', archivoModificado.name);
+        return;
+      }
+
+      // 3. Estrategia C: Drop completo con dragenter (Claude y otros)
+      // En Chrome Claude y Gemini requieren dragenter para activar su zona de drop, 
+      // así que no lo omitimos.
+      if (despacharDropSintetico(archivoModificado, coords, targetOriginal, false)) {
+        console.log('[Middleware][C] Drop sintético completo despachado:', archivoModificado.name);
+        return;
+      }
+    }
+  } catch (error) {
+    console.error('[Middleware] Error en drop:', error);
+  }
+}, true);
+</file>
+
+<file path="extension/popup.html">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #1a1b1e;
+      --card: #26272b;
+      --texto: #e8e8ea;
+      --texto-suave: #9a9ba1;
+      --acento: #4f8cff;
+      --acento-off: #4a4b52;
+      --verde: #3ecf8e;
+      --rojo: #e05c5c;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 320px;
+      background: var(--bg);
+      color: var(--texto);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4f8cff, #7b5cff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      color: white;
+    }
+
+    .titulo { font-size: 15px; font-weight: 600; }
+    .subtitulo { font-size: 11px; color: var(--texto-suave); }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .fila-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .estado-texto { font-size: 13px; font-weight: 600; }
+    .estado-texto.on { color: var(--verde); }
+    .estado-texto.off { color: var(--rojo); }
+
+    /* Interruptor */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--acento-off);
+      border-radius: 24px;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    input:checked + .slider { background: var(--acento); }
+    input:checked + .slider::before { transform: translateX(20px); }
+
+    .descripcion {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--texto-suave);
+    }
+    .descripcion strong { color: var(--texto); }
+
+    .formatos {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .chip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: #33343a;
+      color: var(--texto-suave);
+    }
+
+    .footer {
+      font-size: 10px;
+      color: var(--texto-suave);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">PM</div>
+    <div>
+      <div class="titulo">PDF Middleware</div>
+      <div class="subtitulo">Conversión de documentos para chats de IA</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fila-toggle">
+      <span id="estadoTexto" class="estado-texto on">Activada</span>
+      <label class="switch">
+        <input type="checkbox" id="toggleActivo">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card descripcion">
+    Esta extensión <strong>intercepta los documentos</strong> que subes a
+    ChatGPT, Claude y Gemini (por selector de archivos o arrastrar
+    y soltar), los envía a un <strong>servidor</strong> que los convierte
+    a <strong>Markdown</strong>, lo anonimiza y adjunta al chat la versión convertida en
+    lugar del archivo original ya anonimizado.
+    <div class="formatos">
+      <span class="chip">PDF</span>
+      <span class="chip">DOCX</span>
+      <span class="chip">DOC</span>
+      <span class="chip">XLSX</span>
+      <span class="chip">XLS</span>
+      <span class="chip">PPTX</span>
+    </div>
+  </div>
+
+  <div class="footer">Requiere el servidor de conversión en localhost:5000</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+</file>
+
+<file path="extension/popup.js">
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+const toggle = document.getElementById('toggleActivo');
+const estadoTexto = document.getElementById('estadoTexto');
+
+function pintarEstado(activo) {
+  estadoTexto.textContent = activo ? 'Activada' : 'Desactivada';
+  estadoTexto.classList.toggle('on', activo);
+  estadoTexto.classList.toggle('off', !activo);
+}
+
+// Cargar estado guardado (por defecto: activada)
+browserAPI.storage.local.get({ activo: true }, ({ activo }) => {
+  toggle.checked = activo;
+  pintarEstado(activo);
+});
+
+// Guardar cambios. El background detecta el cambio y avisa a las pestañas abiertas.
+toggle.addEventListener('change', () => {
+  const activo = toggle.checked;
+  browserAPI.storage.local.set({ activo });
+  pintarEstado(activo);
+});
+</file>
+
+<file path="extension/background.js">
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+const SECRET_TOKEN = 'mi-proyecto-middleware-2024-epn';
+
+const SERVIDOR_CONVERSION = 'http://localhost:5000/convertir';
+const SERVIDOR_ANONIMIZACION =
+  'http://127.0.0.1:8000/api/interactions/protect';
+
+const SITIOS_SOPORTADOS = [
+  'https://chatgpt.com/*',
+  'https://claude.ai/*',
+  'https://gemini.google.com/*'
+];
+
+const CONTENT_SCRIPT_ID = 'content-main';
+
+// ============================================================
+// Registro de content.js en MAIN world
+// ============================================================
+
+async function registrarContentPrincipal() {
+  try {
+    const registrados =
+      await browserAPI.scripting.getRegisteredContentScripts({
+        ids: [CONTENT_SCRIPT_ID]
+      });
+
+    if (registrados.length > 0) {
+      await browserAPI.scripting.unregisterContentScripts({
+        ids: [CONTENT_SCRIPT_ID]
+      });
+    }
+
+    await browserAPI.scripting.registerContentScripts([
+      {
+        id: CONTENT_SCRIPT_ID,
+        matches: SITIOS_SOPORTADOS,
+        js: ['content.js'],
+        runAt: 'document_start',
+        world: 'MAIN'
+      }
+    ]);
+  } catch (error) {
+    console.error(
+      '[Middleware] No se pudo registrar content.js:',
+      error
+    );
+  }
+}
+
+browserAPI.runtime.onInstalled.addListener(() => {
+  registrarContentPrincipal();
+});
+
+// ============================================================
+// Estado de la extensión
+// ============================================================
+
+async function obtenerEstado() {
+  const { activo } =
+    await browserAPI.storage.local.get({ activo: true });
+
+  return activo;
+}
+
+browserAPI.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !('activo' in changes)) return;
+
+  const activo = changes.activo.newValue;
+
+  browserAPI.tabs.query(
+    { url: SITIOS_SOPORTADOS },
+    (tabs) => {
+      for (const tab of tabs) {
+        browserAPI.tabs
+          .sendMessage(
+            tab.id,
+            {
+              type: 'ESTADO_CAMBIADO',
+              activo
+            }
+          )
+          .catch(() => { });
+      }
+    }
+  );
+});
+
+// ============================================================
+// Conversión PDF/DOCX -> Markdown
+// ============================================================
+
+async function convertirArchivo(formData) {
+  const inicio = performance.now();
+  const respuesta = await fetch(
+    SERVIDOR_CONVERSION,
+    {
+      method: 'POST',
+      headers: {
+        'X-Token': SECRET_TOKEN
+      },
+      body: formData
+    }
+  );
+
+  const texto = await respuesta.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(texto);
+  } catch {
+    throw new Error(
+      'El servidor de conversión devolvió una respuesta no válida: ' +
+      texto
+    );
+  }
+
+  if (!respuesta.ok || !data.ok) {
+    throw new Error(
+      data.error ||
+      `Error en servidor de conversión (${respuesta.status})`
+    );
+  }
+
+  if (
+    typeof data.markdown !== 'string' ||
+    data.markdown.length === 0
+  ) {
+    throw new Error(
+      'El servidor de conversión no devolvió Markdown válido.'
+    );
+  }
+  //Medir tiempo
+  const fin = performance.now();
+  const segundos = ((fin - inicio) / 1000).toFixed(2);
+
+  console.log(
+    `[Middleware][TIEMPO] Conversión: ${segundos} segundos`
+  );
+
+  return data.markdown;
+}
+
+// ============================================================
+// Limpieza del Markdown antes de enviarlo al anonimizador
+// ============================================================
+
+//LIMPIEZA PARA EXCEL
+
+function limpiarTablasExcelMarkdown(texto) {
+  const pareceExcel =
+    /^##\s+Sheet\b/im.test(texto) ||
+    /\|\s*Unnamed:\s*\d+/i.test(texto);
+
+  if (!pareceExcel) {
+    return texto;
+  }
+
+  // Convierte una fila Markdown en un array de celdas
+  // | NaN | Elena Torres | 1727315029 | - ["NaN", "Elena Torres", "1727315029"]
+
+  function obtenerCeldas(linea) {
+    let contenido = linea.trim();
+
+    if (contenido.startsWith('|')) {
+      contenido = contenido.slice(1);
+    }
+
+    if (contenido.endsWith('|')) {
+      contenido = contenido.slice(0, -1);
+    }
+
+    return contenido
+      .split('|')
+      .map(celda => celda.trim());
+  }
+
+  // Detecta la fila separadora de Markdown:
+  // | --- | --- | --- |
+
+  function esSeparador(celdas) {
+    return (
+      celdas.length > 0 &&
+      celdas.every(celda =>
+        /^:?-{3,}:?$/.test(celda.trim())
+      )
+    );
+  }
+
+  // Limpia una celda individual
+
+  function limpiarCelda(celda) {
+    const valor = celda.trim();
+
+    // Celda vacía de Excel
+    if (/^NaN$/i.test(valor)) {
+      return '';
+    }
+
+    // Encabezados artificiales creados al convertir Excel: Unnamed: 0 - BORRADO
+    if (
+      /^Unnamed:\s*\d+(?:\.\d+)?(?:_level_\d+)?$/i.test(valor)
+    ) {
+      return '';
+    }
+
+    return valor;
+  }
+
+  const lineas = texto.split('\n');
+  const resultado = [];
+
+  let i = 0;
+
+  while (i < lineas.length) {
+
+    // Si no estamos en una tabla Markdown, copiamos la línea normalmente.
+    if (!lineas[i].trim().startsWith('|')) {
+      resultado.push(lineas[i]);
+      i++;
+      continue;
+    }
+    // --------------------------------------------------------
+    // Recoger todo el bloque de tabla
+    // --------------------------------------------------------
+    const bloqueTabla = [];
+
+    while (
+      i < lineas.length &&
+      lineas[i].trim().startsWith('|')
+    ) {
+      bloqueTabla.push(lineas[i]);
+      i++;
+    }
+
+    // Tabla Markdown normal necesita:encabezado + separador.
+    if (bloqueTabla.length < 2) {
+      resultado.push(...bloqueTabla);
+      continue;
+    }
+
+    const filas = bloqueTabla.map(obtenerCeldas);
+
+    // Si la segunda fila no es "---", probablemente no sea
+    // una tabla Markdown normal. No la tocamos.
+    if (!esSeparador(filas[1])) {
+      resultado.push(...bloqueTabla);
+      continue;
+    }
+
+    // Igualar número de columnas
+
+    const maxColumnas = Math.max(
+      ...filas.map(fila => fila.length)
+    );
+
+    const filasNormalizadas = filas.map(
+      (fila, indiceFila) => {
+
+        const nuevaFila = [];
+
+        for (let columna = 0; columna < maxColumnas; columna++) {
+          nuevaFila.push(fila[columna] ?? '');
+        }
+
+        // No limpiar la fila "---"
+        if (indiceFila === 1) {
+          return nuevaFila;
+        }
+
+        return nuevaFila.map(limpiarCelda);
+      }
+    );
+
+    // Detectar columnas completamente vacías Si columna tiene
+    // Unnamed: 0
+    // NaN
+    // NaN
+    // NaN
+    // desaparece completamente.
+
+    const columnasUtiles = [];
+
+    for (
+      let columna = 0;
+      columna < maxColumnas;
+      columna++
+    ) {
+
+      let contieneInformacion = false;
+
+      for (
+        let fila = 0;
+        fila < filasNormalizadas.length;
+        fila++
+      ) {
+
+        // Ignorar fila separadora ---
+        if (fila === 1) {
+          continue;
+        }
+
+        if (
+          filasNormalizadas[fila][columna]
+            .trim()
+            .length > 0
+        ) {
+          contieneInformacion = true;
+          break;
+        }
+      }
+
+      if (contieneInformacion) {
+        columnasUtiles.push(columna);
+      }
+    }
+
+    // Si toda la tabla estaba vacía, eliminarla.
+    if (columnasUtiles.length === 0) {
+      continue;
+    }
+
+    // Reconstruir encabezado
+
+    const encabezado = columnasUtiles.map(
+      columna => filasNormalizadas[0][columna]
+    );
+
+    resultado.push(
+      `| ${encabezado.join(' | ')} |`
+    );
+
+    // Reconstruir separador
+
+    resultado.push(
+      `| ${columnasUtiles.map(() => '---').join(' | ')} |`
+    );
+
+    // Reconstruir filas de datos
+
+    for (
+      let fila = 2;
+      fila < filasNormalizadas.length;
+      fila++
+    ) {
+
+      const celdas = columnasUtiles.map(
+        columna =>
+          filasNormalizadas[fila][columna]
+      );
+
+      // Si todas las celdas de esta fila están vacías, no añadir la fila
+      const filaVacia = celdas.every(
+        celda => celda.trim() === ''
+      );
+
+      if (filaVacia) {
+        continue;
+      }
+
+      resultado.push(
+        `| ${celdas.join(' | ')} |`
+      );
+    }
+  }
+
+  return resultado.join('\n');
+}
+
+function limpiarMarkdown(markdown) {
+  let texto = markdown;
+
+  // 1. Normalizar saltos de línea
+
+  texto = texto.replace(/\r\n?/g, '\n');
+
+  // 2. Reparar palabras partidas por maquetación del documento
+  // De 
+  // "credencia-
+  // les"
+  // pasa a: "credenciales"
+  texto = texto.replace(
+    /\b([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{3,})-\n\s*([a-záéíóúüñ]{2,})\b/g,
+    '$1$2'
+  );
+
+  // 3. Eliminar referencias Markdown a imágenes
+  // Ejemplo: ![/home/claude/icons/globe.png](Image3.jpg)
+  texto = texto.replace(
+    /!\[[^\]]*\]\([^)]*\)/g,
+    ''
+  );
+
+  // 4. Convertir comentarios de PowerPoint en encabezados practicos
+  // De: <!-- Slide number: 4 --> pasa a: ## Diapositiva 4
+  texto = texto.replace(
+    /<!--\s*Slide number:\s*(\d+)\s*-->/gi,
+    '## Diapositiva $1'
+  );
+
+  // 5. Eliminar encabezado "Notes" generado por PowerPoint
+  texto = texto.replace(
+    /^\s*###\s*Notes:\s*$/gmi,
+    ''
+  );
+
+  // 6. Eliminar contadores de diapositivas aislados
+  // Ejemplos: 4 / 13
+  texto = texto.replace(
+    /^\s*\d+\s*\/\s*\d+\s*$/gm,
+    ''
+  );
+
+  // 7. Eliminar simbolos de fuentes iconos (de Font Awesome)
+  texto = texto.replace(
+    /[\uE000-\uF8FF]/g,
+    ''
+  );
+
+  // 8. Eliminar caracteres de control invisibles
+  // Conservamos:
+  // \n = salto de línea
+  // \t = tabulación
+  // Elimina cosas como form feed (\f).
+  texto = texto.replace(
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+    ''
+  );
+
+  // 9. Sustituir espacios no separables por espacios normales
+  texto = texto.replace(/\u00A0/g, ' ');
+  texto = limpiarTablasExcelMarkdown(texto);
+
+  // 10. Limpiar cada línea
+  // - quita espacios al inicio/final
+  // - reduce bloques enormes de espacios
+  texto = texto
+    .split('\n')
+    .map((linea) => {
+      return linea
+        .replace(/[ \t]{3,}/g, ' ')
+        .trim();
+    })
+    .join('\n');
+ 
+  // 11. Limitar exceso de líneas vacías
+
+  // 5, 6, 7... saltos seguidos, pasan a máximo una línea vacía entre bloques.
+  texto = texto.replace(/\n{3,}/g, '\n\n');
+
+  // 12. Limpiar inicio y final
+  texto = texto.trim();
+
+  return texto;
+}
+
+// ============================================================
+// Anonimización Markdown -> protected_text
+// ============================================================
+
+async function anonimizarMarkdown(markdown) {
+  console.log(
+    '[Middleware] Enviando Markdown al anonimizador...'
+  );
+  const inicio = performance.now();
+
+  const respuesta = await fetch(
+    SERVIDOR_ANONIMIZACION,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
+      // JSON.stringify convierte automáticamente
+      // los saltos de línea reales en \n para transportarlos
+      // correctamente dentro del JSON.
+      body: JSON.stringify({
+        text: markdown
+      })
+    }
+  );
+
+  const textoRespuesta = await respuesta.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(textoRespuesta);
+  } catch {
+    throw new Error(
+      'El servidor de anonimización devolvió una respuesta no válida: ' +
+      textoRespuesta
+    );
+  }
+
+  if (!respuesta.ok) {
+    let detalle = '';
+
+    if (data.message) {
+      detalle = data.message;
+    } else if (data.detail) {
+      detalle =
+        typeof data.detail === 'string'
+          ? data.detail
+          : JSON.stringify(data.detail);
+    }
+
+    throw new Error(
+      detalle ||
+      `Error en servidor de anonimización (${respuesta.status})`
+    );
+  }
+
+  if (
+    typeof data.protected_text !== 'string' ||
+    data.protected_text.length === 0
+  ) {
+    throw new Error(
+      'El anonimizador no devolvió protected_text válido.'
+    );
+  }
+
+  const fin = performance.now();
+  const segundos = ((fin - inicio) / 1000).toFixed(2);
+
+  console.log(
+    `[Middleware][TIEMPO] Anonimización: ${segundos} segundos`
+  );
+
+  console.log(
+    '[Middleware] Anonimización completada correctamente.'
+  );
+
+  return data.protected_text;
+}
+
+// ============================================================
+// Mensajería con content.js
+// ============================================================
+
+browserAPI.runtime.onMessage.addListener(
+  (message, sender, sendResponse) => {
+
+    // --------------------------------------------------------
+    // Consultar estado
+    // --------------------------------------------------------
+
+    if (message.type === 'OBTENER_ESTADO') {
+      obtenerEstado()
+        .then((activo) => {
+          sendResponse({
+            ok: true,
+            activo
+          });
+        })
+        .catch((error) => {
+          sendResponse({
+            ok: false,
+            error: error.message
+          });
+        });
+
+      return true;
+    }
+
+    // --------------------------------------------------------
+    // Solo procesar archivos
+    // --------------------------------------------------------
+
+    if (message.type !== 'CONVERTIR_ARCHIVO') {
+      return;
+    }
+
+    const {
+      base64,
+      nombre,
+      mimeType
+    } = message;
+
+    // --------------------------------------------------------
+    // Validación de tamaño
+    // --------------------------------------------------------
+
+    if (base64.length > 27 * 1024 * 1024) {
+      sendResponse({
+        ok: false,
+        error: 'Archivo demasiado grande'
+      });
+
+      return true;
+    }
+
+    // --------------------------------------------------------
+    // Procesamiento completo
+    // PDF/DOCX -> Markdown -> Anonimización
+    // --------------------------------------------------------
+
+    (async () => {
+      try {
+        console.log(
+          `[Middleware] Procesando archivo: ${nombre}`
+        );
+
+        // Base64 -> Blob
+        const byteCharacters = atob(base64);
+
+        const byteNumbers =
+          new Uint8Array(byteCharacters.length);
+
+        for (
+          let i = 0;
+          i < byteCharacters.length;
+          i++
+        ) {
+          byteNumbers[i] =
+            byteCharacters.charCodeAt(i);
+        }
+
+        const blob = new Blob(
+          [byteNumbers],
+          {
+            type: mimeType
+          }
+        );
+
+        const formData = new FormData();
+
+        formData.append(
+          'archivo',
+          blob,
+          nombre
+        );
+
+        // ====================================================
+        // PASO 1
+        // PDF / DOCX / XLSX / PPTX -> Markdown
+        // ====================================================
+
+        console.log(
+          '[Middleware] Paso 1/2: convirtiendo documento...'
+        );
+
+        const markdown =
+          await convertirArchivo(formData);
+
+        console.log(
+          '[Middleware] Conversión completada.'
+        );
+
+        console.log(
+          '[Middleware] Vista previa Markdown ORIGINAL:',
+          markdown.substring(0, 300)
+        );
+
+        // ====================================================
+        // LIMPIEZA
+        // ====================================================
+
+        const inicioLimpieza = performance.now();
+
+        const markdownLimpio =
+          limpiarMarkdown(markdown);
+
+        const finLimpieza = performance.now();
+
+        const segundosLimpieza =
+          ((finLimpieza - inicioLimpieza) / 1000).toFixed(4);
+
+        console.log(
+          `[Middleware][TIEMPO] Limpieza: ${segundosLimpieza} segundos`
+        );
+
+        console.log(
+          '[Middleware] Vista previa Markdown LIMPIO:',
+          markdownLimpio.substring(0, 500)
+        );
+
+        // ====================================================
+        // PASO 2
+        // Markdown limpio -> Texto anonimizado
+        // ====================================================
+
+        console.log(
+          '[Middleware] Paso 2/2: anonimizando información...'
+        );
+
+        const protectedText =
+          await anonimizarMarkdown(markdownLimpio);
+
+        console.log(
+          '[Middleware] Vista previa anonimizada:',
+          protectedText.substring(0, 300)
+        );
+
+        // ====================================================
+        // DEVOLVER RESULTADO A content.js
+        // ====================================================
+
+        sendResponse({
+          ok: true,
+          markdown: protectedText
+        });
+
+      } catch (error) {
+        console.error(
+          '[Middleware] Error durante el procesamiento:',
+          error
+        );
+
+        sendResponse({
+          ok: false,
+          error:
+            error?.message ||
+            'Error desconocido durante el procesamiento'
+        });
+      }
+    })();
+
+    // Mantiene abierto el canal para sendResponse
+    // mientras terminan los dos fetch.
+    return true;
+  }
+);
+</file>
+
+<file path="extension/manifest.json">
+{
+  "manifest_version": 3,
+  "name": "PDF Middleware",
+  "version": "1.2",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "middleware@tu-dominio.com",
+      "strict_min_version": "120.0"
+    }
+  },
+  "permissions": [
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "http://localhost:5000/*",
+    "http://127.0.0.1:8000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PDF Middleware"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}
+</file>
+
+</files>

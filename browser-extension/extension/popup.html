@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #1a1b1e;
+      --card: #26272b;
+      --texto: #e8e8ea;
+      --texto-suave: #9a9ba1;
+      --acento: #4f8cff;
+      --acento-off: #4a4b52;
+      --verde: #3ecf8e;
+      --rojo: #e05c5c;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 320px;
+      background: var(--bg);
+      color: var(--texto);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4f8cff, #7b5cff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      color: white;
+    }
+
+    .titulo { font-size: 15px; font-weight: 600; }
+    .subtitulo { font-size: 11px; color: var(--texto-suave); }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .fila-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .estado-texto { font-size: 13px; font-weight: 600; }
+    .estado-texto.on { color: var(--verde); }
+    .estado-texto.off { color: var(--rojo); }
+
+    /* Interruptor */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--acento-off);
+      border-radius: 24px;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    input:checked + .slider { background: var(--acento); }
+    input:checked + .slider::before { transform: translateX(20px); }
+
+    .descripcion {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--texto-suave);
+    }
+    .descripcion strong { color: var(--texto); }
+
+    .formatos {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .chip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: #33343a;
+      color: var(--texto-suave);
+    }
+
+    .footer {
+      font-size: 10px;
+      color: var(--texto-suave);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">PM</div>
+    <div>
+      <div class="titulo">PDF Middleware</div>
+      <div class="subtitulo">Conversión de documentos para chats de IA</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fila-toggle">
+      <span id="estadoTexto" class="estado-texto on">Activada</span>
+      <label class="switch">
+        <input type="checkbox" id="toggleActivo">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card descripcion">
+    Esta extensión <strong>intercepta los documentos</strong> que subes a
+    ChatGPT, Claude y Gemini (por selector de archivos o arrastrar
+    y soltar), los envía a un <strong>servidor</strong> que los convierte
+    a <strong>Markdown</strong>, lo anonimiza y adjunta al chat la versión convertida en
+    lugar del archivo original ya anonimizado.
+    <div class="formatos">
+      <span class="chip">PDF</span>
+      <span class="chip">DOCX</span>
+      <span class="chip">DOC</span>
+      <span class="chip">XLSX</span>
+      <span class="chip">XLS</span>
+      <span class="chip">PPTX</span>
+    </div>
+  </div>
+
+  <div class="footer">Requiere el servidor de conversión en localhost:5000</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
