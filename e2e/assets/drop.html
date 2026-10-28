@@ -18,6 +18,15 @@
     <script>
       window.__received = null;
       window.__events = [];
+      window.__stateBroadcasts = [];
+
+      window.addEventListener('message', (event) => {
+        if (event.source !== window) return;
+        if (event.data?.direction !== 'BACKGROUND_TO_MAIN_BROADCAST') return;
+        if (event.data.payload?.type === 'ESTADO_CAMBIADO') {
+          window.__stateBroadcasts.push(event.data.payload.activo);
+        }
+      });
 
       function log(message) {
         document.getElementById('log').textContent += message + '\n';

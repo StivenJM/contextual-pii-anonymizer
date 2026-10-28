@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from support.waiting import wait_for_received
+from support.waiting import open_chat, set_extension_state, wait_for_received
 
 PDF_BYTES = b"%PDF-1.4\n% fixture\n%%EOF\n"
 
@@ -8,11 +8,9 @@ PDF_BYTES = b"%PDF-1.4\n% fixture\n%%EOF\n"
 def test_disabled_extension_delivers_the_original_file(
     page, service_worker, chat_site, converter
 ) -> None:
-    service_worker.evaluate(
-        "(value) => chrome.storage.local.set({ activo: value })", False
-    )
+    open_chat(page, f"{chat_site}/chat.html")
+    set_extension_state(page, service_worker, False)
 
-    page.goto(f"{chat_site}/chat.html")
     page.set_input_files(
         "#file",
         {"name": "informe.pdf", "mimeType": "application/pdf", "buffer": PDF_BYTES},

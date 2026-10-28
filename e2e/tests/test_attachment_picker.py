@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from support.servers import DEFAULT_TOKEN
-from support.waiting import wait_for_received
+from support.waiting import open_chat, wait_for_received
 
 PDF_BYTES = b"%PDF-1.4\n% fixture\n%%EOF\n"
 
@@ -11,7 +11,7 @@ def test_file_picker_converts_then_protects(
 ) -> None:
     converter.markdown = "# Synthetic report\n\nContact: ana.torres@correo.com\n"
 
-    page.goto(f"{chat_site}/chat.html")
+    open_chat(page, f"{chat_site}/chat.html")
     page.set_input_files(
         "#file",
         {"name": "informe.pdf", "mimeType": "application/pdf", "buffer": PDF_BYTES},
@@ -32,7 +32,7 @@ def test_file_picker_converts_then_protects(
 
 
 def test_converted_file_is_not_intercepted_again(page, chat_site, converter) -> None:
-    page.goto(f"{chat_site}/chat.html")
+    open_chat(page, f"{chat_site}/chat.html")
     page.set_input_files(
         "#file",
         {
