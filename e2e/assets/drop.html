@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fake chat - drop zone</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #drop { width: 320px; height: 140px; border: 2px dashed #888; padding: 1rem; }
+      #log { white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Fake chat - drop zone</h1>
+    <p>No file input exists on this page, so the extension must use its drop path.</p>
+    <div id="drop">Drop a document here</div>
+    <pre id="log"></pre>
+
+    <script>
+      window.__received = null;
+      window.__events = [];
+
+      function log(message) {
+        document.getElementById('log').textContent += message + '\n';
+      }
+
+      function capture(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          window.__received = {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            text: String(reader.result)
+          };
+          window.__events.push({ name: file.name, type: file.type });
+          log('received: ' + file.name + ' (' + file.type + ')');
+        };
+        reader.readAsText(file);
+      }
+
+      document.getElementById('drop').addEventListener('drop', (event) => {
+        const file = event.dataTransfer && event.dataTransfer.files[0];
+        if (file) {
+          event.preventDefault();
+          capture(file);
+        }
+      });
+    </script>
+  </body>
+</html>
