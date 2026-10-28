@@ -42,3 +42,14 @@ flowchart TD
 ## Documentación relacionada
 
 - [`Protección de interacciones`](../../backend/privacy-middleware/flows/proteccion-de-interacciones.md): procesamiento realizado después de enviar el texto al middleware.
+
+## Automated verification
+
+- [`Automatic verification of the browser extension`](decisions/verificacion-automatica.md): evidence base and decisions behind the integration harness.
+- [`Integration testing`](../../../guides/integration-testing.md): procedure to run the suite.
+
+The extension currently implemented in this repository intercepts PDF and Office
+attachments and delegates their conversion to a local service. It does not intercept
+prompt text. The capabilities and restrictions above describe the target boundary, not
+every behavior of the current artifact; the decision page records the verified behavior.
+

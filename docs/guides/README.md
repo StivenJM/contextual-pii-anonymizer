@@ -14,6 +14,10 @@ These guides explain recurring procedures to prepare and operate the project dur
 
 - [`Code quality with Ruff`](calidad-de-codigo-con-ruff.md): runs linting, formatting, and quality checks with `uv`.
 
+## Testing
+
+- [`Integration testing`](integration-testing.md): runs the browser extension suite against local pages and, optionally, the full Compose stack.
+
 ## Local environment
 
 - [`Local infrastructure with Docker`](infraestructura-local-con-docker.md): configures and operates PostgreSQL for development without containerizing the applications.
