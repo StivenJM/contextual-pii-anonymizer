@@ -14,6 +14,26 @@ from typing import Any
 DEFAULT_TIMEOUT_MS = 20_000
 
 
+def open_chat(page: Any, url: str) -> None:
+    page.goto(url)
+
+
+def set_extension_state(page: Any, worker: Any, active: bool) -> None:
+    """Change the stored switch and wait until the page observed the broadcast.
+
+    The background listens for storage changes and forwards them to the tabs;
+    the bridge reposts that message to the page, where both content.js and the
+    test page receive it. The test page registers its listener after content.js
+    loads, so seeing the broadcast means content.js already applied it.
+    """
+    worker.evaluate("(value) => chrome.storage.local.set({ activo: value })", active)
+    page.wait_for_function(
+        "(expected) => (window.__stateBroadcasts || []).includes(expected)",
+        arg=active,
+        timeout=DEFAULT_TIMEOUT_MS,
+    )
+
+
 def wait_for_received(page: Any, timeout_ms: int = DEFAULT_TIMEOUT_MS) -> dict:
     page.wait_for_function("() => window.__received !== null", timeout=timeout_ms)
     return page.evaluate("() => window.__received")

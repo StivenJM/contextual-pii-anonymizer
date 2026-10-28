@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from support.waiting import drop_document, wait_for_received
+from support.waiting import drop_document, open_chat, wait_for_received
 
 PDF_BYTES = "%PDF-1.4\n% fixture\n%%EOF\n"
 
@@ -10,7 +10,7 @@ def test_drop_zone_converts_then_protects(
 ) -> None:
     converter.markdown = "# Synthetic report\n\nContact: ana.torres@correo.com\n"
 
-    page.goto(f"{chat_site}/drop.html")
+    open_chat(page, f"{chat_site}/drop.html")
     drop_document(page, name="informe.pdf", mime="application/pdf", text=PDF_BYTES)
 
     received = wait_for_received(page)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import time
 from collections.abc import Callable
@@ -14,6 +15,7 @@ from playwright.sync_api import (
     sync_playwright,
 )
 
+from support.artifacts import recording
 from support.extension import BUILD_DIRECTORY, BuildReport, build_patched_extension
 from support.servers import (
     DEFAULT_MARKDOWN,
@@ -26,6 +28,37 @@ from support.servers import (
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 BUILD_ROOT = BUILD_DIRECTORY.parent
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    group = parser.getgroup("e2e")
+    group.addoption(
+        "--headed",
+        action="store_true",
+        default=False,
+        help="Show the Chromium window while the tests run.",
+    )
+    group.addoption(
+        "--slowmo",
+        type=int,
+        default=0,
+        metavar="MS",
+        help="Slow browser operations down by MS milliseconds.",
+    )
+    group.addoption(
+        "--pw-trace",
+        choices=("off", "on", "retain-on-failure"),
+        default="off",
+        help="Record a Playwright trace per test and keep it per MODE.",
+    )
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
+    report = yield
+    if report.when == "call":
+        item.rep_call = report
+    return report
 
 
 @dataclass(frozen=True)
@@ -80,8 +113,10 @@ def _wait_for_registration(worker: Worker, timeout: float = 20.0) -> None:
 
 
 @pytest.fixture(scope="session")
-def browser_factory() -> Callable[..., Harness]:
+def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
     contexts: list[BrowserContext] = []
+    headed = bool(pytestconfig.getoption("--headed")) or bool(os.environ.get("PWDEBUG"))
+    slow_mo = int(pytestconfig.getoption("--slowmo"))
 
     with sync_playwright() as playwright:
 
@@ -107,7 +142,8 @@ def browser_factory() -> Callable[..., Harness]:
             context = playwright.chromium.launch_persistent_context(
                 str(profile),
                 channel="chromium",
-                headless=True,
+                headless=not headed,
+                slow_mo=slow_mo,
                 args=[
                     f"--disable-extensions-except={build.destination}",
                     f"--load-extension={build.destination}",
@@ -177,10 +213,11 @@ def deterministic_state(
 
 
 @pytest.fixture
-def page(stub_harness: Harness) -> Page:
+def page(stub_harness: Harness, request: pytest.FixtureRequest) -> Page:
     page = stub_harness.context.new_page()
     try:
-        yield page
+        with recording(stub_harness, request):
+            yield page
     finally:
         page.close()
 
@@ -206,9 +243,10 @@ def stack_harness(browser_factory, stack, chat_site: str) -> Harness:
 
 
 @pytest.fixture
-def stack_page(stack_harness: Harness) -> Page:
+def stack_page(stack_harness: Harness, request: pytest.FixtureRequest) -> Page:
     page = stack_harness.context.new_page()
     try:
-        yield page
+        with recording(stack_harness, request):
+            yield page
     finally:
         page.close()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from support.documents import write_docx
-from support.waiting import wait_for_received
+from support.waiting import open_chat, wait_for_received
 
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -21,7 +21,7 @@ def test_full_system_protects_a_docx_attachment(
         ],
     )
 
-    stack_page.goto(f"{chat_site}/chat.html")
+    open_chat(stack_page, f"{chat_site}/chat.html")
     stack_page.set_input_files(
         "#file",
         {
