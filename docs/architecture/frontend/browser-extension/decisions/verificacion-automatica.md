@@ -181,6 +181,61 @@ quoted in the decisions were read from the abstract or the paper record.
 | 29 | VoicePM: A Robust Privacy Measurement on Voice Anonymity | 2023 | ACM CODASPY | 10.1145/3558482.3590175 |
 | 30 | Smart metering de-pseudonymization | 2011 | ACSAC | 10.1145/2076732.2076764 |
 
+### I5. Debugging, failure diagnosis, and test observability
+
+| # | Work | Year | Venue | Identifier |
+|---|---|---|---|---|
+| 1 | Fault Analysis and Debugging of Microservice Systems: Industrial Survey, Benchmark System, and Empirical Study | 2018 | TSE | 10.1109/tse.2018.2887384 |
+| 2 | Jalangi: a selective record-replay and dynamic analysis framework for JavaScript | 2013 | FSE | 10.1145/2491411.2491447 |
+| 3 | WaRR: A tool for high-fidelity web application record and replay | 2011 | DSN | 10.1109/dsn.2011.5958253 |
+| 4 | WATERFALL: an incremental approach for repairing record-replay tests of web applications | 2016 | FSE | 10.1145/2950290.2950294 |
+| 5 | Why do Record/Replay Tests of Web Applications Break? | 2016 | ICST | 10.1109/icst.2016.16 |
+| 6 | Feedback-Based Debugging | 2017 | ICSE | 10.1109/icse.2017.43 |
+| 7 | Time-travel debugging for JavaScript/Node.js | 2016 | FSE | 10.1145/2950290.2983933 |
+| 8 | Expositor: Scriptable time-travel debugging with first-class traces | 2013 | ICSE | 10.1109/icse.2013.6606581 |
+| 9 | WebRR: self-replay enhanced robust record/replay for web application testing | 2020 | FSE | 10.1145/3368089.3417069 |
+| 10 | Object-Centric Time-Travel Debugging | 2023 | ACM | 10.1145/3594671.3594678 |
+| 11 | Time-Traveling Debugging Queries: Faster Program Exploration | 2021 | QRS | 10.1109/qrs54544.2021.00074 |
+| 12 | Time-Travel Debugging with Visualization of Data-Structures Based on Instrumentation | 2022 | VL/HCC | 10.1109/vl/hcc53370.2022.9833002 |
+| 13 | DeepDebugger: An Interactive Time-Travelling Debugging Approach for Deep Classifiers | 2023 | FSE | 10.1145/3611643.3616252 |
+| 14 | JavaWiz: A Trace-Based Graphical Debugger for Software Development Education | 2025 | ICPC | 10.1109/icpc66645.2025.00023 |
+| 15 | Record and Replay of Online Traffic for Microservices with Automatic Mocking Point Identification | 2022 | ICSE-SEIP | 10.1109/icse-seip55303.2022.9793867 |
+| 16 | Visual web test repair | 2018 | FSE | 10.1145/3236024.3236063 |
+| 17 | GUIDER: GUI structure and vision co-guided test script repair for Android apps | 2021 | ISSTA | 10.1145/3460319.3464830 |
+| 18 | Repairing GUI Test Suites Using a Genetic Algorithm | 2010 | ICST | 10.1109/icst.2010.39 |
+| 19 | Comprehensive Semantic Repair of Obsolete GUI Test Scripts for Mobile Applications | 2024 | ICSE | 10.1145/3597503.3639108 |
+| 20 | Prioritize Crowdsourced Test Reports via Deep Screenshot Understanding | 2021 | ICSE | 10.1109/icse43902.2021.00090 |
+| 21 | Images don't lie: Duplicate crowdtesting reports detection with screenshot information | 2019 | IST | 10.1016/j.infsof.2019.03.003 |
+| 22 | Studying logging practice in test code | 2022 | EMSE | 10.1007/s10664-022-10139-0 |
+| 23 | To Mock or Not to Mock? An Empirical Study on Mocking Practices | 2017 | MSR | 10.1109/msr.2017.61 |
+| 24 | Performance debugging in the large via mining millions of stack traces | 2012 | ICSE | 10.1109/icse.2012.6227198 |
+| 25 | Failure Diagnosis for Distributed Systems using Targeted Fault Injection | 2016 | TPDS | 10.1109/tpds.2016.2575829 |
+| 26 | The impact of continuous integration on other software development practices | 2017 | ASE | 10.1109/ase.2017.8115619 |
+| 27 | CI/CD Configuration Practices in Open Source Android Apps: An Empirical Study | 2025 | TOSEM | 10.1145/3736758 |
+| 28 | An Empirical Taxonomy of DevOps in Practice | 2020 | SEAA | 10.1109/seaa51224.2020.00046 |
+| 29 | Applying and Extending the Delta Debugging Algorithm for Elevator Dispatching Algorithms | 2023 | ISSTA | 10.1145/3597926.3598117 |
+| 30 | Sage: practical and scalable ML-driven performance debugging in microservices | 2021 | ASPLOS | 10.1145/3445814.3446700 |
+| 31 | Online analysis of debug trace data for embedded systems | 2018 | DATE | 10.23919/date.2018.8342124 |
+
+### Forums and practitioner sources for I5
+
+| # | Source | Contribution |
+|---|---|---|
+| 1 | playwright.dev — UI Mode | `--ui` is documented for `@playwright/test` (Node); the Python documentation has no equivalent |
+| 2 | playwright.dev — Debugging Tests (Python) | `PWDEBUG=1` opens the Inspector, switches to headed, and disables the default timeout |
+| 3 | playwright.dev — Trace Viewer (Python) | `playwright show-trace` and the statically hosted viewer |
+| 4 | playwright.dev — Tracing API (Python) | `context.tracing.start(screenshots, snapshots)`; the API records browser operations and network activity but not test assertions |
+| 5 | playwright.dev — Pytest Plugin Reference | The plugin CLI flags apply only to its own fixtures; a custom persistent context must implement them |
+| 6 | playwright.dev — Trace viewer (general) | Trace is the primary post-mortem artifact for failed runs |
+| 7 | github.com/microsoft/playwright#19992 | Users ask how to hide secrets from the trace viewer; input values are captured |
+| 8 | github.com/microsoft/playwright#28934 | Feature request to hide sensitive data in traces, confirming it is not automatic |
+| 9 | currents.dev — How Playwright tests leak data | Traces serialize network headers, cookies, and DOM snapshots; recommends `retain-on-failure` |
+| 10 | docs.leapwork.com — Keeping secrets and PII out of traces | Names emails, phones, and names as artifact-captured PII |
+| 11 | trace.playwright.dev | The hosted viewer processes traces locally and does not upload them |
+| 12 | github.com/microsoft/playwright-python | Python package surface and issue tracker; no UI Mode |
+| 13 | dev.to — Playwright Python overview | Community walkthrough of the Python API and debugging options |
+| 14 | pytest documentation — writing plugins | `pytest_runtest_makereport` is the documented way to learn a test outcome in a fixture |
+
 ## Decisions
 
 ### D1. Playwright with bundled Chromium
@@ -304,6 +359,75 @@ Consequence: the harness breaks loudly when the extension changes, instead of si
 testing a stale assumption. The cost is that the artifact under test is a copy, which
 is recorded as a boundary in the guide.
 
+### D9. Debugging affordances are opt-in flags
+
+Decision: three flags control the debugging workflow and everything stays off by
+default: `--headed` shows the window, `--slowmo=MS` slows browser operations, and
+`--pw-trace=off|on|retain-on-failure` records a trace per test. `PWDEBUG=1` also forces
+a visible window, because the Inspector is useless without one.
+
+Evidence: the Inspector drives step-by-step exploration and locator picking, which
+requires a visible browser; slow motion exists so a human can follow what happens; the
+trace viewer provides post-mortem time travel when the failure already happened
+(Playwright Python documentation; time-travel debugging literature). Default-on
+instrumentation would tax every CI run for a benefit only a debugging session needs
+(CI/CD practice studies; test logging studies).
+
+Consequence: CI keeps the fast, artifact-free path, and a developer gets the full
+toolkit on demand.
+
+### D10. The trace flag is `--pw-trace`, not `--trace`
+
+Decision: the option is named `--pw-trace`.
+
+Evidence: pytest already registers `--trace`. Adding another option with the same name
+fails at collection with `ValueError: option dest 'trace' already used`. Observed
+during implementation, not assumed.
+
+Consequence: one documented deviation from the Playwright Node flag name, forced by the
+host runner.
+
+### D11. Traces are retained on failure by preference
+
+Decision: `retain-on-failure` is the recommended mode; `on` is available for an
+interactive session and `off` is the default.
+
+Evidence: trace archives serialize DOM snapshots, request headers, cookies, and bodies;
+practitioner sources and two Playwright issues document secrets and PII ending up inside
+them. Keeping every trace multiplies exposure and disk use, while a failing run is
+exactly the run worth inspecting (currents.dev; Leapwork; Playwright issues 19992 and
+28934).
+
+Consequence: a green run writes nothing; a red run writes one archive per failing test.
+
+### D12. Trace artifacts stay local and use synthetic data only
+
+Decision: traces are written to `e2e/test-results/`, which is git-ignored, and the suite
+only ever handles fixtures generated in-repo (synthetic names, emails, and documents).
+No trace is uploaded, and no real document is used.
+
+Evidence: the trace viewer may be opened locally or at trace.playwright.dev, which
+processes the file in the browser without uploading it; the capture includes everything
+the page saw, so the only durable control is what the fixtures contain. The privacy
+literature in I4 treats residual disclosure as the risk to measure, not as an
+assumption to make.
+
+Consequence: the debugging workflow cannot become a PII export path by accident. A
+future test that needs a real document must not enable tracing, and that rule is stated
+in the guide.
+
+### D13. No video recording
+
+Decision: the harness does not record video.
+
+Evidence: a persistent context records video for its whole lifetime, not per test, so a
+session-scoped context would produce one long file that mixes every test; the trace
+already carries screenshots and DOM snapshots per action (Playwright tracing
+documentation; artifact-management practice in CI studies).
+
+Consequence: one artifact format, bounded size, and no continuous recording of every
+run.
+
 ## Consequences
 
 - The fast tier runs without Docker in about fifteen seconds after the browser starts.
@@ -314,12 +438,25 @@ is recorded as a boundary in the guide.
   manual.
 - Prompt-level protection is not covered because this extension does not intercept the
   prompt text; the suite verifies attachments only.
+- Debugging is opt-in. A default run stays headless, records nothing, and writes no
+  artifacts.
 
 ## Materialization status
 
 Implemented and verified on 2026-10-28: six fast tests and one full-system test passed.
 The fast tier was verified with Playwright 1.64.1 and its bundled Chromium. The
 full-system tier was verified with Docker 29.8.2.
+
+The debugging flags were verified separately: `--headed --slowmo 50` ran a test to
+completion, `--pw-trace=on` produced a trace archive, `--pw-trace=retain-on-failure`
+produced none for a passing test and produced one for a deliberately failing probe that
+was removed afterwards.
+
+The first implementation exposed a real race: `content.js` starts with interception
+enabled and resolves the stored switch asynchronously, so a test could set the file
+before the disabled state arrived. The harness now changes the stored switch and waits
+for the broadcast the background forwards to the page, which content.js processes
+before the page's own listener sees it. The race is covered by the disable test.
 
 ## Alternatives considered
 
