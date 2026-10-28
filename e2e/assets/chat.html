@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fake chat - file picker</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #log { white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Fake chat - file picker</h1>
+    <p>Local page that mimics a chat attachment input. It never sends anything.</p>
+    <input id="file" type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx" />
+    <pre id="log"></pre>
+
+    <script>
+      // Observation surface used by the tests. It records what the page
+      // actually receives, which is the only thing the extension must not leak.
+      window.__received = null;
+      window.__events = [];
+
+      function log(message) {
+        document.getElementById('log').textContent += message + '\n';
+      }
+
+      function capture(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          window.__received = {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            text: String(reader.result)
+          };
+          window.__events.push({ name: file.name, type: file.type });
+          log('received: ' + file.name + ' (' + file.type + ')');
+        };
+        reader.readAsText(file);
+      }
+
+      document.getElementById('file').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (file) {
+          capture(file);
+        }
+      });
+    </script>
+  </body>
+</html>
