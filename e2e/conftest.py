@@ -115,7 +115,8 @@ def _wait_for_registration(worker: Worker, timeout: float = 20.0) -> None:
 @pytest.fixture(scope="session")
 def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
     contexts: list[BrowserContext] = []
-    headed = bool(pytestconfig.getoption("--headed")) or bool(os.environ.get("PWDEBUG"))
+    debug = bool(os.environ.get("PWDEBUG"))
+    headed = bool(pytestconfig.getoption("--headed")) or debug
     slow_mo = int(pytestconfig.getoption("--slowmo"))
 
     with sync_playwright() as playwright:
@@ -151,7 +152,7 @@ def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
                     "--no-default-browser-check",
                 ],
             )
-            context.set_default_timeout(20_000)
+            context.set_default_timeout(0 if debug else 20_000)
             contexts.append(context)
             workers = context.service_workers
             worker = workers[0] if workers else context.wait_for_event("serviceworker")
