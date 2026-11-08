@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+
 import pytest
 
 from support.documents import write_docx
@@ -38,3 +40,31 @@ def test_full_system_protects_a_docx_attachment(
     assert "ana.torres@correo.com" not in received["text"]
     assert "Ana Torres" not in received["text"]
     assert "@example.org" in received["text"]
+
+
+@pytest.mark.integration
+def test_existing_api_http_and_postgresql_contracts(stack) -> None:
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-p",
+            stack.project,
+            "exec",
+            "-T",
+            "-e",
+            "RUN_DATABASE_INTEGRATION=1",
+            "api",
+            "uv",
+            "run",
+            "--frozen",
+            "pytest",
+            "tests/integration",
+            "-q",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout[-4000:] + result.stderr[-4000:]

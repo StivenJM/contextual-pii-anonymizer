@@ -46,3 +46,7 @@ Quedan fuera de sus límites la interacción con las páginas de modelos comerci
 - [`Servicio de inferencia`](../inference-service/README.md): declara y ejecuta los modelos disponibles.
 - [`Extensión del navegador`](../../frontend/browser-extension/README.md): entrega el texto y recibe el resultado protegido.
 - [`Administración`](../../frontend/administration/README.md): permite modificar la configuración aceptada por el middleware.
+
+## Independent research capture
+
+[Research capture architecture and decisions](research-capture.md) describes the additional opt-in raw-text archive and separate no-model application entry point. Collection does not invoke this module's protection engines and does not change its existing protection route.

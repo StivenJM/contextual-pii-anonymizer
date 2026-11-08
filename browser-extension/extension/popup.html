@@ -121,6 +121,32 @@
       color: var(--texto-suave);
       text-align: center;
     }
+
+    .research-panel { display: grid; gap: 10px; }
+    .research-panel p { line-height: 1.5; }
+    .research-panel label { display: block; }
+    .research-panel input:not([type="checkbox"]) {
+      width: 100%; padding: 7px; margin-top: 4px;
+      border: 1px solid #656873; border-radius: 5px;
+      background: #18191c; color: var(--texto); font-size: 13px;
+    }
+    .research-panel input[type="checkbox"] { accent-color: var(--acento); }
+    .research-panel button {
+      width: 100%; min-height: 32px; padding: 6px 8px;
+      border: 1px solid #527bbd; border-radius: 5px;
+      background: #295eb0; color: white; cursor: pointer;
+    }
+    .research-panel button:disabled {
+      background: #35373e; border-color: #555965;
+      color: #c3c5cb; cursor: default;
+    }
+    .research-panel #researchDiscard { border-color: #d58686; background: #693333; }
+    .research-panel #researchReceipt { font: 12px monospace; }
+    .research-panel #researchStatus { color: var(--texto); }
+    .research-panel #researchStatus[data-kind="error"] {
+      padding: 8px; border: 1px solid #d58686; border-radius: 5px;
+      background: #4a2020; color: #ffd0d0;
+    }
   </style>
 </head>
 <body>
@@ -160,6 +186,25 @@
 
   <div class="footer">Requiere el servidor de conversión en localhost:5000</div>
 
+  <section class="card descripcion research-panel" aria-labelledby="researchTitle">
+    <h2 id="researchTitle" style="font-size:14px">Captura para investigación (solo texto)</h2>
+    <p>Registra los mensajes enviados y las respuestas visibles en una pestaña de chat nueva; no protege ni desidentifica su contenido. La protección de archivos se pausa solo en esa pestaña mientras la captura está grabando o en pausa.</p>
+    <p>Este modo solo necesita la API de investigación, no el conversor ni el modelo de protección. Las demás pestañas mantienen su configuración de protección.</p>
+    <p>API de investigación: <span id="researchEndpoint"></span></p>
+    <p><label><span id="researchKeyLabel">Código de participación del estudio</span> <input id="researchKey" type="password" autocomplete="off" style="width:100%"></label></p>
+    <p><label>Protocolo <input id="researchProtocol" value="research-v1" style="width:100%"></label></p>
+    <p><label><input id="researchConsent" type="checkbox"> Recibí la información del estudio y doy mi consentimiento para recopilar el texto sin desidentificar.</label></p>
+    <p><label><input id="researchTraining" type="checkbox"> Autorizo por separado el uso de mi sesión para el entrenamiento del modelo.</label></p>
+    <p id="researchStatus" role="status" aria-live="polite"></p>
+    <button id="researchStart" type="button">Iniciar en esta pestaña</button>
+    <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label> <button id="researchSetTask" type="button">Asignar tarea</button></p>
+    <button id="researchFinish" type="button">Finalizar y guardar / reintentar</button>
+    <button id="researchDiscard" type="button">Descartar / retirar sesión</button>
+    <p><label>Identificador de guardado confirmado <input id="researchReceipt" readonly style="width:100%"></label></p>
+    <button id="researchCopy" type="button">Copiar identificador</button>
+    <p>Copia y guarda el identificador confirmado en un lugar seguro. Pégalo en el formulario del estudio. Este código por sí solo no permite leer el chat almacenado.</p>
+  </section>
   <script src="popup.js"></script>
+  <script src="research-popup.js"></script>
 </body>
 </html>

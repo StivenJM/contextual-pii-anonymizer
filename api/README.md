@@ -17,6 +17,7 @@ app/
   services/         # BentoML inference boundary
   use_cases/        # Application orchestration
   infrastructure/   # Database infrastructure and ORM models
+  research/         # Independent model-free capture, authorization and SQLite archive
   routers/          # HTTP route adapters
   schemas/          # HTTP request and response contracts
 tests/              # Unit, HTTP, and opt-in integration tests
@@ -24,46 +25,25 @@ tests/              # Unit, HTTP, and opt-in integration tests
 
 ## Configure
 
-The API and Docker Compose use the same root `.env` file for local PostgreSQL credentials:
+Begin with [extension installation and developer startup](../docs/guides/developer-startup.md). Install the extension before configuring the separate converter's allowed extension ID.
 
-```powershell
-Copy-Item ..\.env.example ..\.env
-```
+The root Compose loads `api/.api.dev.env` and `api/.db.dev.env`, followed by optional ignored overrides `api/.api.env` and `api/.db.env`. Create private overrides without overwriting existing files and replace the example database password with a local-only value. There is no root `.env.example` in the current checkout.
 
-Replace `POSTGRES_PASSWORD` with a local-only value before starting the services.
+Inside Compose, the database host is `db` and inference is `http://inference:3000`. Neither has a published host port. Do not reuse obsolete host-connection instructions or delete an initialized volume after a password mismatch.
 
 ## Run
 
-Start PostgreSQL from the repository root:
+Start the original API, PostgreSQL and inference from the repository root:
 
 ```powershell
-docker compose up -d --wait postgres
+docker compose up --build --watch
 ```
 
-Apply the database migrations from this directory:
+This builds/downloads dependencies as needed, waits for healthy database/inference services, and applies Alembic migrations before starting the API. The converter is not part of this Compose; follow the developer guide to run its separate loopback container.
 
-```powershell
-uv run --locked --env-file ../.env alembic upgrade head
-```
+FastAPI verifies database configuration/connectivity at startup and disposes its pool during shutdown. For specialized native Windows execution, `app.runtime:create_selector_event_loop` remains available for Psycopg async compatibility; the containerized sequence above does not need a host event-loop workaround or host database publication.
 
-Start BentoML from `inference/` in another terminal:
-
-```powershell
-$env:PYTHONUTF8='1'
-.\.venv\Scripts\python.exe -m bentoml serve app.service:PiiInferenceService --port 3000
-```
-
-Then start FastAPI from `api/`:
-
-```powershell
-uv run --locked --env-file ../.env uvicorn app.main:app --reload --loop app.runtime:create_selector_event_loop
-```
-
-FastAPI validates the database configuration and verifies connectivity during startup. Startup fails if PostgreSQL is unavailable. The application disposes its connection pool during shutdown.
-
-The explicit event loop factory keeps Psycopg 3 async compatible with Windows, whose default Proactor loop is unsupported by the driver.
-
-The initial health endpoint is available at `GET /api/health`.
+The health endpoint is `GET http://127.0.0.1:8000/api/health`. To use research capture without the model/database, follow the [standalone capture guide](../docs/guides/research-capture.md); research uses SQLite and has its own `/api/research/health` route. The two local API entry points both default to port 8000 and must not occupy it simultaneously.
 
 ## Public APIs
 
@@ -88,19 +68,13 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/interactions/protect' -Method 
 ## Unit Tests
 
 ```powershell
-uv run --locked python -m unittest discover -s tests -v
+# From api/; dependency synchronization may contact package registries.
+uv sync --locked
+uv run --no-sync pytest -q
 ```
 
-The normal suite does not require Docker. The PostgreSQL integration test is skipped unless explicitly enabled.
+The normal suite does not require Docker. The real PostgreSQL-dependent tests are skipped unless explicitly enabled; report skips separately from passes.
 
 ## PostgreSQL Integration Verification
 
-With PostgreSQL healthy and the root `.env` configured:
-
-```powershell
-$env:RUN_DATABASE_INTEGRATION='1'
-uv run --locked --env-file ../.env python -m unittest tests.test_database_integration tests.test_privacy_integration -v
-Remove-Item Env:RUN_DATABASE_INTEGRATION
-```
-
-This verification checks lifecycle connectivity plus real PostgreSQL-backed Admin CRUD and the complete interaction pipeline with a contract-compatible inference fake.
+Use the [isolated integration harness](../docs/guides/integration-testing.md) rather than running mutating fixtures against the ordinary development database. It executes the real PostgreSQL/API contracts inside a separately named test stack, including Admin CRUD and the interaction pipeline with a contract-compatible inference fake. The current tests use pytest, not the old unittest module paths.

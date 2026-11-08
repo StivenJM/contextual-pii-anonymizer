@@ -26,7 +26,9 @@
   "background": {
     "service_worker": "background.js",
     "scripts": [
-      "background.js"
+      "background.js",
+      "research-config.js",
+      "research-background.js"
     ]
   },
   "content_scripts": [
@@ -37,7 +39,8 @@
         "https://gemini.google.com/*"
       ],
       "js": [
-        "bridge.js"
+        "bridge.js",
+        "research-content.js"
       ],
       "run_at": "document_start"
     }

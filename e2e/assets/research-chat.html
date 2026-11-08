@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Synthetic research chat</title>
+<body>
+  <div id="history"></div>
+  <form id="chat">
+    <textarea data-research-editor aria-label="Prompt"></textarea>
+    <button data-research-send type="submit">Send</button>
+    <input type="file" aria-label="Attachment">
+  </form>
+  <script>
+    window.sentPrompts = [];
+    const form = document.querySelector('form');
+    const editor = document.querySelector('textarea');
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const text = editor.value;
+      window.sentPrompts.push(text);
+      const user = document.createElement('div');
+      user.dataset.researchRole = 'user';
+      user.textContent = text;
+      document.querySelector('#history').append(user);
+      editor.value = '';
+      const answer = document.createElement('div');
+      answer.dataset.researchRole = 'assistant';
+      answer.textContent = 'Partial';
+      document.querySelector('#history').append(answer);
+      setTimeout(() => { answer.textContent = 'Synthetic complete reply'; }, 30);
+    });
+  </script>
+</body>
+</html>

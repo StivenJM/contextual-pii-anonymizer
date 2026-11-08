@@ -1,0 +1,35 @@
+{
+    admin off
+    persist_config off
+    auto_https disable_redirects
+    skip_install_trust
+    # IP clients may omit SNI; select the configured IP certificate, not the
+    # container's private interface address. Clients still verify its IP SAN.
+    default_sni {$RESEARCH_SERVER_IP}
+    servers {
+        protocols h1 h2
+        timeouts {
+            read_header 5s
+            read_body 30s
+            idle 1m
+        }
+    }
+}
+
+https://{$RESEARCH_SERVER_IP}:8443 {
+    tls internal
+    header {
+        -Server
+        Cache-Control "no-store"
+        X-Content-Type-Options "nosniff"
+    }
+    request_body {
+        max_size 1000000
+    }
+    handle /api/research/* {
+        reverse_proxy collector:8000
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

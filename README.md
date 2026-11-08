@@ -4,6 +4,12 @@ Sistema para detectar y proteger información personal identificable (PII) antes
 
 El entorno local incluye PostgreSQL, el servicio de inferencia y la API.
 
+## Developer startup
+
+Start with [extension installation and developer startup](docs/guides/developer-startup.md).
+The attachment converter is a separate backend and is not started by the main Compose.
+For model-free research capture, use the separate sequence in that guide instead of starting inference.
+
 ## Requisitos
 
 - Docker con Docker Compose.
@@ -44,3 +50,14 @@ Este comando conserva los datos almacenados en los volúmenes de Docker.
 ## Documentación
 
 La documentación funcional, técnica y las guías de desarrollo están en [`docs/`](docs/).
+
+## Research capture
+
+The optional [model-free capture workflow](docs/guides/research-capture.md) stores
+consented text research sessions independently of the protection model. Start with
+the [research plan](docs/project/experimentacion/research-capture-plan.md) and
+[student study kit](docs/project/experimentacion/research-study/README.md); institutional
+approval and live-provider adapter checks remain prerequisites for real fieldwork.
+
+For student-owned computers, use the [university-network deployment guide](docs/guides/research-campus-deployment.md)
+to prepare the separate collector, private-IP HTTPS and endpoint-specific extension copy.

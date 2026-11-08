@@ -115,6 +115,12 @@ copies them to `e2e/.build/extension-<name>/` and changes exactly five things:
 4. The supported-site allowlist, so the local page is eligible.
 5. The manifest permissions, so the local origins are reachable.
 
+The browser factory also accepts optional additional_origins for a test that needs a
+second local double (the research two-tab isolation case). These are added only to
+the manifest of the generated test copy; they do not change delivered permissions
+or the original five replacement-count checks. The research cases additionally use
+the [real standalone model-free API](research-capture.md), without a cloud provider.
+
 Each replacement records its expected and observed count. If the extension changes shape,
 the build fails instead of testing a stale assumption. Any other edit to the extension
 will surface here and must be reviewed deliberately.
@@ -142,11 +148,19 @@ uv run --directory e2e ruff format --check .
   not its anti-bot behavior.
 - Firefox stays manual. Playwright cannot load extensions in Firefox; the extension keeps
   its cross-browser manifest, but that path is not covered by this suite.
-- Prompt text is out of scope because the current extension intercepts attachments only.
+- Ordinary protection still targets attachments. Separate opt-in research cases cover
+  typed submission capture and rendered replies against synthetic chat fixtures,
+  including an enrollment-only campus-mode API. This does not validate live provider DOM adapters.
 - The inference stub is deterministic by design. It does not measure model quality; it
   preserves the contract the middleware consumes.
 
 ## Related
+
+- [University-network research deployment](research-campus-deployment.md): production
+  Docker/TLS rehearsal, exact-IP extension packaging and participant trust installation.
+  Its CLI/Docker-only tests do not launch the inherited browser fixture. The optional
+  `research_origin` test-copy override exercises enrollment over loopback without changing
+  source configuration or the five original replacement-count checks.
 
 - [`Automated verification of the browser extension`](../architecture/frontend/browser-extension/decisions/verificacion-automatica.md):
   evidence base and rationale for every decision above.

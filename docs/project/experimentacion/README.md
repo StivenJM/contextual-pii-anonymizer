@@ -33,3 +33,9 @@ Este módulo permite evaluar si la asistencia automática reduce la exposición 
 - [Medición y resultados](capabilities/medicion-y-resultados.md)
 - [Consentimiento y tratamiento de datos](rules/consentimiento-y-datos.md)
 - [Roles del estudio](roles/roles-del-estudio.md)
+
+## Independent research capture
+
+- [Research capture plan](research-capture-plan.md): additional raw-text collection path, separate from protection/inference.
+- [Student research kit](research-study/README.md): 32-work evidence matrix, proposed fictional pilot and real-data amendment, scenarios, instruments, analysis and reporting.
+- [Local capture operation](../../guides/research-capture.md): current implementation, verification and deployment limits. These additions do not imply that all target experimental capabilities above are implemented or institutionally approved.

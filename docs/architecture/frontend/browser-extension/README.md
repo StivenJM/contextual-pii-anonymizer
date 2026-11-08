@@ -48,8 +48,10 @@ flowchart TD
 - [`Automatic verification of the browser extension`](decisions/verificacion-automatica.md): evidence base and decisions behind the integration harness.
 - [`Integration testing`](../../../guides/integration-testing.md): procedure to run the suite.
 
-The extension currently implemented in this repository intercepts PDF and Office
-attachments and delegates their conversion to a local service. It does not intercept
-prompt text. The capabilities and restrictions above describe the target boundary, not
-every behavior of the current artifact; the decision page records the verified behavior.
+The existing protection workflow intercepts PDF and Office attachments and delegates
+conversion to a local service; it does not generally protect typed prompt text.
+The separate [research capture mode](../../backend/privacy-middleware/research-capture.md)
+records supported text submissions and rendered replies without de-identification or
+model calls. It is explicitly enabled and is not a new protection guarantee. The target
+capabilities and restrictions above must not be read as proof of every current behavior.
 
