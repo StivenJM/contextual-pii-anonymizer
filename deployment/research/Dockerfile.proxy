@@ -1,0 +1,10 @@
+FROM caddy:2.11.7-alpine
+# Upstream marks the binary with cap_net_bind_service. Remove that file
+# capability: we listen on 8443 and drop all runtime capabilities.
+RUN setcap -r /usr/bin/caddy \
+    && addgroup -g 10001 research && adduser -D -u 10001 -G research research \
+    && mkdir -p /data /config \
+    && chown -R 10001:10001 /data /config && chmod 700 /data /config
+COPY Caddyfile /etc/caddy/Caddyfile
+USER 10001:10001
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

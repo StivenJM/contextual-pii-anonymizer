@@ -1,0 +1,91 @@
+# Standalone production collector. Do not merge with compose.yaml.
+name: contextual-pii-research
+
+services:
+  collector:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.research
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    tmpfs:
+      - /tmp:size=16777216,mode=1777
+    environment:
+      RESEARCH_ENABLED: "true"
+      RESEARCH_REQUIRE_ENROLLMENT: "true"
+      RESEARCH_API_KEY_FILE: /run/secrets/research_admin
+      RESEARCH_ENROLLMENT_KEY_FILE: /run/secrets/research_enrollment
+      RESEARCH_STORAGE_PATH: /data/capture.sqlite3
+      RESEARCH_PROTOCOL_VERSION: ${RESEARCH_PROTOCOL_VERSION:?Set the approved protocol}
+      RESEARCH_RETENTION_DAYS: ${RESEARCH_RETENTION_DAYS:?Set approved retention days}
+    secrets: [research_admin, research_enrollment]
+    volumes:
+      - research_archive:/data
+    networks: [collection]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/research/health', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: "3"
+
+  proxy:
+    build:
+      context: ./deployment/research
+      dockerfile: Dockerfile.proxy
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      RESEARCH_SERVER_IP: ${RESEARCH_SERVER_IP:?Set the private server IPv4 address}
+    ports:
+      - "${RESEARCH_SERVER_IP:?Set the private server IPv4 address}:${RESEARCH_HTTPS_PORT:-443}:8443"
+    volumes:
+      - research_tls:/data
+      - research_proxy_config:/config
+    networks: [collection, ingress]
+    depends_on:
+      collector:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "test -s /data/caddy/pki/authorities/local/root.crt"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: "3"
+
+networks:
+  collection:
+    internal: true
+  ingress:
+
+volumes:
+  research_archive:
+  research_tls:
+  research_proxy_config:
+
+secrets:
+  research_admin:
+    file: ${RESEARCH_ADMIN_SECRET_FILE:?Set the administrator secret file}
+  research_enrollment:
+    file: ${RESEARCH_ENROLLMENT_SECRET_FILE:?Set the enrollment secret file}

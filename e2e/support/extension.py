@@ -59,6 +59,8 @@ def build_patched_extension(
     middleware_url: str,
     token: str,
     destination: Path | None = None,
+    additional_origins: tuple[str, ...] = (),
+    research_origin: str | None = None,
 ) -> BuildReport:
     target = destination or BUILD_DIRECTORY
     if target.exists():
@@ -72,7 +74,7 @@ def build_patched_extension(
     match_pattern = f"{chat_origin}/*"
     if match_pattern not in manifest["host_permissions"]:
         manifest["host_permissions"].append(match_pattern)
-    for url in (converter_url, middleware_url):
+    for url in (converter_url, middleware_url, *additional_origins):
         parts = urlsplit(url)
         origin_pattern = f"{parts.scheme}://{parts.netloc}/*"
         if origin_pattern not in manifest["host_permissions"]:
@@ -128,5 +130,12 @@ def build_patched_extension(
     replacements.append(item)
 
     background_path.write_text(background, encoding="utf-8")
+
+    if research_origin is not None:
+        # Test-only loopback stand-in for the packaged campus endpoint.
+        (target / "research-config.js").write_text(
+            "globalThis.RESEARCH_API_ORIGIN = " + json.dumps(research_origin) + ";\n",
+            encoding="utf-8",
+        )
 
     return BuildReport(destination=target, replacements=tuple(replacements))

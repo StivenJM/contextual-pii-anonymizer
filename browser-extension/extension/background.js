@@ -56,30 +56,31 @@ browserAPI.runtime.onInstalled.addListener(() => {
 // Estado de la extensión
 // ============================================================
 
-async function obtenerEstado() {
-  const { activo } =
-    await browserAPI.storage.local.get({ activo: true });
+function isResearchCapturing(state, tabId) {
+  return state?.session?.tabId === tabId && ['recording', 'paused'].includes(state?.session?.phase);
+}
 
-  return activo;
+async function obtenerEstado(tabId) {
+  const { activo, researchState } =
+    await browserAPI.storage.local.get({ activo: true, researchState: null });
+
+  return activo && !isResearchCapturing(researchState, tabId);
 }
 
 browserAPI.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !('activo' in changes)) return;
-
-  const activo = changes.activo.newValue;
+  if (area !== 'local' || (!('activo' in changes) && !('researchState' in changes))) return;
 
   browserAPI.tabs.query(
     { url: SITIOS_SOPORTADOS },
     (tabs) => {
       for (const tab of tabs) {
-        browserAPI.tabs
-          .sendMessage(
+        obtenerEstado(tab.id).then((activo) => browserAPI.tabs.sendMessage(
             tab.id,
             {
               type: 'ESTADO_CAMBIADO',
               activo
             }
-          )
+          ))
           .catch(() => { });
       }
     }
@@ -548,7 +549,7 @@ browserAPI.runtime.onMessage.addListener(
     // --------------------------------------------------------
 
     if (message.type === 'OBTENER_ESTADO') {
-      obtenerEstado()
+      obtenerEstado(sender.tab?.id)
         .then((activo) => {
           sendResponse({
             ok: true,
@@ -599,6 +600,10 @@ browserAPI.runtime.onMessage.addListener(
 
     (async () => {
       try {
+        const { researchState } = await browserAPI.storage.local.get('researchState');
+        if (isResearchCapturing(researchState, sender.tab?.id)) {
+          throw new Error('Document protection is paused during research capture.');
+        }
         console.log(
           `[Middleware] Procesando archivo: ${nombre}`
         );
@@ -723,3 +728,5 @@ browserAPI.runtime.onMessage.addListener(
     return true;
   }
 );
+
+if (typeof importScripts === 'function') importScripts('research-config.js', 'research-background.js');

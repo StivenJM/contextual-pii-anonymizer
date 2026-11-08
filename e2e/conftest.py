@@ -127,6 +127,8 @@ def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
             converter_url: str,
             middleware_url: str,
             name: str,
+            additional_origins: tuple[str, ...] = (),
+            research_origin: str | None = None,
         ) -> Harness:
             build = build_patched_extension(
                 chat_origin=chat_origin,
@@ -134,6 +136,8 @@ def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
                 middleware_url=middleware_url,
                 token=DEFAULT_TOKEN,
                 destination=BUILD_ROOT / f"extension-{name}",
+                additional_origins=additional_origins,
+                research_origin=research_origin,
             )
             assert build.is_complete(), build.replacements
             profile = BUILD_ROOT / f"profile-{name}"

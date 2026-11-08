@@ -1,0 +1,88 @@
+# Literature review: designing the capture study
+
+**Result:** use a consented task-based synthetic pilot, record behavior separately from perceptions, and evaluate de-identification offline against independently annotated held-out chats. This review supports design choices; it does not validate the new instrument or report local participant outcomes.
+
+## Scope and method
+
+- Search/verification date: 2026-10-29; 32 unique papers retained. Publication years: 1960–2026. Preprints and peer-reviewed papers are explicitly distinguished in the references.
+- This is a targeted narrative/design review, not an exhaustive systematic review, meta-analysis or preregistered search. No invented retrieved/excluded counts, quality ratings or pooled effects are supplied [R28](references.md#r28).
+- Sources: primary ACL Anthology, arXiv author manuscripts, ICLR/NeurIPS/USENIX/EDM proceedings, publisher records, institutional author copies. Local KB seed terms were Casper, TAB, CRAPII and educational PII; the KB was background rather than proof.
+- Query families used: prompt sanitization/browser extensions; contextual privacy/ConfAIde/PrivacyLens; human–LLM self-disclosure; educational PII/math numeric ambiguity; vignette design; sample-size justification; annotation and qualitative analysis; dataset/model documentation; leakage/memorization.
+- Inclusion: a concrete connection to capture boundaries, student tasks, privacy constructs, measurement or responsible secondary use. Deduplicate preprint/conference versions as one work. Non-scholarly product pages and forums are not counted toward 32.
+- Depth is stated per row: most sources were examined at primary abstract/record level; selected methodological/full-text sections were read for the closest task/design papers. This is **not** a claim to have read all 32 papers cover to cover. Publisher access failures are recorded, rather than silently counted as full-text reading.
+- Primary-record metadata can differ from old snippets. R11 uses the current author order Ji, Shen, Lin, Koedinger. R04 is cited as the 2024 preprint with a 2025 revision; no duplicate is counted.
+
+## Evidence matrix
+
+Each application column is a project inference/recommendation, not a claim that the source tested this implementation. Open the linked source and use the stable R-number to cite it.
+
+| Paper | Method / evidence | Relevant finding | Transfer limitation | Application to this project | Reading depth |
+|---|---|---|---|---|---|
+| [R01](https://aclanthology.org/2022.cl-4.19/) | Corpus and privacy-oriented evaluation | Identifiers and context-dependent masking need more than a generic NER score. | English court cases differ from Spanish student chats. | Annotate direct/quasi-identifiers, referents, and residual disclosure separately. | abstract |
+| [R02](https://aclanthology.org/2024.acl-long.741/) | Disclosure taxonomy, annotated spans and user study | Sensitive disclosure extends beyond standard named-entity categories. | Social-media data and abstraction do not establish efficacy in this student population. | Add sensitive-topic labels and evaluate usefulness after protection. | abstract |
+| [R03](https://arxiv.org/abs/2408.07004) | Browser-side layered sanitization | An extension can mediate prompts before commercial services without provider changes. | Synthetic prompts and sanitization accuracy do not validate a research logger. | Use a browser capture boundary, but keep collection separate from sanitization. | abstract |
+| [R04](https://arxiv.org/abs/2410.11876) | Prototype, benchmarks and formative user interviews | Visible controls and participant involvement matter for trust in prompt minimization. | Twelve interview participants were selected for prior privacy concerns; not population prevalence. | Provide explicit mode, consent and stop controls; do not infer prevalence from a pilot. | selected full-text sections 3.5 and 4.1 |
+| [R05](https://aclanthology.org/2025.naacl-long.173/) | Natural-query benchmark and privacy/quality comparison | Privacy and downstream answer quality must be measured jointly. | An ensemble evaluation does not show that this local detector improves after training. | Use paired fixed inputs for baseline and candidate, with independent utility scoring. | abstract |
+| [R06](https://arxiv.org/abs/2409.00138) | Vignettes expanded into agent trajectories | Stated privacy reasoning and actual disclosure behavior can diverge. | Agent-tool scenarios are not the same as students writing prompts. | Measure actions and text, not only questionnaire intentions; vary context systematically. | abstract and proceedings introduction excerpt |
+| [R07](https://proceedings.iclr.cc/paper_files/paper/2024/hash/08305d8b2ddab98932c163ea73df065f-Abstract-Conference.html) | Four-tier contextual-privacy benchmark | Information recipient and purpose change whether a disclosure is appropriate. | Benchmark model behavior is not a causal estimate of student privacy literacy. | Give every scenario an actor, purpose, recipient and sharing rule. | abstract and conclusion excerpt |
+| [R08](https://arxiv.org/abs/2407.11438) | Observational task/sensitivity annotation of real conversations | Disclosure occurs in ordinary tasks such as translation and editing, not just explicitly personal advice. | Existing detectors and selected public-chat samples constrain prevalence claims. | Include translation/editing tasks and human-adjudicate sensitivity and ownership. | selected full-text sections 1 and 2.2 |
+| [R09](https://arxiv.org/abs/2310.07298) | Personal-attribute inference evaluation | Removing explicit identifiers does not eliminate inference from contextual clues. | Reddit profiles and adversarial inference differ from this collection protocol. | Mark indirect identifiers and avoid claiming irreversible anonymity. | abstract and primary paper excerpt |
+| [R10](https://arxiv.org/abs/2502.18509) | Formative study and local prompt reformulation | Relevance to the user's goal matters, including indirect disclosure. | ShareGPT evaluations do not establish Ecuadorian student effects. | Label whether each attribute is necessary to the assigned task. | abstract |
+| [R11](https://arxiv.org/abs/2501.09765) | Educational PII detection, prompting and fine-tuning comparison | Educational-domain evaluation can distinguish detectors and fine-tuned models. | CRAPII/TSCC performance cannot be transferred to Spanish Ecuadorian chats. | Evaluate local domain/type slices and preserve a held-out participant test set. | abstract; author order verified on current primary record |
+| [R12](https://educationaldatamining.org/edm2026/proceedings/2026.EDM.full-papers.183/index.html) | Tutoring corpus audit and math-segment analysis | Numeric educational content can be falsely treated as identifiers. | English tutoring context and segmentation thresholds require local validation. | Include math numbers as explicit negative controls, not just identifiers. | selected full-text sections 4 and 5 |
+| [R13](https://doi.org/10.1145/3544548.3581388) | End-user prompt-engineering design probe | Non-experts may generalize from a few prompts and explore opportunistically. | Chatbot-design probes are not the same as everyday chat usage. | Standardize task goals, allow natural wording, and collect prior AI experience. | abstract and university-hosted paper introduction; publisher fetch blocked |
+| [R14](https://www.usenix.org/conference/usenixsecurity26/presentation/kwesi) | Mixed-methods vignette study | Deletion controls influence willingness and perceived protection. | U.S. emotional-support vignettes do not validate an academic-task effect. | Explain deletion limits clearly; do not frame collection as privacy protection. | abstract |
+| [R15](https://doi.org/10.1093/joc/jqy026) | Experiment on disclosure and perceived conversation partner | Perceived conversational partners can produce meaningful disclosure effects. | A supposed chatbot experiment is not modern commercial LLM behavior. | Avoid emotional manipulation and unnecessary intimate tasks in a student study. | publisher search excerpt; full-text fetch unavailable |
+| [R16](https://hermanaguinis.com/pdf/ORM2014.pdf) | Methodological review and vignette-design recommendations | Carefully controlled, realistic scenarios balance control and realism. | Vignette judgments do not automatically predict real-world conduct. | Pilot wording, counterbalance task order and distinguish behavior from intention. | selected full-text planning recommendations |
+| [R17](https://digitalcommons.law.uw.edu/wlr/vol79/iss1/10/) | Conceptual privacy framework | Appropriate information flow depends on context and distribution norms. | A theory does not prescribe labels or effects for this local population. | Record subject, sender, recipient, attributes and transmission purpose. | abstract |
+| [R18](https://arxiv.org/abs/1803.09010) | Dataset documentation framework | Collection, consent, uses and maintenance should accompany datasets. | Documentation cannot itself ensure consent or safe reuse. | Complete a dataset sheet before any secondary release or training. | abstract |
+| [R19](https://aclanthology.org/Q18-1041/) | Data-characterization proposal | Population and language context constrain generalization. | Not an empirical validation of any detector. | Record language, recruitment, student groups and exclusions. | abstract |
+| [R20](https://arxiv.org/abs/1810.03993) | Model reporting framework | Intended use and subgroup evaluation need explicit documentation. | A model card is not a privacy guarantee. | Freeze model/config versions and publish domain-specific limitations. | abstract |
+| [R21](https://pmc.ncbi.nlm.nih.gov/articles/PMC10499856/) | Cross-disciplinary leakage analysis and reproducibility study | Data leakage can produce overoptimistic performance estimates. | It does not estimate leakage rates in this proposed study. | Split by participant and scenario family; lock the test set before training. | selected full-text overview and methodological limitations |
+| [R22](https://www.usenix.org/conference/usenixsecurity21/presentation/carlini-extracting) | Training-data extraction experiment | Published models can expose memorized training examples. | A GPT-2 attack does not quantify this detector's leakage. | Separate training permission and do not release raw-chat-trained artifacts without assessment. | abstract |
+| [R23](https://www.usenix.org/conference/usenixsecurity19/presentation/carlini) | Memorization measurement using rare sequences | Rare training sequences can be memorized by generative models. | Memorization testing does not prove deletion/unlearning. | Exclude credentials and consider synthetic canaries only in a separately approved training evaluation. | primary abstract search excerpt; direct fetch timed out |
+| [R24](https://aclanthology.org/2021.acl-long.323/) | Position paper and approaches review | Text privacy requires reasoning about disclosure risk and utility beyond sequence labeling. | Not a comparative trial of the proposed workflow. | Use de-identification terminology and assess contextual residual risk. | abstract |
+| [R25](https://doi.org/10.1177/001316446002000104) | Chance-adjusted agreement statistic | Agreement beyond chance is different from raw percent agreement. | Kappa does not by itself evaluate span boundaries or prove gold-label validity. | Report span agreement plus category agreement and prevalence; adjudicate disagreements. | publisher metadata and author retrospective excerpt; original full text unavailable |
+| [R26](https://doi.org/10.1191/1478088706qp063oa) | Qualitative analysis method | A transparent thematic process can organize interview accounts. | Reflexive thematic analysis should not be conflated with reliability coding of gold spans. | Keep reflexive interview interpretation separate from reproducible span annotation. | publisher abstract excerpt; full text blocked |
+| [R27](https://doi.org/10.1525/collabra.33267) | Methodological overview | Sample size needs a justification aligned with inferential goals. | A heuristic pilot sample is not a powered confirmatory design. | Use a feasibility pilot, then plan precision/power using participant-level variability. | abstract and selected full-text power-reporting section |
+| [R28](https://www.prisma-statement.org/prisma-2020-statement) | Review-reporting guideline | Review search, selection and reporting should be transparent. | This targeted engineering review is not an exhaustive PRISMA-compliant systematic review. | Report search date, depth and limitations without invented search-flow counts. | official statement and publisher excerpt; BMJ full text blocked |
+| [R29](https://nissenbaum.tech.cornell.edu/papers/Measuring%20Privacy.pdf) | Contextual privacy survey study | Context helps explain privacy expectations beyond isolated data-type judgments. | Survey expectations are not direct observations of chat disclosures. | Keep contextual judgments separate from behavioral outcome measures. | primary paper introduction and contextual-integrity excerpts |
+| [R30](https://arxiv.org/abs/2309.11998) | Natural conversational dataset curation | Real interaction data support analyses unlike synthetic benchmarks alone. | Public availability does not imply unrestricted secondary use or relevance to students. | Document provenance, allowed uses and selection bias; do not import public chats automatically. | abstract |
+| [R31](https://arxiv.org/abs/2402.13846) | Adversarial anonymization and utility/privacy evaluation | Anonymization can be evaluated against attribute inference, not only string removal. | An attacker benchmark is not proof of irreversible anonymity. | Treat inference resistance as a separate optional evaluation, not a claimed guarantee. | abstract |
+| [R32](https://aclanthology.org/2026.eacl-long.276/) | Sensitive-span replacement and utility evaluation | Replacement quality matters in addition to which spans are removed. | Cross-domain replacement results need local Spanish validation. | Score whether protected outputs preserve task-critical meaning. | abstract |
+
+## Findings synthesized into the protocol
+
+### 1. Measure disclosure, not merely matching a form
+
+Ordinary writing and translation can contain disclosures [R08](references.md#r08). Context and indirect attributes matter [R07](references.md#r07), [R09](references.md#r09), [R17](references.md#r17). Therefore annotate all relevant spans and their referent; use optional form matching only to support, never to exhaustively define, self-disclosure. A fictional identity is not a student's true identity. Do not merge those outcome denominators.
+
+### 2. Use realistic goals without coercing real disclosure
+
+A vignette can control context while allowing behavior to vary [R16](references.md#r16). The proposed cards give realistic goals and synthetic information, not mandatory copy-paste prompts. This improves comparability and avoids requesting national IDs or trauma. It also limits ecological validity: the pilot measures handling of provided fictional data, **not natural real-world self-disclosure**. A later real-data observational phase needs a separately approved amendment.
+
+### 3. Separate collection from an intervention
+
+Visible user control is important [R04](references.md#r04), while perceived controls can change willingness to disclose [R14](references.md#r14). The initial capture-only phase must not display protection claims or give live anonymization feedback. Do not announce a randomized protection-vs-control experiment before that intervention actually works. The capture UI is itself observable and may change behavior; report this limitation.
+
+### 4. Protect meaning as well as identifiers
+
+Generic PII detection can remove harmless mathematical numbers [R12](references.md#r12). Span replacement can alter task utility [R05](references.md#r05), [R32](references.md#r32). Include a negative-control math task; report residual exposure and over-redaction/utility separately rather than optimizing F1 alone.
+
+### 5. Treat a reusable corpus as a second research artifact
+
+Dataset purpose, population and maintenance must be documented [R18](references.md#r18), [R19](references.md#r19), [R30](references.md#r30). Training can create memorization risks [R22](references.md#r22), [R23](references.md#r23); permission to participate must not automatically enable training. Keep participant-level splits to avoid optimistic scores [R21](references.md#r21).
+
+## What the literature does NOT establish
+
+No source proves that these newly authored task cards are validated in Ecuador, determines an adequate sample size for the eventual population, authorizes identifiable Google Forms collection, approves this institution's consent, or demonstrates model improvement in this repository. The kit includes pilot and analysis steps precisely because these remain empirical/institutional questions.
+
+## Deliverable traceability
+
+- [Protocol and readiness gates](protocol.md): R04, R06–R10, R14–R17, R27.
+- [Scenario cards](scenario-cards.md): R02, R07–R13, R16, R29, R32.
+- [Questionnaire and consent draft](instruments.md): R14–R19, R22–R23.
+- [Annotation and offline analysis](analysis-plan.md): R01–R02, R05, R09, R11–R12, R20–R27, R31–R32.
+- [Literature findings and empirical report](results-report.md): distinguishes prior work from unobserved study outcomes.
+- [Architectural decisions](../../../architecture/backend/privacy-middleware/research-capture.md): engineering decisions are not falsely attributed to papers that did not test them.
+
