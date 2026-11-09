@@ -1,34 +1,34 @@
-# Development guides
+# Guías de desarrollo
 
-These guides explain recurring procedures to prepare and operate the project during development.
+Estas guías explican procedimientos recurrentes para preparar y operar el proyecto durante el desarrollo.
 
-## Start here
+## Empieza aquí
 
-- [Install the extension and start the development system](developer-startup.md): extension installation first, then the separate research-only or attachment/protection startup sequence.
+- [Instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md): primero la instalación de la extensión y después la secuencia separada de captura para investigación o de conversión y protección de adjuntos.
 
-## Data
+## Datos
 
-- [`Datasets and audits`](datasets-and-audits.md): registers a dataset with DVC and turns each audit into reviewable, reproducible evidence.
+- [`Conjuntos de datos y auditorías`](datasets-and-audits.md): registra un conjunto de datos con DVC y convierte cada auditoría en evidencia reproducible y revisable.
 
-## Workflow
+## Flujo de trabajo
 
-- [`Branch names`](nombres-de-ramas.md): defines how to identify the type, scope, and result of each work branch in the monorepo.
+- [`Nombres de ramas`](nombres-de-ramas.md): define cómo identificar el tipo, el alcance y el resultado de cada rama en el monorepo.
 
-## Code quality
+## Calidad de código
 
-- [`Code quality with Ruff`](calidad-de-codigo-con-ruff.md): runs linting, formatting, and quality checks with `uv`.
+- [`Calidad de código con Ruff`](calidad-de-codigo-con-ruff.md): ejecuta linting, formateo y verificaciones de calidad con `uv`.
 
-## Testing
+## Pruebas
 
-- [`Integration testing`](integration-testing.md): runs the browser extension suite against local pages and, optionally, the full Compose stack.
+- [`Pruebas de integración`](integration-testing.md): ejecuta la suite de la extensión contra páginas locales y, opcionalmente, el stack completo de Compose.
 
-## Local environment
+## Entorno local
 
-- [`Local infrastructure with Docker`](infraestructura-local-con-docker.md): operates the current development database, inference and API containers, their private networks and persistent volumes.
+- [`Infraestructura local con Docker`](infraestructura-local-con-docker.md): opera los contenedores actuales de base de datos, inferencia y API, sus redes privadas y sus volúmenes persistentes.
 
-## Research collection
+## Recolección para investigación
 
-- [Model-free research capture](research-capture.md): runs the separate local API and extension capture mode, with access, retry and withdrawal procedures.
-- [University-network deployment](research-campus-deployment.md): prepares separate production Docker, private-IP HTTPS/client trust and a participant-specific endpoint package.
-- [Student study kit](../project/experimentacion/research-study/README.md): evidence, scenario cards, proposed protocol, instruments and analysis/reporting materials.
-- [Security risk review draft](../project/experimentacion/research-study/security-risk-review.md): remaining risks, proportional storage-encryption assessment and owner decisions still pending.
+- [Captura para investigación sin modelo](research-capture.md): ejecuta la API local separada y el modo de captura de la extensión, con procedimientos de acceso, reintento y retiro.
+- [Despliegue en la red universitaria](research-campus-deployment.md): prepara Docker de producción separado, HTTPS con IP privada y confianza de clientes, y un paquete de extensión específico para participantes.
+- [Kit del estudio con estudiantes](../project/experimentacion/research-study/README.md): evidencia, tarjetas de escenario, protocolo propuesto, instrumentos y materiales de análisis y reporte.
+- [Borrador de revisión de riesgos de seguridad](../project/experimentacion/research-study/security-risk-review.md): riesgos pendientes, evaluación proporcional del cifrado en reposo y decisiones del propietario aún abiertas.

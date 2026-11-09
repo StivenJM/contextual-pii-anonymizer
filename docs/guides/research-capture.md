@@ -1,14 +1,14 @@
-# Run research capture without the model
+# Ejecutar la captura para investigación sin el modelo
 
-The implementation is a local pilot, not institutional approval for identifiable-data fieldwork. Consult the validation and readiness limits below before use.
+La implementación es un piloto local, no una aprobación institucional para trabajo de campo con datos identificables. Consulta los límites de validación y preparación que aparecen abajo antes de usarla.
 
-Use the independent local research API and the existing browser extension. This guide does not deploy a service, create a Google Form, recruit students or authorize collection of real personal data.
+Usa la API de investigación local independiente y la extensión del navegador existente. Esta guía no despliega un servicio, no crea un Google Form, no recluta estudiantes ni autoriza la recolección de datos personales reales.
 
-For the confirmed student-owned-computer topology, follow [university-network deployment](research-campus-deployment.md). It adds an enrollment-only code, trusted private-IP HTTPS and a generated extension copy; do not distribute the local researcher key to students.
+Para la topología confirmada de equipos propiedad de los estudiantes, sigue el [despliegue en la red universitaria](research-campus-deployment.md). Añade un código de solo inscripción, HTTPS de confianza sobre IP privada y una copia generada de la extensión; no distribuyas la clave local del investigador a los estudiantes.
 
-## Prepare the local API
+## Preparar la API local
 
-From the repository root in PowerShell:
+Desde la raíz del repositorio en PowerShell:
 
 ~~~powershell
 uv sync --directory api --frozen
@@ -20,96 +20,95 @@ $env:RESEARCH_RETENTION_DAYS = "30"
 uv run --directory api --no-sync python -m uvicorn app.research.application:app --host 127.0.0.1 --port 8000 --no-access-log
 ~~~
 
-The first command installs locked development dependencies and may contact package registries. The last command runs the local listener in the foreground; it does not start PostgreSQL, BentoML, Docker or the converter. Stop with Ctrl+C. Port 8000 must be free; do not stop an unrelated process automatically. The ordinary compose.yaml and its original model-backed behavior are unchanged.
+El primer comando instala las dependencias de desarrollo fijadas y puede contactar registros de paquetes. El último comando ejecuta el listener local en primer plano; no arranca PostgreSQL, BentoML, Docker ni el conversor. Detenlo con Ctrl+C. El puerto 8000 debe estar libre; no detengas un proceso ajeno de forma automática. El `compose.yaml` ordinario y su comportamiento original respaldado por el modelo no cambian.
 
-Keep the key in the operator's secure setup channel and paste it into the extension's password field. Do not print/send it to an AI chat or put it in Forms. It is not saved by the popup after starting. The extension does retain a different session capability for retry/withdrawal. Configure approved retention before real use; “30” is a pilot example, not institutional approval.
+Mantén la clave en el canal seguro de configuración del operador y pégala en el campo de contraseña de la extensión. No la imprimas ni la envíes a un chat de IA, y no la pongas en Forms. El popup no la guarda después de iniciar. La extensión sí conserva una capacidad de sesión distinta para reintentos y retiro. Configura una retención aprobada antes de usar datos reales; «30» es un ejemplo de piloto, no una aprobación institucional.
 
-The example archive is under the existing ignored workspace/ directory. Do not move real archives into tracked paths. The API additionally requires an absolute path. Use institution-approved encrypted local storage and restrict permissions; the application itself does not provide at-rest encryption. For persistent supervised operation, set these environment variables in the approved service account's secret configuration, not in committed .env files.
+El archivo de ejemplo está dentro del directorio `workspace/` ya ignorado. No muevas archivos reales a rutas versionadas. La API además exige una ruta absoluta. Usa almacenamiento local cifrado y aprobado por la institución y restringe los permisos; la aplicación por sí misma no ofrece cifrado en reposo. Para una operación supervisada y persistente, define estas variables en la configuración de secretos de la cuenta de servicio aprobada, no en archivos `.env` versionados.
 
-Open [the local API documentation](http://127.0.0.1:8000/docs). The separate app intentionally exposes research routes only; `/api/research/health` checks collector configuration/archive access, while the normal /api/health and /api/interactions/protect are not part of that entry point. The same /api/research router is also mounted by the ordinary main app, but that app still has its usual PostgreSQL startup requirement.
+Abre [la documentación local de la API](http://127.0.0.1:8000/docs). La aplicación independiente expone a propósito solo las rutas de investigación; `/api/research/health` comprueba la configuración del recolector y el acceso al archivo, mientras que `/api/health` y `/api/interactions/protect` no forman parte de ese punto de entrada. El mismo router `/api/research` también está montado en la aplicación principal ordinaria, pero esa aplicación conserva su requisito habitual de arranque con PostgreSQL.
 
-## Extension: synthetic rehearsal
+## Extensión: ensayo sintético
 
-1. Reload browser-extension/extension as an unpacked extension in a dedicated Chromium/Chrome test profile. Existing host permissions already cover the three supported commercial sites and loopback API.
-2. Open a fresh, empty supported chat, without personal history or loaded attachments. Confirm the current editor/send/reply adapter manually before inviting students. This work did not log into or operate a real provider account.
-3. Open the extension popup. In **Captura para investigación (solo texto)**, enter **Clave local del investigador** and the protocol. The research interface uses Spanish labels/messages; canonical technical documentation remains English. Read the raw-collection warning, check consent explicitly, and leave optional training permission unchecked unless separately agreed.
-   These setup/consent fields are disabled once the session starts: changing a checkbox cannot silently amend an already stored agreement. Use **Descartar / retirar sesión** and the approved researcher process for a consent change.
-4. Click **Iniciar en esta pestaña**. Confirm the in-page recording indicator. The attachment-protection preference is retained; protection is paused only on that selected tab while capture is recording/paused. Other tabs retain their previous behavior.
-   The popup shows progress/errors beside the start action. A failed start keeps the current form inputs; successful activation clears the key. The key is not persisted in browser storage, and closing the popup discards transient inputs. History rejection and a missing editor have separate messages. An empty editor may lack Send until typing; startup permits this, but actual submission is still blocked unless a supported visible enabled send control exists and local storage acknowledges the prompt.
-5. Set **Identificador de tarea** to A and click **Asignar tarea**, then use the appropriate next task IDs. Send only fictional text. The supported send waits for local buffering; replies are observed as rendered snapshots. Wait for the reply to finish before changing tasks or finishing.
-6. Click **Finalizar y guardar / reintentar**. Only a confirmed API response displays the saved identifier. Use **Copiar identificador** and keep it somewhere safe; paste it into the last item of the approved study form.
-7. On failure, keep the extension/profile installed and retry. Do not clear browser storage or repeat the activity just to get a new code. A pending session stops collecting; later prompts are outside that frozen session.
+1. Recarga `browser-extension/extension` como extensión descomprimida en un perfil de prueba dedicado de Chromium o Chrome. Los permisos de host existentes ya cubren los tres sitios comerciales compatibles y la API de loopback.
+2. Abre un chat compatible nuevo y vacío, sin historial personal ni adjuntos cargados. Confirma manualmente el adaptador actual de editor, envío y respuesta antes de invitar estudiantes. Este trabajo no inició sesión ni operó una cuenta real de proveedor.
+3. Abre el popup de la extensión. En **Captura para investigación (solo texto)**, introduce **Clave local del investigador** y el protocolo. La interfaz de investigación usa etiquetas y mensajes en español; la documentación técnica canónica sigue en inglés. Lee la advertencia de recolección sin procesar, marca el consentimiento de forma explícita y deja sin marcar el permiso opcional de entrenamiento salvo que se haya acordado aparte.
+   Estos campos de configuración y consentimiento se deshabilitan al iniciar la sesión: cambiar una casilla no puede modificar en silencio un acuerdo ya almacenado. Usa **Descartar / retirar sesión** y el proceso aprobado del investigador para un cambio de consentimiento.
+4. Pulsa **Iniciar en esta pestaña**. Confirma el indicador de grabación en la página. La preferencia de protección de adjuntos se conserva; la protección se pausa solo en esa pestaña seleccionada mientras la captura graba o está en pausa. Las demás pestañas mantienen su comportamiento anterior.
+   El popup muestra el progreso y los errores junto a la acción de inicio. Un inicio fallido conserva los campos actuales del formulario; una activación correcta limpia la clave. La clave no se persiste en el almacenamiento del navegador y cerrar el popup descarta los campos transitorios. El rechazo por historial y la ausencia de editor tienen mensajes separados. Un editor vacío puede no mostrar Enviar hasta que escribas; el arranque lo permite, pero el envío real sigue bloqueado salvo que exista un control de envío visible, habilitado y compatible, y el almacenamiento local confirme el prompt.
+5. Define **Identificador de tarea** como A y pulsa **Asignar tarea**; después usa los identificadores de tarea siguientes que correspondan. Envía solo texto ficticio. El envío compatible espera el almacenamiento local; las respuestas se observan como instantáneas renderizadas. Espera a que termine la respuesta antes de cambiar de tarea o finalizar.
+6. Pulsa **Finalizar y guardar / reintentar**. Solo una respuesta confirmada de la API muestra el identificador guardado. Usa **Copiar identificador** y guárdalo en un lugar seguro; pégalo en el último elemento del formulario aprobado del estudio.
+7. Si falla, mantén la extensión y el perfil instalados y reintenta. No borres el almacenamiento del navegador ni repitas la actividad solo para obtener un código nuevo. Una sesión pendiente deja de recolectar; los prompts posteriores quedan fuera de esa sesión congelada.
 
-A closed/reloaded tab can be saved as INTERRUPTED; report it to the researcher. A recording session is bound to one document, not all browser activity. Unsupported attachment/voice/image paths are not captured. Empty sessions must be discarded rather than falsely “saved.”
+Una pestaña cerrada o recargada puede guardarse como INTERRUMPIDA; informa al investigador. Una sesión de grabación está atada a un documento, no a toda la actividad del navegador. Las rutas no compatibles de adjuntos, voz o imagen no se capturan. Las sesiones vacías deben descartarse, no «guardarse» falsamente.
 
-ChatGPT editor detection also recognizes the supplied `textarea[data-mobile-composer-prompt]` markup, without depending on generated CSS classes or broadening detection to every textarea. Local fixtures exercise activation, click/Enter submission and exact-text archival with that editor; they do not establish compatibility with the live layout's send controls, history or reply markup. Rehearse those independently before participant collection.
+La detección del editor de ChatGPT también reconoce el marcado suministrado `textarea[data-mobile-composer-prompt]`, sin depender de clases CSS generadas ni ampliar la detección a cualquier textarea. Los fixtures locales ejercitan la activación, el envío por clic o Enter y el archivado de texto exacto con ese editor; no establecen compatibilidad con los controles de envío, el historial ni el marcado de respuesta del layout real. Ensáyalos de forma independiente antes de recolectar con participantes.
 
-## Access, withdrawal and retention
+## Acceso, retiro y retención
 
-- The receipt is 32 case-sensitive base64url characters. It identifies a record; it cannot read it without the researcher key.
-- Authorized staff can retrieve one record with GET /api/research/records/{receipt_id} and X-Research-Key. Protect exports exactly like the original archive. No live form sync or public response dashboard is implemented.
-- **Descartar / retirar sesión** asks for confirmation, stops collection and clears raw local text immediately. It uses the session capability to delete the current session or last saved record; if the API is unavailable, only deletion metadata/capability is retained and the popup requests a retry. Ordinary protection resumes during pending upload/withdrawal. Forms responses, external chatbot history, backups and trained models need the separate [linkage/withdrawal procedure](../project/experimentacion/research-study/instruments.md).
-- For an approved investigator-mediated withdrawal, DELETE /api/research/records/{receipt_id} with X-Research-Key deletes the archived record by code. Never expose this key to a participant page or form.
-- Expired sessions cannot be completed or exported. Authorized operators must schedule POST /api/research/purge-expired using X-Research-Key and align backup expiry. There is no silently installed scheduler. Validate the deleted count; never assume expiry already erased backup media.
-- The popup retains only the last receipt/capability after a successful save, not the raw events. Copy it before completing another session. The institution must maintain its restricted linkage/withdrawal records.
+- El identificador de recibo tiene 32 caracteres base64url sensibles a mayúsculas. Identifica un registro; no permite leerlo sin la clave del investigador.
+- El personal autorizado puede recuperar un registro con GET /api/research/records/{receipt_id} y X-Research-Key. Protege las exportaciones igual que el archivo original. No hay sincronización en vivo con formularios ni panel público de respuestas.
+- **Descartar / retirar sesión** pide confirmación, detiene la recolección y borra de inmediato el texto local sin procesar. Usa la capacidad de sesión para eliminar la sesión actual o el último registro guardado; si la API no está disponible, solo conserva los metadatos y la capacidad de eliminación, y el popup pide reintentar. La protección ordinaria se reanuda durante una subida o un retiro pendiente. Las respuestas de Forms, el historial externo del chatbot, los respaldos y los modelos entrenados necesitan el [procedimiento separado de vinculación y retiro](../project/experimentacion/research-study/instruments.md).
+- Para un retiro aprobado mediado por el investigador, DELETE /api/research/records/{receipt_id} con X-Research-Key elimina el registro archivado por código. Nunca expongas esta clave a una página de participante ni a un formulario.
+- Las sesiones expiradas no se pueden completar ni exportar. Los operadores autorizados deben programar POST /api/research/purge-expired con X-Research-Key y alinear la expiración de los respaldos. No hay un programador instalado en silencio. Valida el conteo de eliminados; nunca supongas que la expiración ya borró los medios de respaldo.
+- El popup conserva solo el último recibo y su capacidad tras un guardado correcto, no los eventos sin procesar. Cópialo antes de completar otra sesión. La institución debe mantener sus registros restringidos de vinculación y retiro.
 
-## Offline de-identification replay
+## Repetición de desidentificación sin conexión
 
-Collection never calls the model. Later, authorized researchers may use the ordinary API environment with its existing database, configuration and inference service to evaluate eligible archived participant text. Fetch the consented record through researcher authorization, then POST {"text": "a held-out submitted prompt"} to /api/interactions/protect in that environment, preserving a separate output/run manifest. Do not send the identity form or session capabilities to the model.
+La recolección nunca llama al modelo. Después, los investigadores autorizados pueden usar el entorno ordinario de la API, con su base de datos, configuración y servicio de inferencia existentes, para evaluar el texto elegible de participantes archivado. Obtén el registro consentido mediante la autorización de investigador y después envía POST `{"text": "un prompt reservado enviado"}` a /api/interactions/protect en ese entorno, conservando un manifiesto separado de salida y ejecución. No envíes el formulario de identidad ni las capacidades de sesión al modelo.
 
-Use [the analysis plan](../project/experimentacion/research-study/analysis-plan.md): participant-disjoint splits, independent gold labels, frozen models/configuration and separate utility/error reporting. This guide does not train a model or automatically send a dataset anywhere.
+Usa el [plan de análisis](../project/experimentacion/research-study/analysis-plan.md): particiones disjuntas por participante, etiquetas de referencia independientes, modelos y configuración congelados y reporte separado de utilidad y error. Esta guía no entrena un modelo ni envía automáticamente un conjunto de datos a ningún lugar.
 
-## Verification commands
+## Comandos de verificación
 
 ~~~powershell
-# From repository root; tests use synthetic fixtures only.
+# Desde la raíz del repositorio; las pruebas usan solo fixtures sintéticos.
 uv run --directory api --no-sync pytest -q
 node --test browser-extension/tests/*.test.cjs
 uv run --directory e2e --no-sync pytest -q -m "not integration"
-# Optional pre-existing full-system regression; needs Docker and builds images.
+# Regresión opcional de sistema completo ya existente; requiere Docker y compila imágenes.
 uv run --directory e2e --no-sync pytest -q -m integration
 ~~~
 
-The research browser cases start a real model-free API process on a free loopback port and drive the real extension in bundled Chromium against synthetic local chats. They verify normal finalization, conversation changes, a lost response after API commit, a local quota failure before send, reload recovery and simultaneous protection in another tab. Research collection makes zero converter/protection requests; the deliberate other-tab regression makes one of each to prove that the original path still works elsewhere. No cloud chatbot is called. Install the e2e dependencies/Chromium as described in [integration testing](integration-testing.md).
+Los casos de navegador de investigación arrancan un proceso real de API sin modelo en un puerto de loopback libre y accionan la extensión real en el Chromium incluido contra chats locales sintéticos. Verifican la finalización normal, los cambios de conversación, la pérdida de respuesta después de que la API confirma, un fallo de cuota local antes del envío, la recuperación tras recargar y la protección simultánea en otra pestaña. La recolección de investigación hace cero peticiones al conversor y de protección; la regresión deliberada de la otra pestaña hace una de cada una para demostrar que la ruta original sigue funcionando en otro lugar. No se llama a ningún chatbot en la nube. Instala las dependencias de e2e y Chromium como se describe en [pruebas de integración](integration-testing.md).
 
-## Observed validation
+## Validación observada
 
-Final functional verification on 2026-10-30:
+Verificación funcional final el 2026-10-30:
 
-The table below records the earlier local implementation milestone. After the campus adaptation, the API suite passed **70 tests with 2 local PostgreSQL skips**, Node passed **14**, and non-container browser/preparation checks passed **21 with 3 Docker cases deselected**. A separate production Docker/TLS rehearsal also passed. See [campus verification](research-campus-deployment.md#verification-and-limits) for the proof boundary; live university/provider readiness is not established by local tests.
+La tabla siguiente registra el hito anterior de implementación local. Después de la adaptación al campus, la suite de la API pasó **70 pruebas con 2 omisiones por PostgreSQL local**, Node pasó **14**, y las comprobaciones de navegador y preparación sin contenedores pasaron **21 con 3 casos de Docker deseleccionados**. Un ensayo separado de Docker/TLS de producción también pasó. Consulta el [límite de prueba del despliegue en campus](research-campus-deployment.md#verificación-y-límites); las pruebas locales no establecen la preparación real de la universidad ni del proveedor.
 
-| Check | Observed result |
+| Comprobación | Resultado observado |
 |---|---|
-| API suite | 66 passed, 2 local PostgreSQL-dependent skips; 1 pre-existing Starlette/httpx TestClient deprecation warning |
-| Node controller/isolation suite | 13 passed |
-| Complete Chromium suite | 14 passed, including all six research cases and two Docker integration cases |
-| Final consent/UI recheck | 12 passed, 2 Docker cases deselected; the unchanged container paths had already passed the complete suite |
-| Real PostgreSQL/API contracts | Executed successfully inside the isolated Docker API container by the integration suite; the local skips are not counted as passes |
-| Baseline differential vs eccf825 | Identical outcomes in 4 state, 4 attachment-message and 4 Markdown-normalization checks using an external temporary copy |
-| Changed Python surfaces | Ruff lint and check-only formatting passed |
-| JavaScript | Background and all three research scripts passed parse checks |
-| Documentation | 19 changed/new Markdown pages checked, zero missing local targets; 32 unique bibliography keys with balanced BibTeX braces |
+| Suite de la API | 66 pasadas, 2 omisiones que dependen de PostgreSQL local; 1 advertencia de deprecación preexistente de TestClient de Starlette/httpx |
+| Suite de controlador y aislamiento en Node | 13 pasadas |
+| Suite completa de Chromium | 14 pasadas, incluidos los seis casos de investigación y dos casos de integración con Docker |
+| Revisión final de consentimiento e interfaz | 12 pasadas, 2 casos de Docker deseleccionados; las rutas de contenedor sin cambios ya habían pasado la suite completa |
+| Contratos reales de PostgreSQL y API | Ejecutados correctamente dentro del contenedor aislado de la API por la suite de integración; las omisiones locales no cuentan como aprobadas |
+| Diferencial base frente a eccf825 | Resultados idénticos en 4 comprobaciones de estado, 4 de mensajes de adjuntos y 4 de normalización de Markdown usando una copia temporal externa |
+| Superficies Python modificadas | Lint de Ruff y comprobación de formato pasaron |
+| JavaScript | El background y los tres scripts de investigación pasaron las comprobaciones de sintaxis |
+| Documentación | 19 páginas Markdown nuevas o modificadas revisadas, cero destinos locales faltantes; 32 claves bibliográficas únicas con llaves BibTeX balanceadas |
 
-The popup was also rendered with synthetic data and inspected visually. No independent AI worker/reviewer was launched, following the user's explicit inline-only instruction; no native review approval is claimed.
+El popup también se renderizó con datos sintéticos y se inspeccionó visualmente. No se lanzó ningún trabajador ni revisor de IA independiente, siguiendo la instrucción explícita del usuario de trabajar solo en línea; no se afirma una aprobación de revisión nativa.
 
-During development, test setup initially hit restricted temporary-directory access, an extension-page string wait conflicted with CSP, and an additional two-tab test double lacked a host permission in the test copy. These were corrected in test setup without weakening product CSP/permissions. A real conversation-history mixing defect and global/pending-state protection isolation defects were reproduced with regression tests and fixed. The final results above supersede those intermediate failures.
+Durante el desarrollo, la preparación de pruebas encontró primero acceso restringido al directorio temporal, una espera de cadena en una página de extensión que chocaba con la CSP y un doble de prueba de dos pestañas al que le faltaba un permiso de host en la copia de prueba. Se corrigieron en la preparación de pruebas sin debilitar la CSP ni los permisos del producto. Se reprodujeron con pruebas de regresión y se corrigieron un defecto real de mezcla de historial de conversación y defectos de aislamiento de la protección global y de estado pendiente. Los resultados finales anteriores superan esos fallos intermedios.
 
-Unverified until separately authorized/performed: real-provider adapters and current cloud UI behavior, Firefox, actual university deployment/client trust/routing/encryption/backup policy, live Google Forms linkage, actual students and trained-model comparisons. The local commands above still target one workstation/profile. Separate [campus deployment artifacts](research-campus-deployment.md) prepare the shared private-IP collector and endpoint-specific extension; they do not automatically deploy it on a university computer.
+Sin verificar hasta que se autorice o realice por separado: adaptadores de proveedores reales y el comportamiento actual de las interfaces en la nube, Firefox, despliegue universitario real, confianza de clientes, enrutamiento, cifrado y política de respaldos, vinculación con Google Forms en vivo, estudiantes reales y comparaciones con modelos entrenados. Los comandos locales anteriores siguen apuntando a una sola estación de trabajo y un solo perfil. Los [artefactos separados de despliegue en campus](research-campus-deployment.md) preparan el recolector compartido con IP privada y la extensión específica del endpoint; no lo despliegan automáticamente en un equipo universitario.
 
-## Troubleshooting
+## Diagnóstico
 
-| Symptom | Action |
+| Síntoma | Acción |
 |---|---|
-| 404 on research routes | Confirm RESEARCH_ENABLED=true in the running process; normal health paths do not exist in the standalone app |
-| 503 configuration | Use a >=32-character key, absolute archive path and retention days between 1 and 365 |
-| 401 on session creation/export | Check the setup key, never paste it into the chatbot |
-| Start remains in starting | Authorization or activation was interrupted; discard that setup and start a new empty session |
-| Adapter unavailable | Use a fresh conversation and check current site selectors; stop the pilot if capture cannot be verified |
-| Pending / API unreachable | Start the same local API/archive and retry the frozen upload; do not delete local state |
-| Withdrawing / API unreachable | Raw local text is already cleared; retry **Descartar / retirar sesión** so the retained capability can finish API deletion |
-| 409 completion conflict | Preserve the local copy; investigate mismatch, never overwrite the saved record |
-| Local limit reached | Stop/save; the supported send is blocked rather than silently dropping text |
-| Receipt lost | Contact approved study staff; do not search other students' records or guess a code |
+| 404 en rutas de investigación | Confirma `RESEARCH_ENABLED=true` en el proceso en ejecución; las rutas de salud normales no existen en la aplicación independiente |
+| 503 de configuración | Usa una clave de al menos 32 caracteres, una ruta absoluta del archivo y una retención entre 1 y 365 días |
+| 401 al crear o exportar una sesión | Revisa la clave de configuración; nunca la pegues en el chatbot |
+| El inicio se queda en `starting` | La autorización o la activación se interrumpió; descarta esa configuración y empieza una sesión nueva y vacía |
+| Adaptador no disponible | Usa una conversación nueva y revisa los selectores actuales del sitio; detén el piloto si no puedes verificar la captura |
+| Pendiente / API inalcanzable | Arranca la misma API y el mismo archivo locales y reintenta la subida congelada; no borres el estado local |
+| Retirando / API inalcanzable | El texto local sin procesar ya se borró; reintenta **Descartar / retirar sesión** para que la capacidad conservada termine la eliminación en la API |
+| 409 al completar | Conserva la copia local; investiga el desajuste, nunca sobrescribas el registro guardado |
+| Límite local alcanzado | Detén y guarda; el envío compatible se bloquea en lugar de descartar texto en silencio |
+| Recibo perdido | Contacta al personal aprobado del estudio; no busques registros de otros estudiantes ni adivines un código |
 
-[Plan](../project/experimentacion/research-capture-plan.md) · [Architecture/decisions](../architecture/backend/privacy-middleware/research-capture.md) · [Study kit](../project/experimentacion/research-study/README.md)
-
+[Plan](../project/experimentacion/research-capture-plan.md) · [Arquitectura y decisiones](../architecture/backend/privacy-middleware/research-capture.md) · [Kit del estudio](../project/experimentacion/research-study/README.md)

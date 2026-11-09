@@ -1,42 +1,33 @@
-# Datasets and audits
+# Conjuntos de datos y auditorías
 
-**Objective.** This guide defines how a dataset enters the repository, where its files live, how it is audited, and
-how the evidence is delivered for review. Apply the same organisation to every new dataset; adapt the checks to the
-data, not the structure.
+**Objetivo.** Esta guía define cómo entra un conjunto de datos al repositorio, dónde viven sus archivos, cómo se audita y cómo se entrega la evidencia para revisión. Aplica la misma organización a cada conjunto de datos nuevo; adapta las comprobaciones a los datos, no a la estructura.
 
-**Intended reader.** Anyone adding a dataset, preparing data, or reviewing an audit before the project moves to
-training.
+**Lector previsto.** Cualquier persona que agregue un conjunto de datos, prepare datos o revise una auditoría antes de que el proyecto pase a entrenamiento.
 
-## Principles
+## Principios
 
-1. **One dataset is one unit.** Payload, preparation code, audit notebook, figures, and report are attributable to a
-   single dataset. Nothing that belongs to a dataset lives in a shared, ambiguous folder.
-2. **Git versions meaning, DVC versions bytes.** Large payloads are stored outside Git; Git keeps the metadata that
-   identifies the exact version.
-3. **An audit is read-only.** Audits measure and document. They never repair, deduplicate, or rewrite the frozen
-   version. Fixes belong to a later dataset version.
-4. **Evidence must be reproducible.** Every number in a report is produced by an executable artifact stored with it,
-   not copied by hand from an interactive session.
-5. **A notebook must explain itself.** A reviewer opens the notebook (or its PDF) with no prior conversation and
-   understands what was measured, why it matters, and what follows.
-6. **Only useful artifacts are versioned.** Transformation code, notebooks with their outputs, reports, figures, and
-   the dataset card are versioned. Payloads, environments, caches, and generated PDFs are not.
+1. **Un conjunto de datos es una unidad.** El contenido, el código de preparación, el notebook de auditoría, las figuras y el informe se atribuyen a un único conjunto de datos. Nada que pertenezca a un conjunto de datos vive en una carpeta compartida y ambigua.
+2. **Git versiona el significado, DVC versiona los bytes.** Los contenidos grandes se guardan fuera de Git; Git conserva los metadatos que identifican la versión exacta.
+3. **Una auditoría es de solo lectura.** Las auditorías miden y documentan. Nunca reparan, deduplican ni reescriben la versión congelada. Las correcciones pertenecen a una versión posterior del conjunto de datos.
+4. **La evidencia debe ser reproducible.** Cada número de un informe lo produce un artefacto ejecutable guardado junto a él, no se copia a mano desde una sesión interactiva.
+5. **Un notebook debe explicarse solo.** Quien revisa abre el notebook (o su PDF) sin conversación previa y entiende qué se midió, por qué importa y qué sigue.
+6. **Solo se versionan los artefactos útiles.** Se versionan el código de transformación, los notebooks con sus salidas, los informes, las figuras y la ficha del conjunto de datos. No se versionan los contenidos, los entornos, las cachés ni los PDF generados.
 
-## Workspace layout
+## Estructura del espacio de trabajo
 
-The layout is stable across datasets. Replace `<dataset>` with the dataset name.
+La estructura es estable entre conjuntos de datos. Reemplaza `<dataset>` por el nombre del conjunto.
 
 ```
 ml/
 ├── data/
-│   ├── raw/<payload>              # DVC payload (not versioned in Git)
-│   └── processed/<payload>        # Derived payload (not versioned in Git)
+│   ├── raw/<payload>              # Contenido gestionado por DVC (no versionado en Git)
+│   └── processed/<payload>        # Contenido derivado (no versionado en Git)
 ├── src/pii_ml/data/
-│   ├── audit.py                   # Reusable statistics and detection
-│   └── validation.py              # Reusable structural and annotation checks
+│   ├── audit.py                   # Estadísticas y detección reutilizables
+│   └── validation.py              # Comprobaciones estructurales y de anotación reutilizables
 ├── datasets/
 │   └── <dataset>/
-│       ├── README.md              # Dataset card
+│       ├── README.md              # Ficha del conjunto de datos
 │       ├── notebooks/
 │       │   └── NNN_<purpose>.ipynb
 │       └── reports/
@@ -44,25 +35,23 @@ ml/
 │           └── figures/
 │               └── NNN_<name>.png
 ├── scripts/
-│   └── render_report_pdf.py       # Markdown report to PDF
-├── pyproject.toml                 # Environment and tooling
+│   └── render_report_pdf.py       # Informe Markdown a PDF
+├── pyproject.toml                 # Entorno y herramientas
 ├── uv.lock
 └── .gitignore
 ```
 
-`data/` holds payloads managed by DVC. `src/pii_ml/` holds code that is genuinely reusable across datasets.
-`datasets/<dataset>/` holds everything that describes or analyses one dataset. A check used by a single dataset stays
-inside its folder until a second dataset needs it; then it moves to `src/pii_ml/` with tests.
+`data/` contiene los archivos gestionados por DVC. `src/pii_ml/` contiene el código realmente reutilizable entre conjuntos de datos. `datasets/<dataset>/` contiene todo lo que describe o analiza un conjunto de datos. Una comprobación usada por un solo conjunto de datos permanece dentro de su carpeta hasta que un segundo la necesite; entonces se mueve a `src/pii_ml/` con sus pruebas.
 
-The workspace overview lives in [`ml/README.md`](../../ml/README.md).
+La visión general del espacio de trabajo está en [`ml/README.md`](../../ml/README.md).
 
-## Prerequisites
+## Requisitos
 
-| Tool | Use |
+| Herramienta | Uso |
 |---|---|
-| `uv` | Creates the environment and runs code from `ml/` |
-| `dvc` | Tracks and transfers dataset payloads |
-| Chromium browser (Chrome or Edge) | Renders reports to PDF without LaTeX |
+| `uv` | Crea el entorno y ejecuta código desde `ml/` |
+| `dvc` | Versiona y transfiere los contenidos del conjunto de datos |
+| Navegador Chromium (Chrome o Edge) | Renderiza informes a PDF sin LaTeX |
 
 ```powershell
 cd ml
@@ -70,11 +59,11 @@ uv sync
 dvc version
 ```
 
-All dataset commands run from `ml/`, the DVC root of this workspace.
+Todos los comandos del conjunto de datos se ejecutan desde `ml/`, la raíz de DVC de este espacio de trabajo.
 
-## 1. Register or locate the dataset
+## 1. Registrar o localizar el conjunto de datos
 
-If the payload already exists and is tracked, skip to restoring it. To add a new payload:
+Si el contenido ya existe y está versionado, pasa directamente a restaurarlo. Para agregar contenido nuevo:
 
 ```powershell
 cd ml
@@ -82,14 +71,11 @@ dvc add data/raw/<file-or-directory>
 git add data/raw/<file-or-directory>.dvc data/raw/.gitignore
 ```
 
-`dvc add` writes `<name>.dvc` with the content hash, size, and file count, and DVC adds the payload path to
-`data/raw/.gitignore`. Commit the `.dvc` file; never commit the payload. The `.dvc` metadata is the identity of the
-dataset version, so a later audit always states which hash it read.
+`dvc add` escribe `<name>.dvc` con el hash del contenido, el tamaño y la cantidad de archivos, y DVC agrega la ruta del contenido a `data/raw/.gitignore`. Haz commit del archivo `.dvc`; nunca hagas commit del contenido. Los metadatos `.dvc` son la identidad de la versión del conjunto de datos, así que una auditoría posterior siempre indica qué hash leyó.
 
-## 2. Configure the remote per machine
+## 2. Configurar el remoto por máquina
 
-A remote tells DVC where the bytes live. The remote URL can contain credentials or machine-specific paths, so it
-must stay outside Git:
+Un remoto le dice a DVC dónde viven los bytes. La URL del remoto puede contener credenciales o rutas propias de la máquina, así que debe quedar fuera de Git:
 
 ```powershell
 cd ml
@@ -97,16 +83,13 @@ dvc remote add --local -d <remote-name> <remote-url>
 dvc remote list --local
 ```
 
-- `--local` writes `.dvc/config.local`, which DVC keeps untracked. Commit `.dvc/config` only when the remote
-  configuration is genuinely shareable and credential-free.
-- Supported forms include a local or mounted directory (`D:\dvc-storage`, a synced Drive folder) and a native
-  backend such as `gdrive://<folder-id>`. Native backends need their own authentication and may require extra
-  dependencies.
-- Never place tokens, service-account JSON, or personal filesystem paths in documentation, commits, or notebooks.
+- `--local` escribe `.dvc/config.local`, que DVC mantiene sin versionar. Haz commit de `.dvc/config` solo cuando la configuración del remoto sea realmente compartible y no contenga credenciales.
+- Las formas admitidas incluyen un directorio local o montado (`D:\dvc-storage`, una carpeta de Drive sincronizada) y un backend nativo como `gdrive://<folder-id>`. Los backends nativos necesitan su propia autenticación y pueden requerir dependencias adicionales.
+- Nunca pongas tokens, JSON de cuentas de servicio ni rutas personales del sistema de archivos en documentación, commits o notebooks.
 
-Check before continuing that `git status` does not list the remote configuration or any credential file.
+Antes de continuar, comprueba que `git status` no liste la configuración del remoto ni ningún archivo de credenciales.
 
-## 3. Restore and verify the payload
+## 3. Restaurar y verificar el contenido
 
 ```powershell
 cd ml
@@ -114,62 +97,57 @@ dvc pull data/raw/<file-or-directory>.dvc
 dvc status data/raw/<file-or-directory>.dvc
 ```
 
-`dvc status` must report that data is up to date. Then reconcile the working copy with the metadata: file count and
-total size should match the numbers in the `.dvc` file. A mismatch means the working copy is not the frozen version;
-do not run the audit until it matches.
+`dvc status` debe informar que los datos están al día. Después concilia la copia de trabajo con los metadatos: la cantidad de archivos y el tamaño total deben coincidir con los números del archivo `.dvc`. Un desajuste significa que la copia de trabajo no es la versión congelada; no ejecutes la auditoría hasta que coincida.
 
-## 4. Write the dataset card
+## 4. Escribir la ficha del conjunto de datos
 
-Create `datasets/<dataset>/README.md` before analysing. It is the entry point that survives after the audit:
+Crea `datasets/<dataset>/README.md` antes de analizar. Es el punto de entrada que sobrevive a la auditoría:
 
-- Dataset identity: DVC version (hash), file count, total size.
-- What the dataset contains and which formats it uses.
-- Contents table: one row per artifact with its purpose.
-- Restore command.
-- How to reproduce the audit.
-- Known characteristics and open issues.
-- Links to the notebook and the report.
+- Identidad del conjunto de datos: versión de DVC (hash), cantidad de archivos y tamaño total.
+- Qué contiene el conjunto de datos y qué formatos usa.
+- Tabla de contenidos: una fila por artefacto con su propósito.
+- Comando de restauración.
+- Cómo reproducir la auditoría.
+- Características conocidas y problemas abiertos.
+- Enlaces al notebook y al informe.
 
-The card states facts that are stable. Detailed measurements belong to the report, not the card.
+La ficha enuncia hechos estables. Las mediciones detalladas pertenecen al informe, no a la ficha.
 
-## 5. Inspect before writing code
+## 5. Inspeccionar antes de escribir código
 
-Read a sample of every artifact first. Identify:
+Lee primero una muestra de cada artefacto. Identifica:
 
-- Files, formats, sizes, and encodings.
-- Record schema: fields, types, identifiers, and how artifacts join.
-- Partition structure and label vocabulary.
-- What the dataset declares about itself that can be verified independently.
+- Archivos, formatos, tamaños y codificaciones.
+- Esquema de los registros: campos, tipos, identificadores y cómo se relacionan los artefactos.
+- Estructura de particiones y vocabulario de etiquetas.
+- Qué declara el conjunto de datos sobre sí mismo que pueda verificarse de forma independiente.
 
-From that inspection, decide which audit questions apply. The default question set is below; keep what the dataset
-supports, drop what it does not, and add domain-specific checks when the data has a contract worth verifying.
+A partir de esa inspección, decide qué preguntas de auditoría aplican. El conjunto de preguntas por defecto está abajo; conserva lo que el conjunto de datos soporte, elimina lo que no y agrega comprobaciones específicas del dominio cuando los datos tengan un contrato que valga la pena verificar.
 
-| Question | Typical evidence |
+| Pregunta | Evidencia típica |
 |---|---|
-| What does the dataset contain? | File inventory, sizes, record counts |
-| What is the record contract? | Field presence, types, joins |
-| Is the data structurally valid? | Missing fields, duplicates, length agreement, grammar |
-| What labels exist? | Declared versus observed classes |
-| How is the data distributed? | Class frequency, document types, lengths, imbalance |
-| Are there duplicates? | Exact, normalized, near-duplicate candidates |
-| Are partitions isolated and comparable? | Identifier and text overlap, class presence |
-| Are annotations correct? | Boundary validity, grounding against declared values |
-| What coverage exists? | Rare and absent classes per partition |
-| Is the dataset ready for the next phase? | Verdict with explicit conditions |
+| ¿Qué contiene el conjunto de datos? | Inventario de archivos, tamaños, conteos de registros |
+| ¿Cuál es el contrato de los registros? | Presencia de campos, tipos, uniones |
+| ¿Los datos son estructuralmente válidos? | Campos faltantes, duplicados, coincidencia de longitudes, gramática |
+| ¿Qué etiquetas existen? | Clases declaradas frente a observadas |
+| ¿Cómo se distribuyen los datos? | Frecuencia de clases, tipos de documento, longitudes, desbalance |
+| ¿Hay duplicados? | Exactos, normalizados y candidatos casi duplicados |
+| ¿Las particiones están aisladas y son comparables? | Solapamiento de identificadores y texto, presencia de clases |
+| ¿Las anotaciones son correctas? | Validez de límites, correspondencia con los valores declarados |
+| ¿Qué cobertura existe? | Clases raras y ausentes por partición |
+| ¿El conjunto de datos está listo para la siguiente fase? | Veredicto con condiciones explícitas |
 
-## 6. Extend the reusable modules only when justified
+## 6. Extender los módulos reutilizables solo cuando se justifique
 
-`pii_ml.data.audit` returns plain data: inventory, schema, counts, lengths, duplicates, partitions, reuse, and
-grounding. `pii_ml.data.validation` returns aggregated issues with a severity, a code, and samples.
+`pii_ml.data.audit` devuelve datos simples: inventario, esquema, conteos, longitudes, duplicados, particiones, reutilización y correspondencia. `pii_ml.data.validation` devuelve problemas agregados con severidad, código y muestras.
 
-Rules:
+Reglas:
 
-- Return data, not formatted text. Notebooks and reports format results.
-- Aggregate findings; never print one line per defective record.
-- Keep every function independent of a specific dataset path; pass paths as arguments.
-- Add a function to `src/pii_ml/` only when it is dataset-agnostic. Otherwise keep it in the dataset notebook or a
-  dataset-local script.
-- Run the linter after changes:
+- Devuelve datos, no texto formateado. Los notebooks y los informes formatean los resultados.
+- Agrega los hallazgos; nunca imprimas una línea por registro defectuoso.
+- Mantén cada función independiente de una ruta concreta del conjunto de datos; pasa las rutas como argumentos.
+- Agrega una función a `src/pii_ml/` solo cuando sea agnóstica al conjunto de datos. Si no, mantenla en el notebook o en un script local del conjunto.
+- Ejecuta el linter después de los cambios:
 
 ```powershell
 cd ml
@@ -177,33 +155,32 @@ uv run ruff check src
 uv run ruff format --check src
 ```
 
-## 7. Write the audit notebook
+## 7. Escribir el notebook de auditoría
 
-Place it at `datasets/<dataset>/notebooks/NNN_<purpose>.ipynb`. A reviewer must be able to read it as a standalone
-document.
+Ubícalo en `datasets/<dataset>/notebooks/NNN_<purpose>.ipynb`. Quien revisa debe poder leerlo como un documento autónomo.
 
-Required content:
+Contenido obligatorio:
 
-1. **Title and purpose** — what the audit answers and which decisions it supports.
-2. **Audience** — who reviews it and what they need in order to approve the next phase.
-3. **Dataset identity** — DVC hash, file count, size, and the date or commit of the run when relevant.
-4. **How to run** — environment, command, and kernel, inside the notebook.
-5. **Definitions** — every domain term the reader needs (record, label, split, coverage, duplicate).
-6. **Scope and method** — what is measured, what is deliberately not done, and why.
-7. **One section per question** — each answers what is measured, why it matters, and how to read the result.
-8. **Conclusions and limitations** — what the evidence supports and what it cannot prove.
-9. **Next steps** — concrete decisions the next phase must take.
+1. **Título y propósito** — qué responde la auditoría y qué decisiones sostiene.
+2. **Audiencia** — quién la revisa y qué necesita para aprobar la siguiente fase.
+3. **Identidad del conjunto de datos** — hash de DVC, cantidad de archivos, tamaño y la fecha o el commit de la ejecución cuando sea relevante.
+4. **Cómo ejecutarlo** — entorno, comando y kernel, dentro del notebook.
+5. **Definiciones** — cada término del dominio que el lector necesite (registro, etiqueta, partición, cobertura, duplicado).
+6. **Alcance y método** — qué se mide, qué se evita a propósito y por qué.
+7. **Una sección por pregunta** — cada una responde qué se mide, por qué importa y cómo leer el resultado.
+8. **Conclusiones y limitaciones** — qué sostiene la evidencia y qué no puede probar.
+9. **Siguientes pasos** — decisiones concretas que debe tomar la siguiente fase.
 
-Rules:
+Reglas:
 
-- Read-only: never write into `data/`.
-- Compute paths relative to the workspace; never hardcode a machine path.
-- Save figures with deterministic names to `reports/figures/`; each figure must have a title and labelled axes.
-- Keep interpretation consistent with the computed values. If a threshold changes, update the text that cites it.
-- Do not depend on outside narration, chat history, or a separate explanation document.
-- Version the notebook **with its outputs** so the evidence is visible without re-running it.
+- Solo lectura: nunca escribas dentro de `data/`.
+- Calcula rutas relativas al espacio de trabajo; nunca fijes una ruta de máquina.
+- Guarda las figuras con nombres deterministas en `reports/figures/`; cada figura debe tener título y ejes etiquetados.
+- Mantén la interpretación coherente con los valores calculados. Si cambia un umbral, actualiza el texto que lo cita.
+- No dependas de narración externa, historial de chat ni un documento de explicación aparte.
+- Versiona el notebook **con sus salidas** para que la evidencia sea visible sin volver a ejecutarlo.
 
-## 8. Execute and store the evidence
+## 8. Ejecutar y almacenar la evidencia
 
 ```powershell
 cd ml
@@ -211,100 +188,92 @@ uv run jupyter nbconvert --to notebook --execute --inplace `
   datasets/<dataset>/notebooks/<notebook>.ipynb
 ```
 
-Commit the executed notebook and the generated figures. If execution fails, fix the code or the environment; do not
-commit a notebook with error outputs.
+Haz commit del notebook ejecutado y de las figuras generadas. Si la ejecución falla, corrige el código o el entorno; no hagas commit de un notebook con salidas de error.
 
-## 9. Write the report
+## 9. Escribir el informe
 
-Place it at `datasets/<dataset>/reports/<purpose>_v<N>.md`. The report is the reviewable decision artifact; the
-notebook is its evidence.
+Ubícalo en `datasets/<dataset>/reports/<purpose>_v<N>.md`. El informe es el artefacto de decisión revisable; el notebook es su evidencia.
 
-Required structure:
+Estructura obligatoria:
 
-1. **Header table** — status, dataset version, files and size, record counts, evidence links.
-2. **Verdict** — ready or not, with explicit conditions.
-3. **Method and reproducibility** — modules, commands, runtime, and what was read-only.
-4. **Findings by question** — tables and the figures that support them.
-5. **Limitations** — what the checks cannot detect.
-6. **Recommendations** — decisions the next phase must take, in priority order.
-7. **Gate** — what must be true before the dataset moves forward.
+1. **Tabla de cabecera** — estado, versión del conjunto de datos, archivos y tamaño, conteos de registros, enlaces a la evidencia.
+2. **Veredicto** — listo o no, con condiciones explícitas.
+3. **Método y reproducibilidad** — módulos, comandos, tiempo de ejecución y qué fue de solo lectura.
+4. **Hallazgos por pregunta** — tablas y las figuras que los sostienen.
+5. **Limitaciones** — qué no pueden detectar las comprobaciones.
+6. **Recomendaciones** — decisiones que debe tomar la siguiente fase, en orden de prioridad.
+7. **Condición de avance** — qué debe ser cierto antes de que el conjunto de datos avance.
 
-Rules:
+Reglas:
 
-- Every number must be traceable to a notebook cell.
-- Separate measured facts from interpretation; do not claim guarantees the checks cannot support.
-- State the dataset version the report refers to. A new version needs a new report.
-- Write the report in English with consistent section and table labels.
+- Cada número debe ser rastreable hasta una celda del notebook.
+- Separa los hechos medidos de la interpretación; no afirmes garantías que las comprobaciones no pueden sostener.
+- Indica la versión del conjunto de datos a la que se refiere el informe. Una versión nueva necesita un informe nuevo.
+- Escribe el informe en inglés con secciones y etiquetas de tabla consistentes.
 
-## 10. Render the PDF for review
+## 10. Renderizar el PDF para revisión
 
-The PDF is a generated artifact and is not versioned. It embeds the figures so a reviewer can read one file.
+El PDF es un artefacto generado y no se versiona. Incorpora las figuras para que quien revisa pueda leer un solo archivo.
 
 ```powershell
 cd ml
 uv run python scripts/render_report_pdf.py datasets/<dataset>/reports/<report>.md
 ```
 
-The script converts Markdown to styled A4 HTML, embeds relative images, and prints it with headless Chrome or Edge.
-Use `--browser <path>` when the browser is not in a standard location, and `--output <path>` to change the
-destination. Keep the Markdown report as the source of truth; never edit the PDF.
+El script convierte Markdown a HTML A4 con estilos, incorpora las imágenes relativas y lo imprime con Chrome o Edge en modo headless. Usa `--browser <path>` cuando el navegador no esté en una ubicación estándar, y `--output <path>` para cambiar el destino. Mantén el informe Markdown como fuente de verdad; nunca edites el PDF.
 
-## Versioning rules
+## Reglas de versionado
 
-| Commit | Ignore |
+| Se versiona | Se ignora |
 |---|---|
-| `.dvc` metadata | Dataset payloads under `data/` |
-| Dataset card | `.venv/`, `__pycache__/`, `*.egg-info/` |
-| Notebook with outputs | `.ipynb_checkpoints/` |
-| Report Markdown and figures | Generated report PDFs and HTML |
-| Reusable audit and validation code | Local DVC configuration and credentials |
-| `pyproject.toml` and `uv.lock` | Machine-specific paths |
+| Metadatos `.dvc` | Contenidos del conjunto de datos bajo `data/` |
+| Ficha del conjunto de datos | `.venv/`, `__pycache__/`, `*.egg-info/` |
+| Notebook con salidas | `.ipynb_checkpoints/` |
+| Informe Markdown y figuras | PDF y HTML generados del informe |
+| Código reutilizable de auditoría y validación | Configuración local de DVC y credenciales |
+| `pyproject.toml` y `uv.lock` | Rutas propias de la máquina |
 
-The workspace `.gitignore` already covers environments, caches, notebook checkpoints, and generated reports. Extend
-it only for new artifact types, and prefer narrow patterns over global ones.
+El `.gitignore` del espacio de trabajo ya cubre entornos, cachés, checkpoints de notebooks e informes generados. Extiéndelo solo para tipos de artefacto nuevos y prefiere patrones estrechos sobre los globales.
 
-## Naming conventions
+## Convenciones de nombres
 
-| Artifact | Pattern | Example |
+| Artefacto | Patrón | Ejemplo |
 |---|---|---|
-| Dataset folder | `datasets/<dataset>/` | `datasets/<dataset>/` |
+| Carpeta del conjunto de datos | `datasets/<dataset>/` | `datasets/<dataset>/` |
 | Notebook | `NNN_<purpose>.ipynb` | `001_dataset_audit.ipynb` |
-| Report | `<purpose>_v<N>.md` | `dataset_audit_v1.md` |
-| Figure | `NNN_<name>.png` | `001_document_types.png` |
-| Dataset-local script | `scripts/<verb>_<object>.py` | `scripts/convert_csv_to_jsonl.py` |
+| Informe | `<purpose>_v<N>.md` | `dataset_audit_v1.md` |
+| Figura | `NNN_<name>.png` | `001_document_types.png` |
+| Script local del conjunto de datos | `scripts/<verb>_<object>.py` | `scripts/convert_csv_to_jsonl.py` |
 
-Use lowercase, hyphen-free folder names that match the DVC artifact name, so metadata, payload, and artifacts are
-easy to correlate.
+Usa nombres de carpeta en minúsculas y sin guiones que coincidan con el nombre del artefacto de DVC, para que metadatos, contenido y artefactos sean fáciles de correlacionar.
 
-## Hand-off checklist
+## Lista de verificación para la entrega
 
-- [ ] Payload restored and `dvc status` clean.
-- [ ] Working copy matches the metadata file count and size.
-- [ ] Dataset card written with identity, contents, and reproduction steps.
-- [ ] Reusable checks extended only where they generalise; linter passes.
-- [ ] Notebook is self-contained, read-only, and executed with outputs committed.
-- [ ] Figures saved under `reports/figures/` with deterministic names.
-- [ ] Report states the dataset version, verdict, conditions, and limitations.
-- [ ] PDF rendered for review and left untracked.
-- [ ] `git status` shows no payload, credential, environment, or generated PDF.
-- [ ] Navigation updated in this guide area if a new convention was introduced.
+- [ ] Contenido restaurado y `dvc status` limpio.
+- [ ] La copia de trabajo coincide con la cantidad de archivos y el tamaño de los metadatos.
+- [ ] Ficha del conjunto de datos escrita con identidad, contenidos y pasos de reproducción.
+- [ ] Comprobaciones reutilizables extendidas solo donde generalizan; el linter pasa.
+- [ ] El notebook es autónomo, de solo lectura y ejecutado con las salidas versionadas.
+- [ ] Figuras guardadas en `reports/figures/` con nombres deterministas.
+- [ ] El informe indica la versión del conjunto de datos, el veredicto, las condiciones y las limitaciones.
+- [ ] PDF renderizado para revisión y dejado sin versionar.
+- [ ] `git status` no muestra contenido, credenciales, entornos ni PDF generados.
+- [ ] Navegación actualizada en esta área de guías si se introdujo una convención nueva.
 
-## Troubleshooting
+## Diagnóstico
 
-| Symptom | Cause | Action |
+| Síntoma | Causa | Acción |
 |---|---|---|
-| `no remote` when pulling | Remote configured only on another machine | Configure it locally with `--local` |
-| Pull succeeds but files mismatch metadata | Working copy belongs to another version | Re-pull the specific `.dvc` file; do not re-add blindly |
-| Notebook cannot import `pii_ml` | Notebook running outside the `ml` environment | Select the `ml` environment kernel after `uv sync` |
-| PDF not created | No Chromium browser found | Pass `--browser` explicitly |
-| Mojibake in terminal output | Console encoding, not file content | Read files with explicit UTF-8; verify with Python |
-| Huge files stall an editor | Payload opened directly | Stream JSONL and inspect samples instead |
-| Report numbers disagree with the notebook | Text copied instead of recomputed | Re-run the notebook and update the report |
+| `no remote` al hacer pull | El remoto está configurado solo en otra máquina | Configúralo localmente con `--local` |
+| El pull funciona pero los archivos no coinciden con los metadatos | La copia de trabajo pertenece a otra versión | Vuelve a hacer pull del archivo `.dvc` específico; no lo agregues de nuevo a ciegas |
+| El notebook no puede importar `pii_ml` | El notebook se ejecuta fuera del entorno `ml` | Selecciona el kernel del entorno `ml` después de `uv sync` |
+| No se crea el PDF | No se encontró un navegador Chromium | Pasa `--browser` de forma explícita |
+| Mojibake en la salida de la terminal | Codificación de la consola, no del contenido del archivo | Lee los archivos con UTF-8 explícito; verifícalo con Python |
+| Archivos enormes bloquean el editor | Se abrió el contenido directamente | Procesa JSONL en streaming e inspecciona muestras |
+| Los números del informe no coinciden con el notebook | Se copió el texto en lugar de recalcularlo | Vuelve a ejecutar el notebook y actualiza el informe |
 
-## Evolving this process
+## Evolucionar este proceso
 
-- A new dataset type (tabular, audio, images) may need new inventory and validation functions. Add them to
-  `src/pii_ml/` only when they generalise, and keep dataset-specific assumptions in the dataset folder.
-- A new question belongs in the audit only if it changes a decision. Document why it was added in the notebook.
-- When the structure itself changes, update this guide and the workspace `README.md` in the same change so the next
-  dataset starts from a correct description.
+- Un tipo nuevo de conjunto de datos (tabular, audio, imágenes) puede necesitar funciones nuevas de inventario y validación. Agrégalas a `src/pii_ml/` solo cuando generalicen y mantén los supuestos específicos en la carpeta del conjunto.
+- Una pregunta nueva pertenece a la auditoría solo si cambia una decisión. Documenta en el notebook por qué se agregó.
+- Cuando cambie la estructura misma, actualiza esta guía y el `README.md` del espacio de trabajo en el mismo cambio, para que el siguiente conjunto de datos parta de una descripción correcta.

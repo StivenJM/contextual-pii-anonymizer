@@ -1,56 +1,56 @@
-# Install the extension and start the development system
+# Instalar la extensión y arrancar el sistema de desarrollo
 
-Windows/PowerShell developer guide. Install the browser extension first, then start **only the services required by the flow you are testing**. Use fictional data throughout this procedure. This guide does not authorize a university deployment or real-student collection.
+Guía para Windows/PowerShell. Instala primero la extensión del navegador y después arranca **solo los servicios que necesita el flujo que vas a probar**. Usa datos ficticios en todo el procedimiento. Esta guía no autoriza un despliegue universitario ni la recolección de datos de estudiantes reales.
 
-## 1. Install the browser extension first
+## 1. Instala primero la extensión del navegador
 
-The extension is plain JavaScript: this installation needs no `npm install`, JavaScript build, Docker service or running model.
+La extensión es JavaScript puro: esta instalación no requiere `npm install`, una compilación de JavaScript, un servicio de Docker ni un modelo en ejecución.
 
-1. Open Google Chrome in a dedicated development profile. Avoid a profile containing personal chat history or unrelated sensitive accounts.
-2. Open `chrome://extensions` and enable **Developer mode**.
-3. Click **Load unpacked** and select **`browser-extension/extension` inside this repository**. Select the folder containing `manifest.json`, not the repository root, `browser-extension/backend`, or an `e2e/.build` test copy.
-4. Confirm that **PDF Middleware** appears enabled. Pin its toolbar icon if useful.
-5. Copy the extension **ID** shown on the extensions page. The converter uses this ID for its allowed browser origin; installing first avoids guessing that value.
-6. Open the popup. The existing attachment interface and separate **Captura para investigación (solo texto)** section should be present. Its participant-facing controls and messages are in Spanish. Installing the extension alone does not start either backend and does not activate research capture.
-7. After loading/reloading the extension, refresh any already-open supported chat tab. For capture tests, start a fresh empty conversation.
+1. Abre Google Chrome con un perfil de desarrollo dedicado. Evita un perfil con historial de chats personales o cuentas sensibles ajenas al proyecto.
+2. Abre `chrome://extensions` y activa el **modo de desarrollador**.
+3. Pulsa **Cargar descomprimida** y selecciona **`browser-extension/extension` dentro de este repositorio**. Elige la carpeta que contiene `manifest.json`, no la raíz del repositorio, ni `browser-extension/backend`, ni una copia de prueba en `e2e/.build`.
+4. Confirma que **PDF Middleware** aparece habilitada. Fija su icono en la barra si te resulta útil.
+5. Copia el **ID** de la extensión que muestra la página de extensiones. El conversor usa ese ID como origen permitido del navegador; instalarla primero evita adivinar ese valor.
+6. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura para investigación (solo texto)**. Sus controles y mensajes para participantes están en español. Instalar la extensión por sí sola no arranca ningún backend ni activa la captura para investigación.
+7. Después de cargar o recargar la extensión, actualiza cualquier pestaña de chat compatible que ya estuviera abierta. Para las pruebas de captura, empieza una conversación nueva y vacía.
 
-The manifest covers ChatGPT, Claude and Gemini. Local synthetic Chromium tests do not prove the current live interfaces work; manually rehearse each intended provider before fieldwork. Firefox and other browsers are not the validated route in this guide. If university policy disables unpacked extensions, obtain IT's approved installation route rather than bypassing that policy.
+El manifest cubre ChatGPT, Claude y Gemini. Las pruebas sintéticas locales en Chromium no demuestran que las interfaces reales actuales funcionen; ensaya manualmente cada proveedor previsto antes del trabajo de campo. Firefox y otros navegadores no son la ruta validada en esta guía. Si la política universitaria deshabilita las extensiones sin empaquetar, consigue la ruta de instalación aprobada por TI en lugar de saltarte esa política.
 
-After editing extension JavaScript or its manifest, return to `chrome://extensions`, click **Reload** on its card, then refresh the chat tab. A browser reload is not a data migration: finish or discard a research session before changing extension/configuration. Do not remove the extension or clear its storage while an upload/withdrawal is pending.
+Después de editar el JavaScript o el manifest de la extensión, vuelve a `chrome://extensions`, pulsa **Recargar** en su tarjeta y actualiza la pestaña del chat. Recargar el navegador no es una migración de datos: termina o descarta una sesión de investigación antes de cambiar la extensión o la configuración. No elimines la extensión ni borres su almacenamiento mientras haya una subida o un retiro pendiente.
 
-If Chrome reports a load error, inspect the extension card's error details before proceeding. Keep its service-worker console free of real text/credentials; a screenshot of a successful installation is not proof that the backend or site adapter works.
+Si Chrome informa un error de carga, revisa los detalles del error en la tarjeta de la extensión antes de continuar. Mantén la consola del service worker sin texto ni credenciales reales; una captura de pantalla de una instalación correcta no demuestra que el backend o el adaptador del sitio funcionen.
 
-Official installation procedure: [Chrome: load an unpacked extension](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
+Procedimiento oficial de instalación: [Chrome: cargar una extensión descomprimida](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 
-## 2. Understand the processes before starting them
+## 2. Entiende los procesos antes de arrancarlos
 
-| Component | Source | What it does | Default local address |
+| Componente | Origen | Qué hace | Dirección local por defecto |
 |---|---|---|---|
-| Browser extension | `browser-extension/extension/` | Existing attachment workflow plus explicitly enabled text research capture | Browser toolbar |
-| Attachment converter | `browser-extension/backend/` | Converts supported PDF/Office attachments to Markdown | `http://localhost:5000/convertir` |
-| Original privacy API | `api/app/main.py` | Detection, policy and de-identification; PostgreSQL stores configuration | `http://127.0.0.1:8000` |
-| Inference service | `inference/` | Runs the privacy detection model used by the original API | Internal Compose address `http://inference:3000` |
-| PostgreSQL | Root Compose service `db` | Privacy settings, entity-label mappings, recognizers, lookup lists and rules; not research chats | Internal Compose address `db:5432` |
-| Independent research API | `api/app/research/application.py` | Authorizes capture, stores finalized raw sessions in SQLite and returns receipts | `http://127.0.0.1:8000` |
+| Extensión del navegador | `browser-extension/extension/` | Flujo existente de adjuntos más la captura de texto para investigación, habilitada de forma explícita | Barra del navegador |
+| Conversor de adjuntos | `browser-extension/backend/` | Convierte adjuntos PDF/Office compatibles a Markdown | `http://localhost:5000/convertir` |
+| API de privacidad original | `api/app/main.py` | Detección, política y desidentificación; PostgreSQL almacena la configuración | `http://127.0.0.1:8000` |
+| Servicio de inferencia | `inference/` | Ejecuta el modelo de detección de privacidad que usa la API original | Dirección interna de Compose `http://inference:3000` |
+| PostgreSQL | Servicio `db` del Compose raíz | Configuración de privacidad, mapeos de etiquetas, reconocedores, listas y reglas; no guarda chats de investigación | Dirección interna de Compose `db:5432` |
+| API de investigación independiente | `api/app/research/application.py` | Autoriza la captura, guarda sesiones finalizadas en SQLite y devuelve identificadores | `http://127.0.0.1:8000` |
 
-**SQLite belongs to the research module, not the converter.** The research router is also mounted in the original API, but its standalone entry point avoids the original API's PostgreSQL/inference startup requirements.
+**SQLite pertenece al módulo de investigación, no al conversor.** El router de investigación también está montado en la API original, pero su punto de entrada independiente evita los requisitos de arranque de PostgreSQL e inferencia de la API original.
 
-Two useful development flows:
+Dos flujos de desarrollo útiles:
 
-- **Research capture:** follow section 3. No converter, PostgreSQL or inference model is needed.
-- **Original attachment conversion and protection:** follow section 4. It needs the converter **and** the main API/PostgreSQL/inference stack.
+- **Captura para investigación:** sigue la sección 3. No necesita conversor, PostgreSQL ni modelo de inferencia.
+- **Conversión y protección de adjuntos original:** sigue la sección 4. Necesita el conversor **y** el stack principal de API/PostgreSQL/inferencia.
 
-The standalone research API and original API both use host port **8000** by default. Do not start them simultaneously on that port. The ordinary source extension uses the loopback API; a campus deployment requires a separately generated extension copy and trusted HTTPS, not editing the URL to plain HTTP on a private IP.
+La API de investigación independiente y la API original usan por defecto el mismo puerto de host **8000**. No las arranques al mismo tiempo en ese puerto. La extensión de fuentes ordinaria usa la API de loopback; un despliegue en campus requiere una copia de extensión generada aparte y HTTPS de confianza, no cambiar la URL a HTTP plano sobre una IP privada.
 
-## 3. Start model-free research capture
+## 3. Arrancar la captura para investigación sin modelo
 
-### Prerequisites
+### Requisitos
 
-- `uv` installed: [official installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
-- Network access for the first locked dependency/Python installation if not cached. The API requires Python 3.14 or later; `uv` can provision a compatible interpreter.
-- Host port 8000 free and a dedicated local test browser profile.
+- `uv` instalado: [instrucciones oficiales de instalación](https://docs.astral.sh/uv/getting-started/installation/).
+- Acceso de red para la primera instalación bloqueada de dependencias y de Python si no está en caché. La API requiere Python 3.14 o superior; `uv` puede provisionar un intérprete compatible.
+- Puerto 8000 libre en el host y un perfil de navegador dedicado para pruebas locales.
 
-Run from the repository root in **terminal A**:
+Ejecuta desde la raíz del repositorio en la **terminal A**:
 
 ```powershell
 uv sync --directory api --locked
@@ -62,58 +62,58 @@ $env:RESEARCH_PROTOCOL_VERSION = "research-v1"
 $env:RESEARCH_RETENTION_DAYS = "7"
 ```
 
-Seven days is a **fictional-development example**, not an approved real-study retention period. The archive path is absolute and under the existing ignored `workspace/`; project documentation remains under `docs/`.
+Siete días es un **ejemplo ficticio de desarrollo**, no un periodo de retención aprobado para un estudio real. La ruta del archivo es absoluta y está dentro de `workspace/`, que ya está ignorado; la documentación del proyecto sigue en `docs/`.
 
-Use a clean dedicated terminal. If research `_FILE` secret sources or enrollment-only settings are already configured, do not mix conflicting secret sources; use the [detailed capture guide](research-capture.md) or the campus runbook instead. Do not overwrite institutional credentials for a local rehearsal.
+Usa una terminal dedicada y limpia. Si ya hay fuentes de secretos `_FILE` de investigación o ajustes de solo inscripción configurados, no mezcles fuentes de secretos en conflicto; usa la [guía detallada de captura](research-capture.md) o el runbook de campus. No sobrescribas credenciales institucionales para un ensayo local.
 
-For this local synthetic rehearsal only, copy the generated operator key into the extension's **Clave local del investigador** field. A PowerShell clipboard transfer avoids printing it in service logs:
+Solo para este ensayo local sintético, copia la clave de operador generada en el campo **Clave local del investigador** de la extensión. Transferirla por el portapapeles de PowerShell evita imprimirla en los logs del servicio:
 
 ```powershell
 Set-Clipboard -Value $env:RESEARCH_API_KEY
 ```
 
-Paste only into that extension field, not the chatbot or Forms. This intentionally places a development credential on the clipboard; do not use clipboard history/cloud sync for real credentials, and clear the clipboard/history after the transfer. This local operator-key shortcut must **not** be distributed to students. A campus package uses a separate enrollment code.
+Pégala únicamente en ese campo de la extensión, nunca en el chatbot ni en Forms. Esto coloca a propósito una credencial de desarrollo en el portapapeles; no uses historial ni sincronización en la nube para credenciales reales, y limpia el portapapeles y su historial después de transferirla. Este atajo de clave de operador local **no** debe distribuirse a estudiantes. Un paquete de campus usa un código de inscripción aparte.
 
-Then start the collector in terminal A:
+Después arranca el recolector en la terminal A:
 
 ```powershell
 uv run --directory api --no-sync python -m uvicorn app.research.application:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
-Keep terminal A open. In **terminal B**, verify availability:
+Mantén abierta la terminal A. En la **terminal B**, verifica la disponibilidad:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/api/research/health
 ```
 
-Expect `status: ready`. The local interactive API documentation is at `http://127.0.0.1:8000/docs`. The standalone app does not expose the original `/api/health` or `/api/interactions/protect` routes.
+Debes obtener `status: ready`. La documentación interactiva local de la API está en `http://127.0.0.1:8000/docs`. La aplicación independiente no expone las rutas originales `/api/health` ni `/api/interactions/protect`.
 
-### Confirm the research flow
+### Confirmar el flujo de investigación
 
-1. Open a fresh supported chat; use the [fictional scenario cards](../project/experimentacion/research-study/scenario-cards.md).
-2. Open the popup. Confirm that **API de investigación** points to `http://127.0.0.1:8000`, enter the development key and `research-v1`, and explicitly review collection consent. Optional training permission stays unchecked unless separately agreed.
-3. Click **Iniciar en esta pestaña**. Confirm the recording indicator before submitting anything. Research mode records raw text; it does not de-identify it before the external chatbot receives it. It pauses ordinary attachment protection only on the selected recording/paused tab.
-   Progress/errors appear immediately above this button. An existing conversation is rejected explicitly: open a new empty chat rather than trying to import its history. A visible empty editor may not show a send button until you type; this alone no longer prevents activation. A missing editor/page adapter is a different error. Failed starts keep the setup fields in the current popup; the key is cleared only after acknowledged activation and is never saved as popup configuration. Closing the browser popup still discards its transient form inputs.
-4. Set **Identificador de tarea** and click **Asignar tarea**; submit fictional text and wait for the reply to finish. Research mode is text-only; do not attach files.
-5. Click **Finalizar y guardar / reintentar**. A confirmed API acknowledgement should display an identifier. Use **Copiar identificador**; do not treat the mere existence of a local buffer as a successful API save.
-6. If upload fails, keep the profile/extension and retry. Do not clear browser storage to resolve the error. **Descartar / retirar sesión** is the explicit deletion route, with its own confirmation and retry semantics.
+1. Abre un chat compatible nuevo; usa las [tarjetas de escenario ficticias](../project/experimentacion/research-study/scenario-cards.md).
+2. Abre el popup. Confirma que **API de investigación** apunta a `http://127.0.0.1:8000`, introduce la clave de desarrollo y `research-v1`, y revisa explícitamente el consentimiento de recolección. El permiso opcional de entrenamiento queda sin marcar salvo que se haya acordado aparte.
+3. Pulsa **Iniciar en esta pestaña**. Confirma el indicador de grabación antes de enviar nada. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Solo pausa la protección ordinaria de adjuntos en la pestaña seleccionada mientras graba o está en pausa.
+   El progreso y los errores aparecen justo encima de ese botón. Una conversación existente se rechaza de forma explícita: abre un chat nuevo y vacío en lugar de intentar importar su historial. Un editor vacío visible puede no mostrar el botón de envío hasta que escribas; eso ya no impide la activación. Un editor o adaptador de página ausente es un error distinto. Los inicios fallidos conservan los campos de configuración en el popup actual; la clave solo se limpia después de una activación confirmada y nunca se guarda como configuración del popup. Cerrar el popup del navegador sigue descartando sus campos transitorios.
+4. Define **Identificador de tarea** y pulsa **Asignar tarea**; envía texto ficticio y espera a que termine la respuesta. El modo de investigación es solo texto: no adjuntes archivos.
+5. Pulsa **Finalizar y guardar / reintentar**. Una confirmación de la API debe mostrar un identificador. Usa **Copiar identificador**; no consideres que un búfer local es un guardado correcto en la API.
+6. Si la subida falla, conserva el perfil y la extensión y reintenta. No borres el almacenamiento del navegador para resolver el error. **Descartar / retirar sesión** es la ruta explícita de eliminación, con su propia confirmación y semántica de reintento.
 
-The other research-operation limits, consent, export and withdrawal procedures are in [model-free capture](research-capture.md). Nothing in this rehearsal creates a Google Form or authorizes recruitment.
+Los demás límites de la operación de investigación, el consentimiento, la exportación y los procedimientos de retiro están en [captura sin modelo](research-capture.md). Nada de este ensayo crea un Google Form ni autoriza reclutamiento.
 
-## 4. Start the original attachment/protection flow
+## 4. Arrancar el flujo original de adjuntos y protección
 
-If the standalone research process from section 3 is using port 8000, stop it with **Ctrl+C in its own terminal** after resolving pending work. Do not terminate an unrelated process automatically. Do not start research recording during this attachment rehearsal.
+Si el proceso independiente de investigación de la sección 3 está usando el puerto 8000, detenlo con **Ctrl+C en su propia terminal** después de resolver el trabajo pendiente. No termines un proceso ajeno de forma automática. No inicies una grabación de investigación durante este ensayo de adjuntos.
 
-### 4.1 Prepare Docker and the main API configuration
+### 4.1 Preparar Docker y la configuración de la API principal
 
-Install/start Docker Desktop with Linux containers and a Compose version supporting `--watch` and optional `env_file` entries. These commands build images and the inference service may download/cache a large model on first startup; allow time, disk space and network access. Do not run them solely to check a Markdown edit.
+Instala o arranca Docker Desktop con contenedores Linux y una versión de Compose que admita `--watch` y entradas opcionales de `env_file`. Estos comandos compilan imágenes y el servicio de inferencia puede descargar y cachear un modelo grande en el primer arranque; dale tiempo, espacio en disco y acceso de red. No los ejecutes solo para comprobar un cambio de Markdown.
 
-The tracked Compose templates are:
+Las plantillas de Compose versionadas son:
 
-- `api/.db.dev.env`: database settings. Inside Docker, `POSTGRES_HOST=db` is correct.
-- `api/.api.dev.env`: inference settings. Inside Docker, `BENTOML_URL=http://inference:3000` is correct.
+- `api/.db.dev.env`: ajustes de base de datos. Dentro de Docker, `POSTGRES_HOST=db` es correcto.
+- `api/.api.dev.env`: ajustes de inferencia. Dentro de Docker, `BENTOML_URL=http://inference:3000` es correcto.
 
-Create private local overrides **only if they do not already exist**:
+Crea las sobreescrituras locales privadas **solo si no existen todavía**:
 
 ```powershell
 if (-not (Test-Path api/.db.env)) {
@@ -124,36 +124,36 @@ if (-not (Test-Path api/.api.env)) {
 }
 ```
 
-Edit `api/.db.env` and replace the example password with a local-only development password. Both database and API load that override. Keep these private files out of Git and do not use production credentials. There is no root `.env.example` in the current checkout; do not follow older instructions that reference one.
+Edita `api/.db.env` y reemplaza la contraseña de ejemplo por una contraseña de desarrollo solo local. Tanto la base de datos como la API cargan esa sobreescritura. Mantén estos archivos privados fuera de Git y no uses credenciales de producción. En el checkout actual no existe un `.env.example` en la raíz; no sigas instrucciones antiguas que lo mencionen.
 
-Changing `POSTGRES_PASSWORD` in an environment file does not automatically change credentials inside an already-initialized database volume. For an existing environment, retain its matching configuration or use an authorized credential-change procedure; do not delete its volume as a shortcut.
+Cambiar `POSTGRES_PASSWORD` en un archivo de entorno no cambia automáticamente las credenciales dentro de un volumen de base de datos ya inicializado. Para un entorno existente, conserva la configuración que coincide o usa un procedimiento autorizado de cambio de credenciales; no borres su volumen como atajo.
 
-### 4.2 Start PostgreSQL, inference and the privacy API
+### 4.2 Arrancar PostgreSQL, la inferencia y la API de privacidad
 
-From the repository root in terminal A:
+Desde la raíz del repositorio en la terminal A:
 
 ```powershell
 docker compose up --build --watch
 ```
 
-This starts `db`, `inference` and `api`. It **does not start the converter**. The API waits for the database/inference health checks and applies Alembic migrations before its development server starts. These are real database changes when the developer runs the command; no migration was executed merely to author this guide.
+Esto arranca `db`, `inference` y `api`. **No arranca el conversor.** La API espera los health checks de base de datos e inferencia y aplica las migraciones de Alembic antes de que arranque su servidor de desarrollo. Son cambios reales en la base de datos cuando el desarrollador ejecuta el comando; no se ejecutó ninguna migración solo por redactar esta guía.
 
-In terminal B:
+En la terminal B:
 
 ```powershell
 docker compose ps
 Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
-The original health response contains `status: active`. Open `http://127.0.0.1:8000/docs` for its interactive API. PostgreSQL and inference are internal-only in this Compose; do not expect host connections to ports 5432 or 3000, and do not change the API's loopback binding to expose the development Admin API.
+La respuesta de salud original contiene `status: active`. Abre `http://127.0.0.1:8000/docs` para su API interactiva. PostgreSQL y la inferencia son solo internos en este Compose; no esperes conexiones desde el host a los puertos 5432 ni 3000, y no cambies el binding de loopback de la API para exponer la Admin API de desarrollo.
 
-Optional development administration: replace the startup command with `docker compose --profile dev up --build --watch` to include pgAdmin at `http://127.0.0.1:9001`. Its current defaults are development-only; do not publish that service to the campus network. Inside pgAdmin, the database host is `db`, not the browser computer's `localhost`.
+Administración de desarrollo opcional: reemplaza el comando de arranque por `docker compose --profile dev up --build --watch` para incluir pgAdmin en `http://127.0.0.1:9001`. Sus valores por defecto actuales son solo de desarrollo; no publiques ese servicio en la red del campus. Dentro de pgAdmin, el host de la base de datos es `db`, no el `localhost` del equipo con el navegador.
 
-### 4.3 Start the converter separately
+### 4.3 Arrancar el conversor por separado
 
-The converter requires the Chrome extension ID from section 1 and a development token matching `SECRET_TOKEN` in `browser-extension/extension/background.js`. That token is bundled in extension source and is not a confidential production credential. Do not confuse it with research enrollment/admin/session credentials.
+El conversor necesita el ID de la extensión de Chrome de la sección 1 y un token de desarrollo que coincida con `SECRET_TOKEN` en `browser-extension/extension/background.js`. Ese token viene incluido en el código de la extensión y no es una credencial confidencial de producción. No lo confundas con las credenciales de inscripción, administración o sesión de investigación.
 
-In **terminal C**, from the repository root:
+En la **terminal C**, desde la raíz del repositorio:
 
 ```powershell
 $ExtensionId = "<copy the 32-character ID from chrome://extensions>"
@@ -171,54 +171,54 @@ docker build -t contextual-pii-converter:dev browser-extension/backend
 docker run --rm --name contextual-pii-converter-dev -p 127.0.0.1:5000:5000 --env MIDDLEWARE_SECRET --env EXTENSION_ID_CHROME contextual-pii-converter:dev
 ```
 
-This uses the existing converter Dockerfile without editing the main Compose. It runs in the foreground and binds the host listener to loopback. Its existing `/convertir` route expects the multipart field `archivo` and header `X-Token`; the extension supplies those. Converter CORS uses `EXTENSION_ID_CHROME`; if the loaded extension ID changes, restart the converter with the matching ID.
+Esto usa el Dockerfile existente del conversor sin editar el Compose principal. Se ejecuta en primer plano y ata el listener del host al loopback. Su ruta existente `/convertir` espera el campo multipart `archivo` y la cabecera `X-Token`; la extensión los aporta. El CORS del conversor usa `EXTENSION_ID_CHROME`; si el ID de la extensión cargada cambia, reinicia el conversor con el ID correcto.
 
-The converter's API documentation is at `http://127.0.0.1:5000/docs`; this only proves the web process is reachable, not that every document format converts successfully. Dependencies come from the current converter requirements file; this service is a separate development backend, not the research archive.
+La documentación de la API del conversor está en `http://127.0.0.1:5000/docs`; eso solo demuestra que el proceso web es alcanzable, no que todos los formatos de documento se conviertan correctamente. Las dependencias vienen del archivo de requisitos actual del conversor; este servicio es un backend de desarrollo separado, no el archivo de investigación.
 
-### 4.4 Confirm the attachment flow with fictional content
+### 4.4 Confirmar el flujo de adjuntos con contenido ficticio
 
-1. Confirm both local documentation URLs respond and the main Compose is healthy.
-2. Refresh a supported chat tab. Keep the extension **Activada**, with research capture idle.
-3. Create a small valid PDF/Office document containing fictional text and attach it using a supported picker/drop path. The converter permits `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls` and `.pptx`; a plain `.txt` file is not a converter smoke test.
-4. Confirm conversion, privacy protection and replacement of the attachment. Check errors instead of assuming the original file was protected when an operation failed. Actual provider behavior still needs manual validation.
+1. Confirma que responden las dos URLs de documentación local y que el Compose principal está saludable.
+2. Actualiza una pestaña de chat compatible. Mantén la extensión **Activada**, con la captura para investigación inactiva.
+3. Crea un documento PDF/Office pequeño y válido con texto ficticio y adjúntalo usando una ruta de selector o de arrastre compatible. El conversor admite `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls` y `.pptx`; un archivo `.txt` plano no sirve como prueba de humo del conversor.
+4. Confirma la conversión, la protección de privacidad y el reemplazo del adjunto. Revisa los errores en lugar de suponer que el archivo original quedó protegido cuando una operación falló. El comportamiento del proveedor real todavía necesita validación manual.
 
-Ordinary protection currently targets attachments; typed chat text is not generally protected just because the toggle says **Activada**. Research capture is a different opt-in mode and is not protection. See [integration testing](integration-testing.md) for synthetic browser and isolated Docker regressions.
+La protección ordinaria actualmente se dirige a los adjuntos; el texto escrito en el chat no queda protegido en general solo porque el interruptor diga **Activada**. La captura para investigación es un modo aparte, de activación explícita, y no es protección. Consulta [pruebas de integración](integration-testing.md) para las regresiones sintéticas en navegador y las de Docker aislado.
 
-## 5. Stop without deleting stored data
+## 5. Detener sin borrar los datos almacenados
 
-| Process | Stop procedure |
+| Proceso | Procedimiento de parada |
 |---|---|
-| Standalone research API | Ctrl+C in its own terminal; archive file remains |
-| Foreground converter | Ctrl+C in terminal C; `--rm` removes that container, not the research archive |
-| Main development stack | Ctrl+C to stop its foreground session; from the repository root run `docker compose down` when removing those containers/networks is intended |
+| API de investigación independiente | Ctrl+C en su propia terminal; el archivo de almacenamiento permanece |
+| Conversor en primer plano | Ctrl+C en la terminal C; `--rm` elimina ese contenedor, no el archivo de investigación |
+| Stack principal de desarrollo | Ctrl+C para detener su sesión en primer plano; desde la raíz del repositorio ejecuta `docker compose down` cuando quieras eliminar esos contenedores y redes |
 
-Do not use `down --volumes`, volume pruning or delete the browser profile/archive to troubleshoot a study deployment. Ordinary `docker compose down` preserves the named PostgreSQL/model-cache volumes. Logs and browser history are not an archive-backup procedure.
+No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o el archivo de investigación para diagnosticar un despliegue del estudio. El `docker compose down` ordinario conserva los volúmenes nombrados de PostgreSQL y de la caché del modelo. Los logs y el historial del navegador no son un procedimiento de respaldo del archivo.
 
-## 6. Troubleshooting
+## 6. Diagnóstico
 
-| Symptom | Check |
+| Síntoma | Comprobación |
 |---|---|
-| Extension does not appear | Load the folder containing `manifest.json`; ensure policy permits unpacked development extensions |
-| Extension update seems ignored | Reload its card, then refresh the provider tab; do not do this mid-session |
-| Port 8000 already in use | Select one local API flow; do not kill unrelated processes or assume the other app's health route applies |
-| Research health returns 404/503 | Check explicit enablement, absolute path, retention and nonconflicting secret sources in that process |
-| Capture stays at `Iniciando` (`starting` internally) | Authorization/activation was interrupted; use the documented discard/retry procedure, not storage deletion |
-| Start says the conversation already has messages | Open a new empty conversation; history is deliberately excluded, not imported or erased |
-| Start cannot find the chat editor | Wait for the page to load; after an extension update refresh the tab, then use a fresh supported chat. Do not confuse an absent empty-editor Send button with a missing editor |
-| Converter 401 | Its `MIDDLEWARE_SECRET` must match the extension's development token; research keys do not substitute for it |
-| Converter CORS failure | Check the loaded extension ID and restart converter after changing its allowed-origin environment |
-| Converter reachable, protection fails | The original main API/inference stack must also be available, not just port 5000 |
-| Main API still starting | Inspect `docker compose logs --tail 50 inference api`; first model setup can take time; do not log real prompts |
-| Database authentication fails after editing `.db.env` | Existing volume credentials may differ; do not erase the database to fix a password mismatch |
-| Campus package fails from home/off-network | It is intentionally campus-private; follow the approved network/TLS procedure, not certificate-warning bypasses |
+| La extensión no aparece | Carga la carpeta que contiene `manifest.json`; asegúrate de que la política permita extensiones de desarrollo sin empaquetar |
+| La actualización de la extensión parece ignorarse | Recarga su tarjeta y después actualiza la pestaña del proveedor; no lo hagas a mitad de una sesión |
+| El puerto 8000 ya está en uso | Elige un solo flujo local de API; no mates procesos ajenos ni supongas que aplica la ruta de salud de la otra aplicación |
+| La salud de investigación devuelve 404/503 | Comprueba la habilitación explícita, la ruta absoluta, la retención y que no haya fuentes de secretos en conflicto en ese proceso |
+| La captura se queda en `Iniciando` (`starting` internamente) | La autorización o activación se interrumpió; usa el procedimiento documentado de descarte y reintento, no borres el almacenamiento |
+| El inicio dice que la conversación ya tiene mensajes | Abre una conversación nueva y vacía; el historial se excluye a propósito, no se importa ni se borra |
+| El inicio no encuentra el editor del chat | Espera a que cargue la página; después de actualizar la extensión refresca la pestaña y usa un chat compatible nuevo. No confundas la ausencia del botón de envío en un editor vacío con un editor ausente |
+| El conversor devuelve 401 | Su `MIDDLEWARE_SECRET` debe coincidir con el token de desarrollo de la extensión; las claves de investigación no lo sustituyen |
+| Falla el CORS del conversor | Revisa el ID de la extensión cargada y reinicia el conversor después de cambiar su entorno de origen permitido |
+| El conversor responde pero falla la protección | También debe estar disponible el stack principal de API/inferencia, no solo el puerto 5000 |
+| La API principal sigue arrancando | Revisa `docker compose logs --tail 50 inference api`; la primera preparación del modelo puede tardar; no registres prompts reales |
+| Falla la autenticación de la base de datos tras editar `.db.env` | Las credenciales del volumen existente pueden ser distintas; no borres la base de datos para resolver un desajuste de contraseña |
+| El paquete de campus falla desde casa o fuera de la red | Es privado del campus a propósito; sigue el procedimiento aprobado de red y TLS, no desactives advertencias de certificado |
 
-## 7. Verification and next reading
+## 7. Verificación y lecturas siguientes
 
-Service names/paths/configuration and startup CLI help were checked when writing this guide. Local synthetic software tests are recorded in the capture guide, including failed-start recovery and a send button that appears only after typing. The converter/live-provider smoke-test instructions still require the developer to perform the actual rehearsal; they are not a claim that a real browser account, university host or provider adapter was tested.
+Los nombres de servicios, rutas y configuración, y la ayuda de la CLI de arranque, se revisaron al escribir esta guía. Las pruebas sintéticas locales de software están registradas en la guía de captura, incluida la recuperación tras un inicio fallido y un botón de envío que aparece solo después de escribir. Las instrucciones de prueba de humo del conversor y del proveedor real siguen requiriendo que el desarrollador haga el ensayo; no son una afirmación de que se haya probado una cuenta real de navegador, un host universitario ni un adaptador de proveedor.
 
-- [Risk review for the project owner](../project/experimentacion/research-study/security-risk-review.md): conditional risks, existing controls and pending decisions; not risk acceptance.
-- [Local model-free capture](research-capture.md): detailed lifecycle, API tests and access procedures.
-- [University-network deployment](research-campus-deployment.md): production collector, trusted private-IP HTTPS and generated campus extension. Do not use the development stack for student deployment.
-- [Docker infrastructure](infraestructura-local-con-docker.md): current network, environment and persistence boundaries.
-- [Integration tests](integration-testing.md): actual synthetic verification and test-runner requirements.
-- [API README](../../api/README.md): routes and component structure.
+- [Revisión de riesgos para el propietario del proyecto](../project/experimentacion/research-study/security-risk-review.md): riesgos condicionales, controles existentes y decisiones pendientes; no es aceptación de riesgo.
+- [Captura local sin modelo](research-capture.md): ciclo de vida detallado, pruebas de API y procedimientos de acceso.
+- [Despliegue en la red universitaria](research-campus-deployment.md): recolector de producción, HTTPS de confianza sobre IP privada y extensión de campus generada. No uses el stack de desarrollo para desplegar con estudiantes.
+- [Infraestructura con Docker](infraestructura-local-con-docker.md): límites actuales de red, entorno y persistencia.
+- [Pruebas de integración](integration-testing.md): verificación sintética real y requisitos del runner de pruebas.
+- [README de la API](../../api/README.md): rutas y estructura del componente.

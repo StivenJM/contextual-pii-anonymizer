@@ -1,36 +1,36 @@
-# Operate the local Docker infrastructure
+# Operar la infraestructura local con Docker
 
-For the complete sequence, start with [installing the extension and developer startup](developer-startup.md). This page describes the **current development Compose**, not a production deployment or a PostgreSQL-only topology.
+Para la secuencia completa, empieza por [instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md). Esta página describe el **Compose de desarrollo actual**, no un despliegue de producción ni una topología de solo PostgreSQL.
 
-## Services and boundaries
+## Servicios y límites
 
-| Compose service | Responsibility | Host exposure |
+| Servicio de Compose | Responsabilidad | Exposición en el host |
 |---|---|---|
-| `db` | PostgreSQL privacy configuration | No published host port; internal `db:5432` |
-| `inference` | BentoML model inference | No published host port; internal `inference:3000` |
-| `api` | Privacy API and Admin routes | Loopback `127.0.0.1:8000` |
-| `pgadmin`, profile `dev` | Optional development administration | Loopback `127.0.0.1:9001` |
+| `db` | Configuración de privacidad en PostgreSQL | Sin puerto publicado; interno `db:5432` |
+| `inference` | Inferencia de modelos con BentoML | Sin puerto publicado; interno `inference:3000` |
+| `api` | API de privacidad y rutas de administración | Loopback `127.0.0.1:8000` |
+| `pgadmin`, perfil `dev` | Administración de desarrollo opcional | Loopback `127.0.0.1:9001` |
 
-The attachment converter is **not** a service in this Compose. Run it separately as documented in the startup guide. Model-free research uses a separate entry point/Compose and SQLite, not this PostgreSQL database.
+El conversor de adjuntos **no** es un servicio de este Compose. Ejecútalo por separado como se documenta en la guía de arranque. La investigación sin modelo usa un punto de entrada y un Compose separados, y SQLite, no esta base de datos PostgreSQL.
 
-## Configuration
+## Configuración
 
-The current tracked templates are `api/.api.dev.env` and `api/.db.dev.env`. Optional ignored overrides are `api/.api.env` and `api/.db.env`, loaded after the templates. Create them without overwriting existing local files, using the startup guide, and choose local-only credentials.
+Las plantillas versionadas actuales son `api/.api.dev.env` y `api/.db.dev.env`. Las sobreescrituras opcionales e ignoradas son `api/.api.env` y `api/.db.env`, que se cargan después de las plantillas. Créalas sin sobrescribir archivos locales existentes, siguiendo la guía de arranque, y elige credenciales solo locales.
 
-Inside Docker, retain `POSTGRES_HOST=db` and `BENTOML_URL=http://inference:3000`. A host process cannot use those internal addresses as if they were published localhost services. The root `.env.example`, service name `postgres` and host-published database described by an earlier version of this page no longer match the checkout.
+Dentro de Docker, conserva `POSTGRES_HOST=db` y `BENTOML_URL=http://inference:3000`. Un proceso del host no puede usar esas direcciones internas como si fueran servicios publicados en localhost. El `.env.example` de la raíz, el nombre de servicio `postgres` y la base de datos publicada en el host que describía una versión anterior de esta página ya no coinciden con el checkout.
 
-Changing an environment-file password does not reset an initialized database volume's password. Preserve existing credentials or use an explicitly authorized database credential-change procedure; never remove the volume to solve a mismatch without approval.
+Cambiar la contraseña en un archivo de entorno no restablece la contraseña de un volumen de base de datos ya inicializado. Conserva las credenciales existentes o usa un procedimiento de cambio de credenciales de base de datos autorizado de forma explícita; nunca elimines el volumen para resolver un desajuste sin aprobación.
 
-## Start and inspect
+## Arrancar e inspeccionar
 
-From the repository root:
+Desde la raíz del repositorio:
 
 ```powershell
-# Starts the full development stack; may download/build images and a large model.
+# Arranca el stack completo de desarrollo; puede descargar y compilar imágenes y un modelo grande.
 docker compose up --build --watch
 ```
 
-In another terminal:
+En otra terminal:
 
 ```powershell
 docker compose ps
@@ -38,33 +38,33 @@ docker compose logs --tail 50 db inference api
 Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
-The API waits for healthy PostgreSQL/inference and runs `alembic upgrade head` before its development server starts. Running startup therefore applies real migrations to that development database. The original API health response reports `status: active`; it is not the standalone research health route.
+La API espera a que PostgreSQL e inferencia estén saludables y ejecuta `alembic upgrade head` antes de que arranque su servidor de desarrollo. Por lo tanto, arrancar aplica migraciones reales a esa base de datos de desarrollo. La respuesta de salud de la API original informa `status: active`; no es la ruta de salud de la investigación independiente.
 
-For a database-only container operation, the service name is `db`:
+Para una operación de contenedor solo de base de datos, el nombre del servicio es `db`:
 
 ```powershell
 docker compose up -d --wait db
 docker compose exec db sh -c 'pg_isready -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
-This does not publish PostgreSQL to the host or start either API. Native host application development would need a separately reviewed connectivity setup; it is not implied by starting this container.
+Esto no publica PostgreSQL en el host ni arranca ninguna API. Desarrollar aplicaciones nativas en el host requeriría una configuración de conectividad revisada por separado; arrancar este contenedor no lo implica.
 
-For optional pgAdmin, start the full stack with `docker compose --profile dev up --build --watch`. Register the database using host `db` and the same configured database credentials. Do not expose development administration outside loopback.
+Para pgAdmin opcional, arranca el stack completo con `docker compose --profile dev up --build --watch`. Registra la base de datos con el host `db` y las mismas credenciales configuradas. No expongas la administración de desarrollo fuera del loopback.
 
-## Stop and preserve data
+## Detener y conservar los datos
 
 ```powershell
 docker compose stop
-# Or remove this project's containers/networks while preserving named volumes:
+# O elimina los contenedores y redes de este proyecto conservando los volúmenes nombrados:
 docker compose down
 ```
 
-PostgreSQL data and the model cache are named volumes. Do not use `down --volumes` or volume pruning when their contents must be preserved. Restarting with `up` reuses those volumes; it does not create a backup or prove recovery.
+Los datos de PostgreSQL y la caché del modelo son volúmenes nombrados. No uses `down --volumes` ni poda de volúmenes cuando debas conservar su contenido. Reiniciar con `up` reutiliza esos volúmenes; no crea un respaldo ni demuestra una recuperación.
 
-## Tests and production
+## Pruebas y producción
 
-- [Integration testing](integration-testing.md) uses separately named, isolated test resources. Do not point destructive test fixtures at the ordinary development database.
-- [Model-free capture](research-capture.md) starts without PostgreSQL/inference and uses the same host port 8000 by default; do not start both local APIs on that port.
-- [Campus research deployment](research-campus-deployment.md) is the separate internal-CA HTTPS setup. The development Compose, its reload process and unauthenticated local Admin API are not a campus production deployment.
+- [Pruebas de integración](integration-testing.md) usan recursos de prueba aislados y con nombres separados. No apuntes fixtures destructivos a la base de datos de desarrollo ordinaria.
+- [Captura sin modelo](research-capture.md) arranca sin PostgreSQL ni inferencia y usa el mismo puerto de host 8000 por defecto; no arranques las dos APIs locales en ese puerto.
+- [Despliegue de investigación en campus](research-campus-deployment.md) es la configuración separada con HTTPS y CA interna. El Compose de desarrollo, su proceso de recarga y su Admin API local sin autenticación no son un despliegue de producción de campus.
 
-These instructions were reconciled against `compose.yaml`, the two tracked environment templates and CLI configuration/help. No service, migration or model download was run for this documentation update.
+Estas instrucciones se conciliaron con `compose.yaml`, las dos plantillas de entorno versionadas y la configuración y ayuda de la CLI. No se ejecutó ningún servicio, migración ni descarga de modelo para esta actualización de documentación.
