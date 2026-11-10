@@ -16,7 +16,7 @@ Delivery: ask-on-risk; forecast ~700 authored lines across four commits; no publ
 
 ## Tasks
 
-- T1 [S1,S6,S7] inline — default Compose converter service, `.env.example`, Compose configuration regression, and startup infrastructure docs. Commit: pending.
+- T1 [S1,S6,S7] inline — default Compose converter service, root `.env` interpolation, Compose configuration regression, and startup infrastructure docs. Commit: 9eef2a8.
 - T2 [S2,S3,S6,S7] inline — research Compose override with named archive volume and required operator key; normal-app disabled/enabled tests; local research docs. Commit: pending.
 - T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: pending.
 - T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: pending.
@@ -262,3 +262,13 @@ Return:
 Do not claim completion while required evidence is missing. If blocked, preserve completed commits and report the specific blocker.
 
 Continue through authorized implementation, verification, documentation, and local commits without asking permission at every phase. Ask only when a consequential unresolved decision, safety boundary, or required consent prevents progress.
+
+### L2 — Unit 1 (2026-11-10)
+
+- Verified the starting state: branch `new-branch` at `c6bbffb`, one pre-existing unstaged wording edit in `docs/guides/developer-startup.md`.
+- RED: `uv run --directory e2e --no-sync pytest -q tests/test_compose_configuration.py` failed because the default Compose lacked `converter`.
+- Implemented the converter service with loopback `5000`, extension-ID CORS configuration, health check, watch rules, and a root `.env` requirement; added `.env` to `.gitignore`; updated README, API README, developer startup and Docker infrastructure guides.
+- GREEN: same focused test `2 passed`; `docker compose --env-file <synthetic> -f compose.yaml config --quiet` exited `0`; `--profile dev` resolves `db`, `pgadmin`, `inference`, `api`, `converter`; omitting `EXTENSION_ID_CHROME` fails with a clear Compose interpolation error.
+- The pre-existing wording edit remains unstaged and was intentionally excluded from the Unit 1 commit.
+- Commit: `9eef2a8 feat(infra): start the converter in the default compose stack`.
+

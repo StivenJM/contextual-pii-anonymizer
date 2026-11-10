@@ -363,3 +363,29 @@ def test_enrollment_cors_header_and_disabled_health(client, monkeypatch):
     assert response.status_code == 200
     monkeypatch.setenv("RESEARCH_ENABLED", "false")
     assert client.get("/api/research/health").status_code == 404
+
+
+def test_normal_app_keeps_research_disabled_by_default(monkeypatch):
+    from app.main import create_app
+
+    monkeypatch.delenv("RESEARCH_ENABLED", raising=False)
+    normal = TestClient(create_app())
+    assert normal.get("/api/research/health").status_code == 404
+
+
+def test_normal_app_serves_enabled_research_without_inference(client):
+    from app.main import create_app
+
+    normal = TestClient(create_app())
+    # No lifespan ran, so the ordinary API has no database or inference client.
+    assert not hasattr(normal.app.state, "container")
+    session = start(normal)
+    body = batch()
+    saved = finish(normal, session, body)
+    assert saved.status_code == 200
+    receipt = saved.json()["receipt_id"]
+    exported = normal.get(
+        f"/api/research/records/{receipt}", headers={"X-Research-Key": KEY}
+    )
+    assert exported.status_code == 200
+    assert exported.json()["events"] == body["events"]

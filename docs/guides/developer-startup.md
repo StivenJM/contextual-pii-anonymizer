@@ -39,14 +39,51 @@ Procedimiento oficial de instalación: [Chrome: cargar una extensión descomprim
 
 Dos flujos de desarrollo útiles:
 
-- **Captura para investigación:** sigue la sección 3. No necesita conversor, PostgreSQL ni modelo de inferencia.
+- **Captura para investigación:** sigue la sección 3. Puede ejecutarse dentro del stack local o en la aplicación independiente sin modelo. Habilitar la API no inicia una grabación ni implica consentimiento.
 - **Conversión y protección de adjuntos original:** sigue la sección 4. Necesita el stack local completo: conversor, API de privacidad, PostgreSQL e inferencia.
 
 La API de investigación independiente y la API original usan por defecto el mismo puerto de host **8000**. No las arranques al mismo tiempo en ese puerto. La extensión de fuentes ordinaria usa la API de loopback; un despliegue en campus requiere una copia de extensión generada aparte y HTTPS de confianza, no cambiar la URL a HTTP plano sobre una IP privada.
 
-## 3. Arrancar la captura para investigación sin modelo
+## 3. Habilitar la captura para investigación (opcional)
 
-### Requisitos
+La captura está deshabilitada por defecto. Puedes habilitarla dentro del stack local o ejecutar la aplicación independiente sin modelo. En ambos casos, habilitar la API no inicia una grabación ni implica consentimiento; la extensión exige consentimiento explícito al iniciar cada sesión.
+
+### 3.1 Investigación dentro del stack local
+
+La API principal monta el mismo router `/api/research`. La sobreescritura `compose.research.dev.yaml` habilita ese router y guarda el archivo SQLite en el volumen nombrado `research_archive`, sin fusionar servicios ni mover datos existentes.
+
+Añade una sola vez estos valores al `.env` privado de la raíz. Genera una clave de operador local de al menos 32 caracteres:
+
+```powershell
+$ResearchKey = (& api/.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
+Add-Content .env "RESEARCH_API_KEY=$ResearchKey"
+Add-Content .env "RESEARCH_RETENTION_DAYS=7"
+Add-Content .env "RESEARCH_PROTOCOL_VERSION=research-v1"
+```
+
+Siete días es un **ejemplo ficticio de desarrollo**, no un periodo de retención aprobado para un estudio real. No confirmes `.env` en Git ni reutilices credenciales institucionales. Si el archivo ya contiene esas claves, edítalas en lugar de añadir líneas duplicadas.
+
+Arranca el stack completo con la sobreescritura:
+
+```powershell
+docker compose -f compose.yaml -f compose.research.dev.yaml up --build --watch
+```
+
+En la terminal B, confirma la disponibilidad:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/research/health
+```
+
+Debes obtener `status: ready`. El flujo del popup es el mismo de la sección 3.2: abre un chat nuevo, introduce la **Clave local del investigador**, revisa el consentimiento y pulsa **Iniciar en esta pestaña**. El archivo queda en `/data/research/capture.sqlite3` dentro del volumen `research_archive`; `docker compose down` lo conserva y `down --volumes` lo elimina. No es el mismo archivo que la ruta de `workspace/research/` de la aplicación independiente.
+
+El servicio de inferencia sigue arrancando porque el stack local lo necesita para proteger adjuntos, y la API espera su health check. Las peticiones de investigación no lo invocan. Si solo necesitas captura sin modelo, usa la aplicación independiente de la sección 3.2.
+
+### 3.2 Captura local independiente (sin Docker ni modelo)
+
+La aplicación independiente evita PostgreSQL e inferencia y usa el mismo router de investigación. Es la opción sin modelo cuando no necesitas el stack completo.
+
+#### Requisitos
 
 - `uv` instalado: [instrucciones oficiales de instalación](https://docs.astral.sh/uv/getting-started/installation/).
 - Acceso de red para la primera instalación bloqueada de dependencias y de Python si no está en caché. La API requiere Python 3.14 o superior; `uv` puede provisionar un intérprete compatible.
@@ -90,7 +127,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/research/health
 
 Debes obtener `status: ready`. La documentación interactiva local de la API está en `http://127.0.0.1:8000/docs`. La aplicación independiente no expone las rutas originales `/api/health` ni `/api/interactions/protect`.
 
-### Confirmar el flujo de investigación
+#### Confirmar el flujo de investigación
 
 1. Abre un chat compatible nuevo; usa las [tarjetas de escenario ficticias](../project/experimentacion/research-study/scenario-cards.md).
 2. Abre el popup. Confirma que **API de investigación** apunta a `http://127.0.0.1:8000`, introduce la clave de desarrollo y `research-v1`, y revisa explícitamente el consentimiento de recolección. El permiso opcional de entrenamiento queda sin marcar salvo que se haya acordado aparte.

@@ -54,8 +54,10 @@ La documentación funcional, técnica y las guías de desarrollo están en [`doc
 ## Research capture
 
 The optional [model-free capture workflow](docs/guides/research-capture.md) stores
-consented text research sessions independently of the protection model. Start with
-the [research plan](docs/project/experimentacion/research-capture-plan.md) and
+consented text research sessions independently of the protection model. The same
+router can be enabled inside the local Compose stack with `compose.research.dev.yaml`
+and a persistent `research_archive` volume; research requests do not call inference.
+Start with the [research plan](docs/project/experimentacion/research-capture-plan.md) and
 [student study kit](docs/project/experimentacion/research-study/README.md); institutional
 approval and live-provider adapter checks remain prerequisites for real fieldwork.
 

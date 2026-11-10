@@ -12,7 +12,7 @@ Para la secuencia completa, empieza por [instalar la extensión y arrancar el si
 | `converter` | Conversión de adjuntos PDF/Office a Markdown | Loopback `127.0.0.1:5000` |
 | `pgadmin`, perfil `dev` | Administración de desarrollo opcional | Loopback `127.0.0.1:9001` |
 
-El conversor es su propio proceso dentro del Compose de desarrollo; no está fusionado con la API ni llama a la API de privacidad. La investigación sin modelo sigue usando un punto de entrada y un Compose separados, y SQLite, no esta base de datos PostgreSQL.
+El conversor es su propio proceso dentro del Compose de desarrollo; no está fusionado con la API ni llama a la API de privacidad. La captura para investigación está deshabilitada por defecto. La sobreescritura opcional `compose.research.dev.yaml` habilita el router existente en la API y añade el volumen nombrado `research_archive`. El despliegue de campus sigue usando un punto de entrada y un Compose separados, y SQLite, no esta base de datos PostgreSQL.
 
 ## Configuración
 
@@ -63,7 +63,7 @@ docker compose stop
 docker compose down
 ```
 
-Los datos de PostgreSQL y la caché del modelo son volúmenes nombrados. No uses `down --volumes` ni poda de volúmenes cuando debas conservar su contenido. Reiniciar con `up` reutiliza esos volúmenes; no crea un respaldo ni demuestra una recuperación.
+Los datos de PostgreSQL, la caché del modelo y el archivo de investigación del volumen `research_archive` son volúmenes nombrados. No uses `down --volumes` ni poda de volúmenes cuando debas conservar su contenido. Reiniciar con `up` reutiliza esos volúmenes; no crea un respaldo ni demuestra una recuperación.
 
 ## Pruebas y producción
 

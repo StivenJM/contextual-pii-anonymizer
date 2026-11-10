@@ -6,6 +6,8 @@ Usa la API de investigación local independiente y la extensión del navegador e
 
 Para la topología confirmada de equipos propiedad de los estudiantes, sigue el [despliegue en la red universitaria](research-campus-deployment.md). Añade un código de solo inscripción, HTTPS de confianza sobre IP privada y una copia generada de la extensión; no distribuyas la clave local del investigador a los estudiantes.
 
+Para habilitar este mismo router dentro del stack local de Docker, con la API principal y el volumen persistente `research_archive`, consulta la sección 3.1 de [instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md). Esa variante mantiene la inferencia en ejecución por el flujo de adjuntos, pero las peticiones de investigación no la invocan.
+
 ## Preparar la API local
 
 Desde la raíz del repositorio en PowerShell:
@@ -20,7 +22,7 @@ $env:RESEARCH_RETENTION_DAYS = "30"
 uv run --directory api --no-sync python -m uvicorn app.research.application:app --host 127.0.0.1 --port 8000 --no-access-log
 ~~~
 
-El primer comando instala las dependencias de desarrollo fijadas y puede contactar registros de paquetes. El último comando ejecuta el listener local en primer plano; no arranca PostgreSQL, BentoML, Docker ni el conversor. Detenlo con Ctrl+C. El puerto 8000 debe estar libre; no detengas un proceso ajeno de forma automática. El `compose.yaml` ordinario y su comportamiento original respaldado por el modelo no cambian.
+El primer comando instala las dependencias de desarrollo fijadas y puede contactar registros de paquetes. El último comando ejecuta el listener local en primer plano; no arranca PostgreSQL, BentoML, Docker ni el conversor. Detenlo con Ctrl+C. El puerto 8000 debe estar libre; no detengas un proceso ajeno de forma automática. El `compose.yaml` ordinario conserva su flujo respaldado por el modelo; esta aplicación independiente no lo modifica.
 
 Mantén la clave en el canal seguro de configuración del operador y pégala en el campo de contraseña de la extensión. No la imprimas ni la envíes a un chat de IA, y no la pongas en Forms. El popup no la guarda después de iniciar. La extensión sí conserva una capacidad de sesión distinta para reintentos y retiro. Configura una retención aprobada antes de usar datos reales; «30» es un ejemplo de piloto, no una aprobación institucional.
 

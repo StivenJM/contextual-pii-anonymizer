@@ -1,0 +1,21 @@
+# Optional local research capture for the development stack.
+# Use it with the base stack:
+#   docker compose -f compose.yaml -f compose.research.dev.yaml up --build --watch
+#
+# RESEARCH_API_KEY comes from the private root .env and must have at least
+# 32 characters. The named volume keeps the SQLite archive across ordinary
+# `docker compose down` runs; `down --volumes` deletes it.
+services:
+  api:
+    environment:
+      RESEARCH_ENABLED: "true"
+      RESEARCH_API_KEY: ${RESEARCH_API_KEY:?Set RESEARCH_API_KEY in the root .env; see the developer startup guide}
+      RESEARCH_STORAGE_PATH: /data/research/capture.sqlite3
+      RESEARCH_PROTOCOL_VERSION: ${RESEARCH_PROTOCOL_VERSION:-research-v1}
+      RESEARCH_RETENTION_DAYS: ${RESEARCH_RETENTION_DAYS:-7}
+
+    volumes:
+      - research_archive:/data/research
+
+volumes:
+  research_archive:
