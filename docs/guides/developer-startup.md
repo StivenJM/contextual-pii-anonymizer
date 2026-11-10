@@ -1,6 +1,6 @@
 # Instalar la extensión y arrancar el sistema de desarrollo
 
-Guía para Windows/PowerShell. Instala primero la extensión del navegador y después arranca **solo los servicios que necesita el flujo que vas a probar**. Usa datos ficticios en todo el procedimiento. Esta guía no autoriza un despliegue universitario ni la recolección de datos de estudiantes reales.
+Guía para Windows/PowerShell. Instala primero la extensión del navegador y después arranca **solo los servicios que necesita el flujo que vas a probar**.
 
 ## 1. Instala primero la extensión del navegador
 
@@ -8,11 +8,13 @@ La extensión es JavaScript puro: esta instalación no requiere `npm install`, u
 
 1. Abre Google Chrome con un perfil de desarrollo dedicado. Evita un perfil con historial de chats personales o cuentas sensibles ajenas al proyecto.
 2. Abre `chrome://extensions` y activa el **modo de desarrollador**.
-3. Pulsa **Cargar descomprimida** y selecciona **`browser-extension/extension` dentro de este repositorio**. Elige la carpeta que contiene `manifest.json`, no la raíz del repositorio, ni `browser-extension/backend`, ni una copia de prueba en `e2e/.build`.
+3. Pulsa **Load unpacked** y selecciona **`browser-extension/extension` dentro de este repositorio**.
 4. Confirma que **PDF Middleware** aparece habilitada. Fija su icono en la barra si te resulta útil.
 5. Copia el **ID** de la extensión que muestra la página de extensiones. El conversor usa ese ID como origen permitido del navegador; instalarla primero evita adivinar ese valor.
-6. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura para investigación (solo texto)**. Sus controles y mensajes para participantes están en español. Instalar la extensión por sí sola no arranca ningún backend ni activa la captura para investigación.
+6. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura de mensajes**.
 7. Después de cargar o recargar la extensión, actualiza cualquier pestaña de chat compatible que ya estuviera abierta. Para las pruebas de captura, empieza una conversación nueva y vacía.
+
+> NOTA. Instalar la extensión por sí sola no arranca ningún backend ni activa la captura para investigación.
 
 El manifest cubre ChatGPT, Claude y Gemini. Las pruebas sintéticas locales en Chromium no demuestran que las interfaces reales actuales funcionen; ensaya manualmente cada proveedor previsto antes del trabajo de campo. Firefox y otros navegadores no son la ruta validada en esta guía. Si la política universitaria deshabilita las extensiones sin empaquetar, consigue la ruta de instalación aprobada por TI en lugar de saltarte esa política.
 
@@ -28,10 +30,10 @@ Procedimiento oficial de instalación: [Chrome: cargar una extensión descomprim
 |---|---|---|---|
 | Extensión del navegador | `browser-extension/extension/` | Flujo existente de adjuntos más la captura de texto para investigación, habilitada de forma explícita | Barra del navegador |
 | Conversor de adjuntos | `browser-extension/backend/` | Convierte adjuntos PDF/Office compatibles a Markdown | `http://localhost:5000/convertir` |
-| API de privacidad original | `api/app/main.py` | Detección, política y desidentificación; PostgreSQL almacena la configuración | `http://127.0.0.1:8000` |
-| Servicio de inferencia | `inference/` | Ejecuta el modelo de detección de privacidad que usa la API original | Dirección interna de Compose `http://inference:3000` |
-| PostgreSQL | Servicio `db` del Compose raíz | Configuración de privacidad, mapeos de etiquetas, reconocedores, listas y reglas; no guarda chats de investigación | Dirección interna de Compose `db:5432` |
-| API de investigación independiente | `api/app/research/application.py` | Autoriza la captura, guarda sesiones finalizadas en SQLite y devuelve identificadores | `http://127.0.0.1:8000` |
+| API de desidentificación | `api/app/main.py` | Detección, política y desidentificación; PostgreSQL almacena la configuración | `http://127.0.0.1:8000` |
+| Servicio de inferencia | `inference/` | Sirve los modelos de IA para desidentificación | Dirección interna de Compose `http://inference:3000` |
+| PostgreSQL | `Imagen de docker` | Servicio base de datos para API de desidentificación; guarda las configuraciones de la API | Dirección interna de Compose `db:5432` |
+| API de recorección de chats | `api/app/research/application.py` | Autoriza la captura, guarda sesiones finalizadas en SQLite y devuelve identificadores | `http://127.0.0.1:8000` |
 
 **SQLite pertenece al módulo de investigación, no al conversor.** El router de investigación también está montado en la API original, pero su punto de entrada independiente evita los requisitos de arranque de PostgreSQL e inferencia de la API original.
 
