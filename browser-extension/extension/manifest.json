@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "PDF Middleware",
-  "version": "1.2",
+  "name": "IA Middleware",
+  "version": "1.3",
   "browser_specific_settings": {
     "gecko": {
       "id": "middleware@tu-dominio.com",
@@ -21,7 +21,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "PDF Middleware"
+    "default_title": "IA Middleware"
   },
   "background": {
     "service_worker": "background.js",

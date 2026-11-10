@@ -1,5 +1,6 @@
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
 
+// TODO: Ocultar estas variables si es necesario
 const SECRET_TOKEN = 'mi-proyecto-middleware-2024-epn';
 
 const SERVIDOR_CONVERSION = 'http://localhost:5000/convertir';
