@@ -9,7 +9,6 @@
     }
   },
   "permissions": [
-    "scripting",
     "storage"
   ],
   "host_permissions": [
@@ -43,6 +42,18 @@
         "research-content.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ]
 }
