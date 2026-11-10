@@ -4,7 +4,7 @@ Estas guías explican procedimientos recurrentes para preparar y operar el proye
 
 ## Empieza aquí
 
-- [Instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md): primero la instalación de la extensión y después la secuencia separada de captura para investigación o de conversión y protección de adjuntos.
+- [Instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md): instalación inicial, un arranque local por defecto para adjuntos y la captura para investigación opcional.
 
 ## Datos
 
@@ -24,7 +24,7 @@ Estas guías explican procedimientos recurrentes para preparar y operar el proye
 
 ## Entorno local
 
-- [`Infraestructura local con Docker`](infraestructura-local-con-docker.md): opera los contenedores actuales de base de datos, inferencia y API, sus redes privadas y sus volúmenes persistentes.
+- [`Infraestructura local con Docker`](infraestructura-local-con-docker.md): opera los contenedores de base de datos, inferencia, API y conversor, sus redes privadas y sus volúmenes persistentes.
 
 ## Recolección para investigación
 
