@@ -17,8 +17,8 @@ Delivery: ask-on-risk; forecast ~700 authored lines across four commits; no publ
 ## Tasks
 
 - T1 [S1,S6,S7] inline — default Compose converter service, root `.env` interpolation, Compose configuration regression, and startup infrastructure docs. Commit: 9eef2a8.
-- T2 [S2,S3,S6,S7] inline — research Compose override with named archive volume and required operator key; normal-app disabled/enabled tests; local research docs. Commit: pending.
-- T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: pending.
+- T2 [S2,S3,S6,S7] inline — research Compose override with named archive volume and required operator key; normal-app disabled/enabled tests; local research docs. Commit: db0ca94.
+- T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: pending (L4).
 - T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: pending.
 
 ## Log
@@ -271,4 +271,21 @@ Continue through authorized implementation, verification, documentation, and loc
 - GREEN: same focused test `2 passed`; `docker compose --env-file <synthetic> -f compose.yaml config --quiet` exited `0`; `--profile dev` resolves `db`, `pgadmin`, `inference`, `api`, `converter`; omitting `EXTENSION_ID_CHROME` fails with a clear Compose interpolation error.
 - The pre-existing wording edit remains unstaged and was intentionally excluded from the Unit 1 commit.
 - Commit: `9eef2a8 feat(infra): start the converter in the default compose stack`.
+
+### L3 — Unit 2 (2026-11-10)
+
+- RED: Compose configuration tests failed because `compose.research.dev.yaml` did not exist.
+- Added `compose.research.dev.yaml`: enables the existing research router, requires a local `RESEARCH_API_KEY` from the private root `.env`, sets `/data/research/capture.sqlite3`, protocol and retention, and mounts the named `research_archive` volume on the API.
+- Characterization tests for the normal app: research stays `404` when `RESEARCH_ENABLED` is unset; enabled research completes and exports through `create_app()` with no lifespan, database or inference container.
+- GREEN: Compose tests `4 passed`; research API tests `23 passed`; `docker compose --env-file <synthetic> -f compose.yaml -f compose.research.dev.yaml config --quiet` exited `0`; resolved API volume target is `/data/research` with volume `contextual-pii-anonymizer_research_archive`.
+- Runtime persistence and real-model inference were not exercised; the named-volume contract and the no-inference research path are configuration/unit evidence.
+- Commit: `db0ca94 feat(infra): add opt-in research capture to the local stack`.
+
+### L4 — Unit 3 (2026-11-10)
+
+- RED: Node tests failed for the missing `estadoAlcance` scope text, the new Docker sentence, and the reworked research phase labels (`4` failures).
+- Implemented the existing toggle under the explicit **Protección de adjuntos** label, added scope copy for enabled and disabled states, stated that backend availability is not protection, added the Docker/recording clarification to the research card, and changed research labels to `Sin captura` and `Pendiente de guardar o reintentar`.
+- GREEN: `node --test browser-extension/tests/*.test.cjs` passed `22`; `node --check` passed for both popup scripts; `pytest -q tests/test_toggle_disabled.py` passed `1`; `pytest -q tests/test_research_capture.py -k "normal or other_tab"` passed `2`.
+- Bypass semantics, per-tab isolation and the separation between protection and research state were preserved; no duplicate switch was added.
+- Commit: pending.
 

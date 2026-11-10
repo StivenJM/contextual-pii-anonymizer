@@ -48,7 +48,8 @@ test('research card labels and separate consent remain Spanish', () => {
   for (const text of ['Captura para investigación (solo texto)', 'Protocolo',
     'Iniciar en esta pestaña', 'Finalizar y guardar / reintentar',
     'Descartar / retirar sesión', 'Copiar identificador',
-    'no protege ni desidentifica', 'entrenamiento del modelo']) {
+    'no protege ni desidentifica', 'entrenamiento del modelo',
+    'no arranca ni detiene Docker']) {
     assert.ok(panel.includes(text), `Missing Spanish UI: ${text}`);
   }
   for (const id of ['researchConsent', 'researchTraining']) {
@@ -58,8 +59,8 @@ test('research card labels and separate consent remain Spanish', () => {
 });
 
 test('Spanish display labels do not replace protocol phase values or enrollment logic', async () => {
-  for (const [phase, label] of Object.entries({ idle: 'Inactivo', starting: 'Iniciando',
-    recording: 'Grabando', paused: 'En pausa', pending: 'Pendiente de guardar' })) {
+  for (const [phase, label] of Object.entries({ idle: 'Sin captura', starting: 'Iniciando',
+    recording: 'Grabando', paused: 'En pausa', pending: 'Pendiente de guardar o reintentar' })) {
     const p = await popup({ phase });
     assert.ok(p.elements.get('researchStatus').textContent.startsWith(label));
     assert.equal(p.elements.get('researchKeyLabel').textContent, 'Clave local del investigador');

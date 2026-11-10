@@ -17,7 +17,7 @@ La suite tiene dos niveles:
 | `test_file_picker_converts_then_protects` | La ruta del selector de archivos convierte, limpia, protege y reemplaza el archivo |
 | `test_converted_file_is_not_intercepted_again` | El control anti-bucle evita reprocesar el archivo |
 | `test_drop_zone_converts_then_protects` | La ruta de arrastrar y soltar llega al mismo resultado sin un campo de archivo |
-| `test_disabled_extension_delivers_the_original_file` | El interruptor desactiva la interceptación y no se llama a ningún backend |
+| `test_disabled_extension_delivers_the_original_file` | **Protección de adjuntos** desactivada deja pasar el archivo y no se llama a ningún backend |
 | `test_conversion_failure_keeps_the_file_away_from_the_page` | Un fallo de conversión nunca expone el archivo original |
 | `test_protection_failure_keeps_the_file_away_from_the_page` | Un fallo de protección nunca expone el archivo original |
 | `test_full_system_protects_a_docx_attachment` | El middleware real pseudonimiza el texto extraído antes de que la página lo vea |
