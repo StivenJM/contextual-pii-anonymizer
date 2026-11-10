@@ -43,7 +43,7 @@ This builds/downloads dependencies as needed, waits for healthy database/inferen
 
 FastAPI verifies database configuration/connectivity at startup and disposes its pool during shutdown. For specialized native Windows execution, `app.runtime:create_selector_event_loop` remains available for Psycopg async compatibility; the containerized sequence above does not need a host event-loop workaround or host database publication.
 
-The health endpoint is `GET http://127.0.0.1:8000/api/health`. To use research capture without the model/database, follow the [standalone capture guide](../docs/guides/research-capture.md); research uses SQLite and has its own `/api/research/health` route. The two local API entry points both default to port 8000 and must not occupy it simultaneously.
+The health endpoint is `GET http://127.0.0.1:8000/api/health`. Research capture is disabled by default. To enable the existing research router inside the ordinary development API with a persistent archive volume, use `compose.research.dev.yaml` as described in the developer guide; research handlers do not call inference. To use research capture without the model/database at all, follow the [standalone capture guide](../docs/guides/research-capture.md); research uses SQLite and has its own `/api/research/health` route. The two local API entry points both default to port 8000 and must not occupy it simultaneously.
 
 ## Public APIs
 

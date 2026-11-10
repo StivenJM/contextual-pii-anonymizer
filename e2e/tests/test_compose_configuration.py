@@ -13,6 +13,14 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 EXTENSION_ID = "a" * 32
+RESEARCH_KEY = "synthetic-local-research-key-at-least-32-chars"
+INTERPOLATED = {
+    "EXTENSION_ID_CHROME",
+    "MIDDLEWARE_SECRET",
+    "RESEARCH_API_KEY",
+    "RESEARCH_PROTOCOL_VERSION",
+    "RESEARCH_RETENTION_DAYS",
+}
 
 
 def _compose_available() -> bool:
@@ -35,7 +43,9 @@ pytestmark = [
 ]
 
 
-def compose_config(tmp_path: Path, files: list[str], values: dict[str, str]) -> dict:
+def compose_result(
+    tmp_path: Path, files: list[str], values: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
     """Resolve Compose files against isolated interpolation values.
 
     The repository's private root ``.env`` must never influence these
@@ -48,13 +58,13 @@ def compose_config(tmp_path: Path, files: list[str], values: dict[str, str]) -> 
         encoding="utf-8",
     )
     environment = os.environ.copy()
-    for name in values:
+    for name in INTERPOLATED:
         environment.pop(name, None)
     command = ["docker", "compose", "--env-file", str(env_file)]
     for name in files:
         command.extend(["-f", str(ROOT / name)])
     command.extend(["config", "--format", "json"])
-    result = subprocess.run(
+    return subprocess.run(
         command,
         cwd=ROOT,
         env=environment,
@@ -62,6 +72,10 @@ def compose_config(tmp_path: Path, files: list[str], values: dict[str, str]) -> 
         text=True,
         timeout=120,
     )
+
+
+def compose_config(tmp_path: Path, files: list[str], values: dict[str, str]) -> dict:
+    result = compose_result(tmp_path, files, values)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -118,4 +132,38 @@ def test_default_stack_keeps_internal_services_and_research_disabled(
     assert set(services["api"]["depends_on"]) == {"db", "inference"}
     assert "converter" not in services["api"]["depends_on"]
     assert "RESEARCH_ENABLED" not in (services["api"].get("environment") or {})
+    assert "research_archive" not in (config.get("volumes") or {})
     assert "pgadmin" not in services
+
+
+def test_research_override_adds_persistent_archive_to_the_api(tmp_path: Path) -> None:
+    config = compose_config(
+        tmp_path,
+        ["compose.yaml", "compose.research.dev.yaml"],
+        {"EXTENSION_ID_CHROME": EXTENSION_ID, "RESEARCH_API_KEY": RESEARCH_KEY},
+    )
+    services = config["services"]
+    api = services["api"]
+    environment = api["environment"]
+
+    assert set(services) == {"db", "inference", "api", "converter"}
+    assert environment["RESEARCH_ENABLED"] == "true"
+    assert environment["RESEARCH_API_KEY"] == RESEARCH_KEY
+    assert environment["RESEARCH_STORAGE_PATH"] == "/data/research/capture.sqlite3"
+    assert environment["RESEARCH_PROTOCOL_VERSION"] == "research-v1"
+    assert environment["RESEARCH_RETENTION_DAYS"] == "7"
+    mounts = [volume for volume in api["volumes"] if volume["type"] == "volume"]
+    assert [mount["target"] for mount in mounts] == ["/data/research"]
+    assert "research_archive" in config["volumes"]
+    assert set(api["depends_on"]) == {"db", "inference"}
+
+
+def test_research_override_requires_a_local_operator_key(tmp_path: Path) -> None:
+    result = compose_result(
+        tmp_path,
+        ["compose.yaml", "compose.research.dev.yaml"],
+        {"EXTENSION_ID_CHROME": EXTENSION_ID},
+    )
+
+    assert result.returncode != 0
+    assert "RESEARCH_API_KEY" in result.stderr
