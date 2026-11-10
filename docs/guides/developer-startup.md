@@ -215,11 +215,11 @@ El conversor es su propio proceso y endpoint; la extensión lo llama antes de la
 ### 4.4 Confirmar el flujo de adjuntos con contenido ficticio
 
 1. Confirma que responden las dos URLs de documentación local y que el Compose principal está saludable.
-2. Actualiza una pestaña de chat compatible. Mantén la extensión **Activada**, con la captura para investigación inactiva.
+2. Actualiza una pestaña de chat compatible. Mantén **Protección de adjuntos** en **Activada**, con la captura para investigación inactiva.
 3. Crea un documento PDF/Office pequeño y válido con texto ficticio y adjúntalo usando una ruta de selector o de arrastre compatible. El conversor admite `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls` y `.pptx`; un archivo `.txt` plano no sirve como prueba de humo del conversor.
 4. Confirma la conversión, la protección de privacidad y el reemplazo del adjunto. Revisa los errores en lugar de suponer que el archivo original quedó protegido cuando una operación falló. El comportamiento del proveedor real todavía necesita validación manual.
 
-La protección ordinaria actualmente se dirige a los adjuntos; el texto escrito en el chat no queda protegido en general solo porque el interruptor diga **Activada**. La captura para investigación es un modo aparte, de activación explícita, y no es protección. Consulta [pruebas de integración](integration-testing.md) para las regresiones sintéticas en navegador y las de Docker aislado.
+La protección ordinaria actualmente se dirige a los adjuntos; el texto escrito en el chat no queda protegido en general solo porque **Protección de adjuntos** diga **Activada**. Desactivarla deja pasar los adjuntos sin convertir ni proteger, pero no detiene Docker ni autoriza la captura para investigación. La captura para investigación es un modo aparte, de activación explícita, y no es protección. Consulta [pruebas de integración](integration-testing.md) para las regresiones sintéticas en navegador y las de Docker aislado.
 
 ## 5. Detener sin borrar los datos almacenados
 

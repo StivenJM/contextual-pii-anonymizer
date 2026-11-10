@@ -4,8 +4,8 @@
   const element = id => document.getElementById(id);
   const status = element('researchStatus');
   const phaseLabels = {
-    idle: 'Inactivo', starting: 'Iniciando', recording: 'Grabando',
-    paused: 'En pausa', pending: 'Pendiente de guardar', withdrawing: 'Retiro pendiente'
+    idle: 'Sin captura', starting: 'Iniciando', recording: 'Grabando',
+    paused: 'En pausa', pending: 'Pendiente de guardar o reintentar', withdrawing: 'Retiro pendiente'
   };
   let busy = false;
   function showError(error) {
