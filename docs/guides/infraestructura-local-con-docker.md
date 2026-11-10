@@ -71,4 +71,4 @@ Los datos de PostgreSQL, la caché del modelo y el archivo de investigación del
 - [Captura sin modelo](research-capture.md) arranca sin PostgreSQL ni inferencia y usa el mismo puerto de host 8000 por defecto; no arranques las dos APIs locales en ese puerto.
 - [Despliegue de investigación en campus](research-campus-deployment.md) es la configuración separada con HTTPS y CA interna. El Compose de desarrollo, su proceso de recarga y su Admin API local sin autenticación no son un despliegue de producción de campus.
 
-Estas instrucciones se conciliaron con `compose.yaml`, las dos plantillas de entorno versionadas y la configuración y ayuda de la CLI. No se ejecutó ningún servicio, migración ni descarga de modelo para esta actualización de documentación.
+Estas instrucciones se conciliaron con `compose.yaml`, `compose.research.dev.yaml`, las dos plantillas de entorno versionadas y la configuración de Compose. Se validó la resolución de los archivos de Compose con `docker compose config`; no se inició ningún servicio, migración ni descarga de modelo para esta actualización.

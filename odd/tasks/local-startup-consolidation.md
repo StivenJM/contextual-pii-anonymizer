@@ -18,8 +18,8 @@ Delivery: ask-on-risk; forecast ~700 authored lines across four commits; no publ
 
 - T1 [S1,S6,S7] inline — default Compose converter service, root `.env` interpolation, Compose configuration regression, and startup infrastructure docs. Commit: 9eef2a8.
 - T2 [S2,S3,S6,S7] inline — research Compose override with named archive volume and required operator key; normal-app disabled/enabled tests; local research docs. Commit: db0ca94.
-- T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: pending (L4).
-- T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: pending.
+- T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: ca3c08d.
+- T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: pending (L5).
 
 ## Log
 
@@ -287,5 +287,15 @@ Continue through authorized implementation, verification, documentation, and loc
 - Implemented the existing toggle under the explicit **Protección de adjuntos** label, added scope copy for enabled and disabled states, stated that backend availability is not protection, added the Docker/recording clarification to the research card, and changed research labels to `Sin captura` and `Pendiente de guardar o reintentar`.
 - GREEN: `node --test browser-extension/tests/*.test.cjs` passed `22`; `node --check` passed for both popup scripts; `pytest -q tests/test_toggle_disabled.py` passed `1`; `pytest -q tests/test_research_capture.py -k "normal or other_tab"` passed `2`.
 - Bypass semantics, per-tab isolation and the separation between protection and research state were preserved; no duplicate switch was added.
+- Commit: `ca3c08d feat(extension): clarify attachment protection and research states`.
+
+### L5 — Unit 4 (2026-11-10)
+
+- Rewrote `docs/guides/developer-startup.md` into the requested order: prerequisites and initial setup; one default startup; optional research; exact extension scope; model-free deployment; safe shutdown and troubleshooting. The earlier units' commands remain in the guide.
+- Preserved the pre-existing wording intent in section 2 with the exact line `Los flujos disponibles son:`.
+- Structural checks: headings match the target sections; all fenced blocks are balanced; every relative link in the touched guides resolves.
+- Configuration checks: `docker compose --env-file <synthetic> -f compose.yaml config --quiet` and the same with `compose.research.dev.yaml` both exited `0`; `compose.research.yaml` resolves only `collector` and `proxy`, with no collector ports and no database/inference services.
+- Focused Compose tests: `4 passed`. Full API suite: `72 passed, 2 skipped` (PostgreSQL-dependent). Node suite: `22 passed`. Browser/preparation tier: `29 passed, 7 deselected` (`-m "not integration"`).
+- Not run: full Compose stack startup, model download/real-model checks, live provider adapters, campus host/TLS deployment, and runtime archive recreation. Those remain manual or external prerequisites.
 - Commit: pending.
 
