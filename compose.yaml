@@ -103,6 +103,43 @@ services:
       - huggingface_cache:/cache/huggingface # To cache models and avoid re downloads
 
   # ─────────────────────────────────────
+  # Attachment converter
+  # ─────────────────────────────────────
+  converter:
+    build:
+      context: ./browser-extension/backend
+
+    environment:
+      # This token is bundled in the extension for development, not a secret.
+      MIDDLEWARE_SECRET: ${MIDDLEWARE_SECRET:-mi-proyecto-middleware-2024-epn}
+      EXTENSION_ID_CHROME: ${EXTENSION_ID_CHROME:?Set EXTENSION_ID_CHROME in the root .env; see the developer startup guide}
+
+    ports:
+      - "127.0.0.1:5000:5000"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/docs', timeout=2)"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./browser-extension/backend/app.py
+          target: /app/app.py
+
+        - action: rebuild
+          path: ./browser-extension/backend/requirements.txt
+
+  # ─────────────────────────────────────
   # FastAPI
   # ─────────────────────────────────────
   api:

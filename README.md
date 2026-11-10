@@ -2,13 +2,13 @@
 
 Sistema para detectar y proteger información personal identificable (PII) antes de enviarla a un modelo de lenguaje.
 
-El entorno local incluye PostgreSQL, el servicio de inferencia y la API.
+El entorno local incluye PostgreSQL, el servicio de inferencia, la API y el conversor de adjuntos.
 
 ## Developer startup
 
 Start with [extension installation and developer startup](docs/guides/developer-startup.md).
-The attachment converter is a separate backend and is not started by the main Compose.
-For model-free research capture, use the separate sequence in that guide instead of starting inference.
+The default Compose stack starts the attachment converter alongside the API, PostgreSQL and inference.
+For model-free research capture, use the separate model-free deployment documented in that guide instead of starting inference.
 
 ## Requisitos
 
