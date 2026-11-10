@@ -19,7 +19,7 @@ Delivery: ask-on-risk; forecast ~700 authored lines across four commits; no publ
 - T1 [S1,S6,S7] inline — default Compose converter service, root `.env` interpolation, Compose configuration regression, and startup infrastructure docs. Commit: 9eef2a8.
 - T2 [S2,S3,S6,S7] inline — research Compose override with named archive volume and required operator key; normal-app disabled/enabled tests; local research docs. Commit: db0ca94.
 - T3 [S4,S6,S7] inline — attachment-protection scope copy, research phase labels, Node state regression; bypass and per-tab tests retained. Commit: ca3c08d.
-- T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: pending (L5).
+- T4 [S5,S6,S7,S8] inline — consolidated Spanish startup guide and cross-page consistency. Commit: d2e053a.
 
 ## Log
 
@@ -297,5 +297,11 @@ Continue through authorized implementation, verification, documentation, and loc
 - Configuration checks: `docker compose --env-file <synthetic> -f compose.yaml config --quiet` and the same with `compose.research.dev.yaml` both exited `0`; `compose.research.yaml` resolves only `collector` and `proxy`, with no collector ports and no database/inference services.
 - Focused Compose tests: `4 passed`. Full API suite: `72 passed, 2 skipped` (PostgreSQL-dependent). Node suite: `22 passed`. Browser/preparation tier: `29 passed, 7 deselected` (`-m "not integration"`).
 - Not run: full Compose stack startup, model download/real-model checks, live provider adapters, campus host/TLS deployment, and runtime archive recreation. Those remain manual or external prerequisites.
-- Commit: pending.
+- Commit: `d2e053a docs(guides): consolidate the local startup workflow`.
+
+### L6 — Closure evidence (2026-11-10)
+
+- Native assessment over `c6bbffb..d2e053a`: `risk: medium`, `review_due: false`, `review_due_reason: under_budget`, `changed_lines: 984`. No native review transaction was started and no consent was requested.
+- Final checks: API `72 passed, 2 skipped`; Node `22 passed`; browser/preparation `29 passed, 7 deselected`; Compose configuration `4 passed`; default and research-enabled `docker compose config --quiet` exited `0`; standalone `compose.research.yaml` resolved only `collector` and `proxy` with no published collector port.
+- The full Compose stack was not started, so no migration, model download or real-model request occurred.
 
