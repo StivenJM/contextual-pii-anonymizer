@@ -13,46 +13,6 @@ const SITIOS_SOPORTADOS = [
   'https://gemini.google.com/*'
 ];
 
-const CONTENT_SCRIPT_ID = 'content-main';
-
-// ============================================================
-// Registro de content.js en MAIN world
-// ============================================================
-
-async function registrarContentPrincipal() {
-  try {
-    const registrados =
-      await browserAPI.scripting.getRegisteredContentScripts({
-        ids: [CONTENT_SCRIPT_ID]
-      });
-
-    if (registrados.length > 0) {
-      await browserAPI.scripting.unregisterContentScripts({
-        ids: [CONTENT_SCRIPT_ID]
-      });
-    }
-
-    await browserAPI.scripting.registerContentScripts([
-      {
-        id: CONTENT_SCRIPT_ID,
-        matches: SITIOS_SOPORTADOS,
-        js: ['content.js'],
-        runAt: 'document_start',
-        world: 'MAIN'
-      }
-    ]);
-  } catch (error) {
-    console.error(
-      '[Middleware] No se pudo registrar content.js:',
-      error
-    );
-  }
-}
-
-browserAPI.runtime.onInstalled.addListener(() => {
-  registrarContentPrincipal();
-});
-
 // ============================================================
 // Estado de la extensión
 // ============================================================

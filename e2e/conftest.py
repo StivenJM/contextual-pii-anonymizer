@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,19 +98,6 @@ def middleware() -> MiddlewareStub:
         stub.stop()
 
 
-def _wait_for_registration(worker: Worker, timeout: float = 20.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        registered = worker.evaluate(
-            "async () => (await chrome.scripting.getRegisteredContentScripts("
-            "{ ids: ['content-main'] })).length"
-        )
-        if registered:
-            return
-        time.sleep(0.05)
-    raise AssertionError("content.js was not registered in the MAIN world")
-
-
 @pytest.fixture(scope="session")
 def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
     contexts: list[BrowserContext] = []
@@ -160,7 +146,6 @@ def browser_factory(pytestconfig: pytest.Config) -> Callable[..., Harness]:
             contexts.append(context)
             workers = context.service_workers
             worker = workers[0] if workers else context.wait_for_event("serviceworker")
-            _wait_for_registration(worker)
             return Harness(
                 build=build,
                 context=context,
