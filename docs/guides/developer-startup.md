@@ -40,7 +40,7 @@ Procedimiento oficial de instalación: [Chrome: cargar una extensión descomprim
 Dos flujos de desarrollo útiles:
 
 - **Captura para investigación:** sigue la sección 3. No necesita conversor, PostgreSQL ni modelo de inferencia.
-- **Conversión y protección de adjuntos original:** sigue la sección 4. Necesita el conversor **y** el stack principal de API/PostgreSQL/inferencia.
+- **Conversión y protección de adjuntos original:** sigue la sección 4. Necesita el stack local completo: conversor, API de privacidad, PostgreSQL e inferencia.
 
 La API de investigación independiente y la API original usan por defecto el mismo puerto de host **8000**. No las arranques al mismo tiempo en ese puerto. La extensión de fuentes ordinaria usa la API de loopback; un despliegue en campus requiere una copia de extensión generada aparte y HTTPS de confianza, no cambiar la URL a HTTP plano sobre una IP privada.
 
@@ -126,11 +126,28 @@ if (-not (Test-Path api/.api.env)) {
 }
 ```
 
-Edita `api/.db.env` y reemplaza la contraseña de ejemplo por una contraseña de desarrollo solo local. Tanto la base de datos como la API cargan esa sobreescritura. Mantén estos archivos privados fuera de Git y no uses credenciales de producción. En el checkout actual no existe un `.env.example` en la raíz; no sigas instrucciones antiguas que lo mencionen.
+Edita `api/.db.env` y reemplaza la contraseña de ejemplo por una contraseña de desarrollo solo local. Tanto la base de datos como la API cargan esa sobreescritura. Mantén estos archivos privados fuera de Git y no uses credenciales de producción. En el checkout actual no existe un `.env.example` en la raíz; crea el `.env` de Compose con los comandos siguientes.
 
 Cambiar `POSTGRES_PASSWORD` en un archivo de entorno no cambia automáticamente las credenciales dentro de un volumen de base de datos ya inicializado. Para un entorno existente, conserva la configuración que coincide o usa un procedimiento autorizado de cambio de credenciales; no borres su volumen como atajo.
 
-### 4.2 Arrancar PostgreSQL, la inferencia y la API de privacidad
+El conversor necesita el ID de la extensión de Chrome de la sección 1 y un token de desarrollo que coincida con `SECRET_TOKEN` en `browser-extension/extension/background.js`. Ese token viene incluido en el código de la extensión y no es una credencial confidencial de producción. No lo confundas con las credenciales de inscripción, administración o sesión de investigación.
+
+Crea el `.env` privado de la raíz **solo si no existe todavía**; Compose lo lee para configurar el conversor:
+
+```powershell
+$ExtensionId = "<copy the 32-character ID from chrome://extensions>"
+if ($ExtensionId -notmatch '^[a-p]{32}$') {
+    throw "Replace the placeholder with the actual Chrome extension ID."
+}
+if (-not (Test-Path .env)) {
+    "EXTENSION_ID_CHROME=$ExtensionId" | Set-Content .env
+    Add-Content .env "MIDDLEWARE_SECRET="
+}
+```
+
+`MIDDLEWARE_SECRET` vacío usa el token de desarrollo incluido en la extensión. Si `background.js` cambia ese token, escribe el valor nuevo en `.env` y reinicia el conversor. `.env` está ignorado por Git; no lo publiques ni lo confirmes. Sin `EXTENSION_ID_CHROME`, Compose se detiene en lugar de arrancar el conversor con un origen permitido vacío.
+
+### 4.2 Arrancar el stack local completo
 
 Desde la raíz del repositorio en la terminal A:
 
@@ -138,44 +155,25 @@ Desde la raíz del repositorio en la terminal A:
 docker compose up --build --watch
 ```
 
-Esto arranca `db`, `inference` y `api`. **No arranca el conversor.** La API espera los health checks de base de datos e inferencia y aplica las migraciones de Alembic antes de que arranque su servidor de desarrollo. Son cambios reales en la base de datos cuando el desarrollador ejecuta el comando; no se ejecutó ninguna migración solo por redactar esta guía.
+Esto arranca `db`, `inference`, `api` y `converter`. La API espera los health checks de base de datos e inferencia y aplica las migraciones de Alembic antes de que arranque su servidor de desarrollo. Son cambios reales en la base de datos cuando el desarrollador ejecuta el comando; no se ejecutó ninguna migración solo por redactar esta guía. El conversor queda disponible cuando responde su health check en `http://127.0.0.1:5000/docs`. `--watch` sincroniza y reinicia el conversor al cambiar `browser-extension/backend/app.py`, y reconstruye su imagen si cambia `requirements.txt`.
 
 En la terminal B:
 
 ```powershell
 docker compose ps
 Invoke-RestMethod http://127.0.0.1:8000/api/health
+(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5000/docs).StatusCode
 ```
 
-La respuesta de salud original contiene `status: active`. Abre `http://127.0.0.1:8000/docs` para su API interactiva. PostgreSQL y la inferencia son solo internos en este Compose; no esperes conexiones desde el host a los puertos 5432 ni 3000, y no cambies el binding de loopback de la API para exponer la Admin API de desarrollo.
+La respuesta de salud original contiene `status: active` y el código del conversor debe ser `200`. Abre `http://127.0.0.1:8000/docs` para la API interactiva y `http://127.0.0.1:5000/docs` para la del conversor. PostgreSQL y la inferencia son solo internos en este Compose; no esperes conexiones desde el host a los puertos 5432 ni 3000, y no cambies el binding de loopback de la API ni del conversor para exponer la Admin API de desarrollo.
 
 Administración de desarrollo opcional: reemplaza el comando de arranque por `docker compose --profile dev up --build --watch` para incluir pgAdmin en `http://127.0.0.1:9001`. Sus valores por defecto actuales son solo de desarrollo; no publiques ese servicio en la red del campus. Dentro de pgAdmin, el host de la base de datos es `db`, no el `localhost` del equipo con el navegador.
 
-### 4.3 Arrancar el conversor por separado
+### 4.3 Configurar y verificar el conversor
 
-El conversor necesita el ID de la extensión de Chrome de la sección 1 y un token de desarrollo que coincida con `SECRET_TOKEN` en `browser-extension/extension/background.js`. Ese token viene incluido en el código de la extensión y no es una credencial confidencial de producción. No lo confundas con las credenciales de inscripción, administración o sesión de investigación.
+El conversor es su propio proceso y endpoint; la extensión lo llama antes de la API de privacidad. Su ruta `/convertir` espera el campo multipart `archivo` y la cabecera `X-Token`; la extensión los aporta. El CORS usa `EXTENSION_ID_CHROME`; si cambias el ID de la extensión cargada, actualiza `.env` y ejecuta `docker compose up -d converter`.
 
-En la **terminal C**, desde la raíz del repositorio:
-
-```powershell
-$ExtensionId = "<copy the 32-character ID from chrome://extensions>"
-if ($ExtensionId -notmatch '^[a-p]{32}$') {
-    throw "Replace the placeholder with the actual Chrome extension ID."
-}
-$Background = Get-Content browser-extension/extension/background.js -Raw
-$TokenMatch = [regex]::Match($Background, "(?m)^const SECRET_TOKEN = '([^']+)';")
-if (-not $TokenMatch.Success) {
-    throw "Read the current extension token configuration; do not invent a token."
-}
-$env:MIDDLEWARE_SECRET = $TokenMatch.Groups[1].Value
-$env:EXTENSION_ID_CHROME = $ExtensionId
-docker build -t contextual-pii-converter:dev browser-extension/backend
-docker run --rm --name contextual-pii-converter-dev -p 127.0.0.1:5000:5000 --env MIDDLEWARE_SECRET --env EXTENSION_ID_CHROME contextual-pii-converter:dev
-```
-
-Esto usa el Dockerfile existente del conversor sin editar el Compose principal. Se ejecuta en primer plano y ata el listener del host al loopback. Su ruta existente `/convertir` espera el campo multipart `archivo` y la cabecera `X-Token`; la extensión los aporta. El CORS del conversor usa `EXTENSION_ID_CHROME`; si el ID de la extensión cargada cambia, reinicia el conversor con el ID correcto.
-
-La documentación de la API del conversor está en `http://127.0.0.1:5000/docs`; eso solo demuestra que el proceso web es alcanzable, no que todos los formatos de documento se conviertan correctamente. Las dependencias vienen del archivo de requisitos actual del conversor; este servicio es un backend de desarrollo separado, no el archivo de investigación.
+`http://127.0.0.1:5000/docs` solo demuestra que el proceso web es alcanzable, no que todos los formatos de documento se conviertan correctamente. Las dependencias vienen del archivo de requisitos actual del conversor; este servicio es un backend de desarrollo separado, no el archivo de investigación.
 
 ### 4.4 Confirmar el flujo de adjuntos con contenido ficticio
 
@@ -191,8 +189,7 @@ La protección ordinaria actualmente se dirige a los adjuntos; el texto escrito 
 | Proceso | Procedimiento de parada |
 |---|---|
 | API de investigación independiente | Ctrl+C en su propia terminal; el archivo de almacenamiento permanece |
-| Conversor en primer plano | Ctrl+C en la terminal C; `--rm` elimina ese contenedor, no el archivo de investigación |
-| Stack principal de desarrollo | Ctrl+C para detener su sesión en primer plano; desde la raíz del repositorio ejecuta `docker compose down` cuando quieras eliminar esos contenedores y redes |
+| Stack local de desarrollo (incluido el conversor) | Ctrl+C para detener su sesión en primer plano; desde la raíz del repositorio ejecuta `docker compose down` cuando quieras eliminar esos contenedores y redes |
 
 No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o el archivo de investigación para diagnosticar un despliegue del estudio. El `docker compose down` ordinario conserva los volúmenes nombrados de PostgreSQL y de la caché del modelo. Los logs y el historial del navegador no son un procedimiento de respaldo del archivo.
 
@@ -208,9 +205,10 @@ No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o
 | El inicio dice que la conversación ya tiene mensajes | Abre una conversación nueva y vacía; el historial se excluye a propósito, no se importa ni se borra |
 | El inicio no encuentra el editor del chat | Espera a que cargue la página; después de actualizar la extensión refresca la pestaña y usa un chat compatible nuevo. No confundas la ausencia del botón de envío en un editor vacío con un editor ausente |
 | El conversor devuelve 401 | Su `MIDDLEWARE_SECRET` debe coincidir con el token de desarrollo de la extensión; las claves de investigación no lo sustituyen |
-| Falla el CORS del conversor | Revisa el ID de la extensión cargada y reinicia el conversor después de cambiar su entorno de origen permitido |
-| El conversor responde pero falla la protección | También debe estar disponible el stack principal de API/inferencia, no solo el puerto 5000 |
-| La API principal sigue arrancando | Revisa `docker compose logs --tail 50 inference api`; la primera preparación del modelo puede tardar; no registres prompts reales |
+| Falla el CORS del conversor | Revisa `EXTENSION_ID_CHROME` en `.env` y ejecuta `docker compose up -d converter` después de cambiar el ID |
+| Compose se detiene pidiendo `EXTENSION_ID_CHROME` | Crea el `.env` de la raíz con el ID de la extensión cargada; Compose falla de forma explícita en vez de permitir un origen vacío |
+| El conversor responde pero falla la protección | También debe estar disponible la API de privacidad y su inferencia, no solo el puerto 5000 |
+| La API principal sigue arrancando | Revisa `docker compose logs --tail 50 inference api converter`; la primera preparación del modelo puede tardar; no registres prompts reales |
 | Falla la autenticación de la base de datos tras editar `.db.env` | Las credenciales del volumen existente pueden ser distintas; no borres la base de datos para resolver un desajuste de contraseña |
 | El paquete de campus falla desde casa o fuera de la red | Es privado del campus a propósito; sigue el procedimiento aprobado de red y TLS, no desactives advertencias de certificado |
 

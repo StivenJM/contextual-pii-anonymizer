@@ -25,21 +25,21 @@ tests/              # Unit, HTTP, and opt-in integration tests
 
 ## Configure
 
-Begin with [extension installation and developer startup](../docs/guides/developer-startup.md). Install the extension before configuring the separate converter's allowed extension ID.
+Begin with [extension installation and developer startup](../docs/guides/developer-startup.md). Install the extension before configuring the converter's allowed extension ID.
 
-The root Compose loads `api/.api.dev.env` and `api/.db.dev.env`, followed by optional ignored overrides `api/.api.env` and `api/.db.env`. Create private overrides without overwriting existing files and replace the example database password with a local-only value. There is no root `.env.example` in the current checkout.
+The root Compose loads `api/.api.dev.env` and `api/.db.dev.env`, followed by optional ignored overrides `api/.api.env` and `api/.db.env`. Create private overrides without overwriting existing files and replace the example database password with a local-only value. The root Compose also reads a private root `.env` for the converter's extension ID and development token; create it as described in the developer guide. The root `.env` is ignored by Git, and there is no root `.env.example` in the current checkout.
 
 Inside Compose, the database host is `db` and inference is `http://inference:3000`. Neither has a published host port. Do not reuse obsolete host-connection instructions or delete an initialized volume after a password mismatch.
 
 ## Run
 
-Start the original API, PostgreSQL and inference from the repository root:
+Start the default local stack — PostgreSQL, inference, the privacy API and the attachment converter — from the repository root:
 
 ```powershell
 docker compose up --build --watch
 ```
 
-This builds/downloads dependencies as needed, waits for healthy database/inference services, and applies Alembic migrations before starting the API. The converter is not part of this Compose; follow the developer guide to run its separate loopback container.
+This builds/downloads dependencies as needed, waits for healthy database/inference services, and applies Alembic migrations before starting the API. The converter remains its own process and loopback endpoint; the extension calls it separately from the privacy API.
 
 FastAPI verifies database configuration/connectivity at startup and disposes its pool during shutdown. For specialized native Windows execution, `app.runtime:create_selector_event_loop` remains available for Psycopg async compatibility; the containerized sequence above does not need a host event-loop workaround or host database publication.
 

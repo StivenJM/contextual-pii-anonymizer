@@ -1,3 +1,6 @@
 #  Personal ignore
 workspace/
 .atl
+
+# Local Compose interpolation values (extension ID, development token).
+.env
