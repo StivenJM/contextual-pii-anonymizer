@@ -153,6 +153,8 @@ Arranca el stack completo con la sobreescritura:
 docker compose -f compose.yaml -f compose.research.dev.yaml up --build --watch
 ```
 
+Si el stack ya estaba arrancado, vuelve a ejecutar ese mismo comando: Compose recrea la API cuando cambian las variables de entorno.
+
 En la terminal B, confirma la disponibilidad:
 
 ```powershell
