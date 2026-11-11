@@ -88,10 +88,12 @@ services:
         - action: sync
           path: ./inference/app
           target: /app/app
+          initial_sync: true
 
         - action: sync
           path: ./inference/tests
           target: /app/tests
+          initial_sync: true
 
         - action: rebuild
           path: ./inference/pyproject.toml
@@ -135,6 +137,7 @@ services:
         - action: sync+restart
           path: ./browser-extension/backend/app.py
           target: /app/app.py
+          initial_sync: true
 
         - action: rebuild
           path: ./browser-extension/backend/requirements.txt
@@ -183,14 +186,17 @@ services:
         - path: ./api/app
           action: sync
           target: /app/app
+          initial_sync: true
 
         - action: sync
           path: ./api/tests
           target: /app/tests
+          initial_sync: true
 
         - action: sync
           path: ./api/alembic
           target: /app/alembic
+          initial_sync: true
         
         - action: sync
           path: ./api/alembic.ini
