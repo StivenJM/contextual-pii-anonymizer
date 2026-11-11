@@ -1,0 +1,200 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="planeGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#42d0d0"/>
+      <stop offset=".5" stop-color="#16a9c2"/>
+      <stop offset="1" stop-color="#172b77"/>
+    </linearGradient>
+
+    <linearGradient id="middleGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#168fb5"/>
+      <stop offset=".55" stop-color="#1175ae"/>
+      <stop offset="1" stop-color="#14519a"/>
+    </linearGradient>
+
+    <linearGradient id="darkGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17679c"/>
+      <stop offset=".5" stop-color="#174b91"/>
+      <stop offset="1" stop-color="#172b77"/>
+    </linearGradient>
+
+    <!-- Espacios transparentes entre piezas -->
+    <mask id="separaciones"
+          maskUnits="userSpaceOnUse"
+          x="0" y="0" width="256" height="256">
+
+      <rect width="256" height="256" fill="white"/>
+
+      <!-- SEPARACIONES IZQUIERDAS ORIGINALES -->
+
+      <!-- Separación diagonal superior izquierda -->
+      <path
+        d="M23 67 L78 90 L140 59"
+        fill="none"
+        stroke="black"
+        stroke-width="6"
+        stroke-linejoin="miter"/>
+
+      <!-- Separación diagonal inferior izquierda -->
+      <path
+        d="M0 190 H34 L109 120"
+        fill="none"
+        stroke="black"
+        stroke-width="6"
+        stroke-linejoin="miter"/>
+
+      <!-- Separaciones pequeñas izquierda -->
+      <path
+        d="M0 98 L34 98 L71 115 L33 153Z"
+        fill="none"
+        stroke="black"
+        stroke-width="6"/>
+
+      <path
+        d="M50 105 L82 88"
+        fill="none"
+        stroke="black"
+        stroke-width="6"/>
+
+      <!-- NUEVAS SEPARACIONES DERECHAS -->
+
+      <!-- Separación diagonal inferior derecha -->
+      <path
+        d="M247 193 L192 169 L130 201"
+        fill="none"
+        stroke="black"
+        stroke-width="6"
+        stroke-linejoin="miter"/>
+
+      <!-- Separación diagonal superior derecha -->
+      <path
+        d="M270 70 H236 L160 141"
+        fill="none"
+        stroke="black"
+        stroke-width="6"
+        stroke-linejoin="miter"/>
+
+      <!-- Separaciones pequeñas derecha -->
+      <path
+        d="M269 162 L235 162 L198 145 L236 108Z"
+        fill="none"
+        stroke="black"
+        stroke-width="6"/>
+
+      <path
+        d="M219 155 L187 172"
+        fill="none"
+        stroke="black"
+        stroke-width="6"/>
+    </mask>
+  </defs>
+
+  <!-- Todas las figuras conservan sus coordenadas -->
+  <g mask="url(#separaciones)">
+
+    <!-- PLANO IZQUIERDO -->
+    <path d="M35 65 L135 15 V195 L35 245Z"
+          fill="url(#planeGradient)"/>
+
+    <path d="M135 15 V105 L35 245 V155Z"
+          fill="url(#middleGradient)"/>
+
+    <!-- PLANO DERECHO -->
+    <path d="M135 65 L235 15 V195 L135 245Z"
+          fill="url(#planeGradient)"/>
+
+    <path d="M235 15 V105 L135 245 V155Z"
+          fill="url(#middleGradient)"/>
+
+    <!-- FIGURA PLOMA ORIGINAL -->
+    <path
+      d="
+        M0 165
+        H25
+        L75 115
+        L55 105
+        L135 65
+        L135 116
+        L109 116
+        L35 185
+        H0
+        Z
+      "
+      fill="#303a42"
+    />
+
+    <!-- SEGUNDA FLECHA -->
+    <path
+      d="
+        M0 165
+        H25
+        L75 115
+        L55 105
+        L135 65
+        L135 116
+        L109 116
+        L35 185
+        H0
+        Z
+      "
+      fill="#303a42"
+      transform="translate(14, 4) rotate(180 128 128)"
+    />
+
+    <!-- FIGURA PLOMA SUPERIOR IZQUIERDA -->
+    <path
+      d="
+        M0 75
+        H35
+        L75 90
+        L50 102
+        L35 96
+        H0
+        Z
+      "
+      fill="#303a42"
+    />
+
+    <!-- FIGURA PLOMA INFERIOR DERECHA -->
+    <path
+      d="
+        M0 75
+        H35
+        L75 90
+        L50 102
+        L35 96
+        H0
+        Z
+      "
+      fill="#303a42"
+      transform="translate(13, 4) rotate(180 128 128)"
+    />
+
+  </g>
+
+  <!-- CANDADO ORIGINAL SIN MODIFICACIONES -->
+  <g transform="translate(0,-19)">
+    <path
+      d="M119 143 V124 A16 16 0 0 1 151 124 V133"
+      fill="none"
+      stroke="#fff"
+      stroke-width="7"
+      stroke-linecap="round"
+    />
+
+    <path d="M108 135 H162 V174 H108Z"
+          fill="#fff"/>
+
+    <path
+      d="M135 144
+         A6 6 0 0 0 132 155
+         L129 165
+         H141
+         L138 155
+         A6 6 0 0 0 135 144
+         Z"
+      fill="#087eaa"
+    />
+  </g>
+</svg>
