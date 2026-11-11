@@ -1,20 +1,18 @@
 # Instalar la extensión y arrancar el sistema de desarrollo
 
-Guía para Windows/PowerShell. Después de la preparación inicial, un solo comando de Compose arranca el flujo ordinario de adjuntos: conversor, API de privacidad, PostgreSQL e inferencia. La captura para investigación es una sobreescritura opcional. El despliegue de investigación sin modelo sigue siendo un flujo separado.
-
 ## 1. Requisitos y preparación inicial
 
 ### 1.1 Requisitos
 
-- Docker Desktop con contenedores Linux y una versión de Compose que admita `--watch` y entradas opcionales de `env_file`.
+- Docker Desktop y Compose.
 - Google Chrome con un perfil de desarrollo dedicado. Evita un perfil con historial de chats personales o cuentas sensibles ajenas al proyecto.
-- Opcional: `uv` y Python para ejecutar las pruebas de la API o la aplicación independiente sin modelo de la sección 5.1. El flujo por defecto y la investigación dentro de Docker no lo necesitan.
+- Opcional: `uv` y Python para ejecutar las pruebas de la API o la aplicación independiente sin modelo de IA.
 
-El primer arranque compila imágenes y el servicio de inferencia puede descargar y cachear un modelo grande. Dale tiempo, espacio en disco y acceso de red. No ejecutes el stack solo para comprobar un cambio de Markdown.
+> El primer arranque compila imágenes y el servicio de inferencia puede descargar y cachear un modelo grande. Necesita de tiempo, espacio en disco y acceso de red.
 
 ### 1.2 Instalar la extensión del navegador
 
-La extensión es JavaScript puro: esta instalación no requiere `npm install`, una compilación de JavaScript, un servicio de Docker ni un modelo en ejecución.
+La extensión es JavaScript puro: esta instalación no requiere `npm install`, una compilación de JavaScript ni un servicio de Docker.
 
 1. Abre `chrome://extensions` y activa el **modo de desarrollador**.
 2. Pulsa **Load unpacked** y selecciona **`browser-extension/extension` dentro de este repositorio**.
@@ -25,7 +23,7 @@ La extensión es JavaScript puro: esta instalación no requiere `npm install`, u
 
 > NOTA. Instalar la extensión por sí sola no arranca ningún backend ni activa la captura para investigación.
 
-El manifest cubre ChatGPT, Claude y Gemini. Las pruebas sintéticas locales en Chromium no demuestran que las interfaces reales actuales funcionen; ensaya manualmente cada proveedor previsto antes del trabajo de campo. Firefox y otros navegadores no son la ruta validada en esta guía. Si la política universitaria deshabilita las extensiones sin empaquetar, consigue la ruta de instalación aprobada por TI en lugar de saltarte esa política.
+El manifest cubre ChatGPT, Claude y Gemini.
 
 Después de editar el JavaScript o el manifest de la extensión, vuelve a `chrome://extensions`, pulsa **Recargar** en su tarjeta y actualiza la pestaña del chat. Recargar el navegador no es una migración de datos: termina o descarta una sesión de investigación antes de cambiar la extensión o la configuración. No elimines la extensión ni borres su almacenamiento mientras haya una subida o un retiro pendiente.
 
