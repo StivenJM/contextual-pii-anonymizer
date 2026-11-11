@@ -1,5 +1,16 @@
 # Instalar la extensión y arrancar el sistema de desarrollo
 
+## 0. Elementos del sistema
+
+El sistema cuenta con 6 elementos de los cuales 5 son servicios que corren en docker y 1 es la extensión del navegador:
+
+1. Servicio db - base de datos
+2. Servicio inference - servicio fastapi que sirve modelos con BentoML
+3. Servicio converter - servicio para cambiar adjuntos por markdown
+4. Servicio pgadmin - servicio solo en "desarrollo" para acceso a la BD
+5. Servicio api - servicio de anonimización
+6. Extensión de navegador
+
 ## 1. Requisitos y preparación inicial
 
 ### 1.1 Requisitos
@@ -21,22 +32,26 @@ La extensión es JavaScript puro: esta instalación no requiere `npm install`, u
 5. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura para investigación (solo texto)**.
 6. Después de cargar o recargar la extensión, actualiza cualquier pestaña de chat compatible que ya estuviera abierta. Para las pruebas de captura, empieza una conversación nueva y vacía.
 
-> NOTA. Instalar la extensión por sí sola no arranca ningún backend ni activa la captura para investigación.
+> NOTA. Instalar la extensión por sí sola no arranca ningún backend, esos servicios deben estar activos antes.
 
 El manifest cubre ChatGPT, Claude y Gemini.
 
-Después de editar el JavaScript o el manifest de la extensión, vuelve a `chrome://extensions`, pulsa **Recargar** en su tarjeta y actualiza la pestaña del chat. Recargar el navegador no es una migración de datos: termina o descarta una sesión de investigación antes de cambiar la extensión o la configuración. No elimines la extensión ni borres su almacenamiento mientras haya una subida o un retiro pendiente.
-
-Si Chrome informa un error de carga, revisa los detalles del error en la tarjeta de la extensión antes de continuar. Mantén la consola del service worker sin texto ni credenciales reales; una captura de pantalla de una instalación correcta no demuestra que el backend o el adaptador del sitio funcionen.
+Después de editar el JavaScript o el manifest de la extensión, vuelve a `chrome://extensions`, pulsa **Recargar** en su tarjeta y actualiza la pestaña del chat.
 
 Procedimiento oficial de instalación: [Chrome: cargar una extensión descomprimida](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 
 ### 1.3 Crear la configuración local privada
 
+Los servicios (mirar la sección 0) que necesitan de configuración de variables de entorno son:
+1. Servicio db
+2. Servicio api
+3. Servicio converter
+
 Las plantillas de Compose versionadas son:
 
-- `api/.db.dev.env`: ajustes de base de datos. Dentro de Docker, `POSTGRES_HOST=db` es correcto.
-- `api/.api.dev.env`: ajustes de inferencia. Dentro de Docker, `BENTOML_URL=http://inference:3000` es correcto.
+- `api/.db.dev.env`: ajustes de base de datos.
+- `api/.api.dev.env`: ajustes de api de anonimizacion.
+- `browser-extension/backend/.dev.env`: ajustes de backend del conversor
 
 Crea las sobreescrituras locales privadas **solo si no existen todavía**:
 
@@ -47,28 +62,15 @@ if (-not (Test-Path api/.db.env)) {
 if (-not (Test-Path api/.api.env)) {
     Copy-Item api/.api.dev.env api/.api.env
 }
-```
-
-Edita `api/.db.env` y reemplaza la contraseña de ejemplo por una contraseña de desarrollo solo local. Tanto la base de datos como la API cargan esa sobreescritura. Mantén estos archivos privados fuera de Git y no uses credenciales de producción.
-
-El conversor necesita el ID de la extensión de Chrome de la sección 1.2 y un token de desarrollo que coincida con `SECRET_TOKEN` en `browser-extension/extension/background.js`. Ese token viene incluido en el código de la extensión y no es una credencial confidencial de producción. No lo confundas con las credenciales de inscripción, administración o sesión de investigación.
-
-Crea el `.env` privado de la raíz **solo si no existe todavía**; Compose lo lee para configurar el conversor:
-
-```powershell
-$ExtensionId = "<copy the 32-character ID from chrome://extensions>"
-if ($ExtensionId -notmatch '^[a-p]{32}$') {
-    throw "Replace the placeholder with the actual Chrome extension ID."
-}
-if (-not (Test-Path .env)) {
-    "EXTENSION_ID_CHROME=$ExtensionId" | Set-Content .env
-    Add-Content .env "MIDDLEWARE_SECRET="
+if (-not (Test-Path browser-extension/backend/.env)) {
+    Copy-Item browser-extension/backend/.dev.env browser-extension/backend/.env
 }
 ```
 
-`MIDDLEWARE_SECRET` vacío usa el token de desarrollo incluido en la extensión. Si `background.js` cambia ese token, escribe el valor nuevo en `.env` y reinicia el conversor. `.env` está ignorado por Git; no lo publiques ni lo confirmes. En el checkout actual no existe un `.env.example` en la raíz. Sin `EXTENSION_ID_CHROME`, Compose se detiene en lugar de arrancar el conversor con un origen permitido vacío.
+Edita las variables por una configuración conveniente.
 
-Cambiar `POSTGRES_PASSWORD` en un archivo de entorno no cambia automáticamente las credenciales dentro de un volumen de base de datos ya inicializado. Para un entorno existente, conserva la configuración que coincide o usa un procedimiento autorizado de cambio de credenciales; no borres su volumen como atajo.
+> **NOTA.** El conversor necesita el ID de la extensión de Chrome de la sección 1.2 y un token de desarrollo que coincida con `SECRET_TOKEN` en `browser-extension/extension/background.js`. 
+> `MIDDLEWARE_SECRET` vacío usa el token de desarrollo incluido en la extensión. Si `background.js` cambia ese token, escribe el valor nuevo en `.env` y reinicia el conversor. `.env` está ignorado por Git; no lo publiques ni lo confirmes.
 
 ## 2. Arranque local por defecto
 
