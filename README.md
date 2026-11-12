@@ -55,8 +55,11 @@ La documentación funcional, técnica y las guías de desarrollo están en [`doc
 
 The optional [model-free capture workflow](docs/guides/research-capture.md) stores
 consented text research sessions independently of the protection model. The same
-router can be enabled inside the local Compose stack with `compose.research.dev.yaml`
-and a persistent `research_archive` volume; research requests do not call inference.
+router is enabled by default in the local development stack through
+`api/.api.dev.env`, and `compose.yaml` mounts the persistent `research_archive`
+volume. Override `RESEARCH_ENABLED=false` in the private `api/.api.env` to disable
+the research endpoints; research requests do not call inference. Enabling the API
+does not start a recording: each session still requires consent in the extension.
 Start with the [research plan](docs/project/experimentacion/research-capture-plan.md) and
 [student study kit](docs/project/experimentacion/research-study/README.md); institutional
 approval and live-provider adapter checks remain prerequisites for real fieldwork.

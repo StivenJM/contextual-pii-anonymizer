@@ -153,6 +153,9 @@ services:
       - api-database
       - api-inference
     
+    volumes:
+      - research_archive:/data/research
+    
     env_file:
       - path: ./api/.api.dev.env
 
@@ -228,3 +231,4 @@ networks:
 volumes:
   postgres_data:
   huggingface_cache:
+  research_archive:

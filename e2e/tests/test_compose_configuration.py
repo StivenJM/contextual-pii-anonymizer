@@ -48,9 +48,9 @@ def compose_result(
 ) -> subprocess.CompletedProcess[str]:
     """Resolve Compose files against isolated interpolation values.
 
-    The repository's private root ``.env`` must never influence these
-    assertions, so every call uses a temporary ``--env-file`` and strips the
-    same names from the inherited environment.
+    Private root and API env files must never influence research assertions.
+    Use temporary interpolation values and replace the API's env_file list
+    with the versioned development defaults plus those synthetic values.
     """
     env_file = tmp_path / "compose.env"
     env_file.write_text(
@@ -63,6 +63,14 @@ def compose_result(
     command = ["docker", "compose", "--env-file", str(env_file)]
     for name in files:
         command.extend(["-f", str(ROOT / name)])
+    override = tmp_path / "api-env.yaml"
+    override.write_text(
+        "services:\n  api:\n    env_file: !override\n"
+        f"      - {json.dumps(str(ROOT / 'api/.api.dev.env'))}\n"
+        f"      - {json.dumps(str(env_file))}\n",
+        encoding="utf-8",
+    )
+    command.extend(["-f", str(override)])
     command.extend(["config", "--format", "json"])
     return subprocess.run(
         command,
@@ -118,7 +126,7 @@ def test_default_stack_starts_converter_with_extension_configuration(
     assert "5000/docs" in " ".join(converter["healthcheck"]["test"])
 
 
-def test_default_stack_keeps_internal_services_and_research_disabled(
+def test_default_stack_keeps_internal_services_private(
     tmp_path: Path,
 ) -> None:
     config = compose_config(
@@ -131,16 +139,14 @@ def test_default_stack_keeps_internal_services_and_research_disabled(
     assert "ports" not in services["inference"]
     assert set(services["api"]["depends_on"]) == {"db", "inference"}
     assert "converter" not in services["api"]["depends_on"]
-    assert "RESEARCH_ENABLED" not in (services["api"].get("environment") or {})
-    assert "research_archive" not in (config.get("volumes") or {})
     assert "pgadmin" not in services
 
 
-def test_research_override_adds_persistent_archive_to_the_api(tmp_path: Path) -> None:
+def test_default_stack_enables_research_with_persistent_archive(tmp_path: Path) -> None:
     config = compose_config(
         tmp_path,
-        ["compose.yaml", "compose.research.dev.yaml"],
-        {"EXTENSION_ID_CHROME": EXTENSION_ID, "RESEARCH_API_KEY": RESEARCH_KEY},
+        ["compose.yaml"],
+        {"EXTENSION_ID_CHROME": EXTENSION_ID},
     )
     services = config["services"]
     api = services["api"]
@@ -148,7 +154,7 @@ def test_research_override_adds_persistent_archive_to_the_api(tmp_path: Path) ->
 
     assert set(services) == {"db", "inference", "api", "converter"}
     assert environment["RESEARCH_ENABLED"] == "true"
-    assert environment["RESEARCH_API_KEY"] == RESEARCH_KEY
+    assert len(environment["RESEARCH_API_KEY"].encode("utf-8")) >= 32
     assert environment["RESEARCH_STORAGE_PATH"] == "/data/research/capture.sqlite3"
     assert environment["RESEARCH_PROTOCOL_VERSION"] == "research-v1"
     assert environment["RESEARCH_RETENTION_DAYS"] == "7"
@@ -158,12 +164,22 @@ def test_research_override_adds_persistent_archive_to_the_api(tmp_path: Path) ->
     assert set(api["depends_on"]) == {"db", "inference"}
 
 
-def test_research_override_requires_a_local_operator_key(tmp_path: Path) -> None:
-    result = compose_result(
+def test_research_environment_can_override_defaults(tmp_path: Path) -> None:
+    config = compose_config(
         tmp_path,
-        ["compose.yaml", "compose.research.dev.yaml"],
-        {"EXTENSION_ID_CHROME": EXTENSION_ID},
+        ["compose.yaml"],
+        {
+            "EXTENSION_ID_CHROME": EXTENSION_ID,
+            "RESEARCH_ENABLED": "false",
+            "RESEARCH_API_KEY": RESEARCH_KEY,
+            "RESEARCH_PROTOCOL_VERSION": "research-test",
+            "RESEARCH_RETENTION_DAYS": "14",
+        },
     )
 
-    assert result.returncode != 0
-    assert "RESEARCH_API_KEY" in result.stderr
+    environment = config["services"]["api"]["environment"]
+    assert environment["RESEARCH_ENABLED"] == "false"
+    assert environment["RESEARCH_API_KEY"] == RESEARCH_KEY
+    assert environment["RESEARCH_PROTOCOL_VERSION"] == "research-test"
+    assert environment["RESEARCH_RETENTION_DAYS"] == "14"
+    assert "research_archive" in config["volumes"]
