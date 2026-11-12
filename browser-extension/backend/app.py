@@ -16,7 +16,7 @@ app = FastAPI()
 EXTENSION_ID_CHROME = os.getenv("EXTENSION_ID_CHROME", "")
 EXTENSION_ID_EDGE = os.getenv("EXTENSION_ID_EDGE", "")
 EXTENSION_ID_FIREFOX = os.getenv("EXTENSION_ID_FIREFOX", "")
-SECRET_TOKEN    = os.getenv("MIDDLEWARE_SECRET", "token-por-defecto")
+SECRET_TOKEN    = os.getenv("SECRET_TOKEN", "")
 TAMANO_MAXIMO   = 20 * 1024 * 1024  # 20 MB
 TIPOS_PERMITIDOS = {'.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx'}
 
