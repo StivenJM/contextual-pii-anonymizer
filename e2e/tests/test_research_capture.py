@@ -137,25 +137,20 @@ def test_research_session_roundtrip_without_inference(
                 });
             }""")
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
-        expect(popup.locator("#researchTitle")).to_have_text(
-            "Captura para investigación (solo texto)"
-        )
+        expect(popup.locator("#researchTitle")).to_have_text("Captura de chats")
         expect(popup.locator("#researchStart")).to_have_text("Iniciar en esta pestaña")
-        expect(popup.locator("#researchFinish")).to_have_text(
-            "Finalizar y guardar / reintentar"
-        )
+        expect(popup.locator("#researchFinish")).to_have_text("Finalizar y guardar")
         popup.locator("#researchKey").fill(ENROLLMENT if scenario == "campus" else KEY)
         if scenario == "campus":
             expect(popup.locator("#researchKeyLabel")).to_have_text(
                 "Código de participación del estudio"
             )
-            expect(popup.locator("#researchEndpoint")).to_have_text(research_api)
         popup.locator("#researchConsent").check()
         page.bring_to_front()
         popup.locator("#researchStart").evaluate("el => el.click()")
         page.wait_for_function(
-            "document.querySelector('#research-capture-indicator')"
-            "?.textContent.includes('Captura activa')"
+            "document.querySelector('[data-research-notice]')"
+            "?.shadowRoot?.textContent.includes('Captura activa')"
         )
         expect(popup.locator("#researchConsent")).to_be_disabled()
         expect(popup.locator("#researchTraining")).to_be_disabled()
@@ -165,7 +160,7 @@ def test_research_session_roundtrip_without_inference(
                 "el => { el.value = 'Blocked synthetic draft'; }"
             )
             page.locator("textarea").press("Enter")
-            expect(page.locator("#research-capture-indicator")).to_contain_text(
+            expect(page.locator("[data-research-notice] .research-notice-text")).to_contain_text(
                 "se bloqueó"
             )
             assert page.evaluate("window.sentPrompts.length") == 0
@@ -196,7 +191,7 @@ def test_research_session_roundtrip_without_inference(
         else:
             page.locator("[data-research-send]").click()
         if scenario == "quota":
-            expect(page.locator("#research-capture-indicator")).to_contain_text(
+            expect(page.locator("[data-research-notice] .research-notice-text")).to_contain_text(
                 "se bloqueó"
             )
             assert page.evaluate("window.sentPrompts.length") == 0
@@ -220,9 +215,9 @@ def test_research_session_roundtrip_without_inference(
             page.wait_for_timeout(350)
         if scenario == "reload":
             page.reload()
-            expect(page.locator("#research-capture-indicator")).to_contain_text(
-                "en pausa"
-            )
+            expect(
+                page.locator("[data-research-notice] .research-notice-text")
+            ).to_contain_text("en pausa")
         if scenario == "other_tab":
             harness.worker.evaluate(
                 """(url) => {
@@ -265,10 +260,12 @@ def test_research_session_roundtrip_without_inference(
         page.locator("input[type=file]").set_input_files(
             {"name": "synthetic.txt", "mimeType": "text/plain", "buffer": b"fixture"}
         )
-        popup.locator("#researchFinish").evaluate("el => el.click()")
+        popup.locator(
+            "#researchFinish:enabled, #researchFinishInterrupted:enabled, #researchRetrySave:enabled"
+        ).first.evaluate("el => el.click()")
         committed_receipt = None
         if scenario == "response_lost":
-            expect(popup.locator("#researchStatus")).to_contain_text(
+            expect(popup.locator("#researchPendingReason")).to_contain_text(
                 "No se pudo conectar con la API de investigación"
             )
             assert popup.locator("#researchReceipt").input_value() == ""
@@ -279,7 +276,7 @@ def test_research_session_roundtrip_without_inference(
                 ).fetchall()
             assert len(rows) == 1
             committed_receipt = rows[0][0]
-            popup.locator("#researchFinish").evaluate("el => el.click()")
+            popup.locator("#researchRetrySave").evaluate("el => el.click()")
         expect(popup.locator("#researchReceipt")).to_have_value(
             re.compile(r"^[A-Za-z0-9_-]{32}$"), timeout=20000
         )
@@ -376,8 +373,8 @@ def test_research_startup_rejection_preserves_setup(
             if startup_case == "history"
             else "No se encontró el editor"
         )
-        expect(popup.locator("#researchStatus")).to_contain_text(expected)
-        expect(popup.locator("#researchStatus")).to_be_in_viewport()
+        expect(popup.locator("#researchStartError")).to_contain_text(expected)
+        expect(popup.locator("#researchStartError")).to_be_in_viewport()
         expect(popup.locator("#researchKey")).to_have_value(KEY)
         expect(popup.locator("#researchProtocol")).to_have_value("research-v1")
         expect(popup.locator("#researchConsent")).to_be_checked()

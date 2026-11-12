@@ -11,7 +11,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 
 async function popup(stored = { activo: true }) {
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, {
-    checked: false, textContent: '', classList: {
+    checked: false, textContent: '', hidden: false, classList: {
       values: new Set(),
       toggle(name, enabled) { enabled ? this.values.add(name) : this.values.delete(name); }
     },
@@ -31,24 +31,21 @@ async function popup(stored = { activo: true }) {
   return { elements, writes };
 }
 
-test('attachment protection state names its scope instead of implying whole-extension state', async () => {
+test('the attachment toggle names its own scope instead of implying whole-extension state', async () => {
   const p = await popup();
   assert.equal(p.elements.get('estadoTexto').textContent, 'Activada');
   assert.ok(html.includes('Protección de adjuntos'));
-  assert.match(p.elements.get('estadoAlcance').textContent, /No anonimiza el texto/);
-  assert.match(html, /localhost:5000/);
-  assert.match(html, /127\.0\.0\.1:8000/);
+  assert.ok(html.includes('Anonimiza tus mensajes y archivos antes de enviarlos al chat.'));
+  assert.match(html, /fijar su icono a la barra del navegador/);
 });
 
-test('disabling protection explains the bypass without touching research state', async () => {
+test('disabling protection persists only the attachment preference', async () => {
   const p = await popup();
   p.elements.get('toggleActivo').checked = false;
   p.elements.get('toggleActivo').listeners.change();
   await settle();
 
   assert.equal(p.elements.get('estadoTexto').textContent, 'Desactivada');
-  assert.match(p.elements.get('estadoAlcance').textContent, /sin convertir ni proteger/);
-  assert.match(p.elements.get('estadoAlcance').textContent, /Docker/);
   assert.equal(p.writes.length, 1);
   assert.deepEqual(Object.keys(p.writes[0]), ['activo']);
   assert.equal(p.writes[0].activo, false);

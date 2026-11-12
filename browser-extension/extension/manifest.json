@@ -46,6 +46,7 @@
       ],
       "js": [
         "bridge.js",
+        "research-notice.js",
         "research-content.js"
       ],
       "run_at": "document_start"
