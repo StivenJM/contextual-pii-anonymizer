@@ -2,16 +2,9 @@
   'use strict';
   const api = typeof browser !== 'undefined' ? browser : chrome;
   const element = id => document.getElementById(id);
-  const status = element('researchStatus');
-  const phaseLabels = {
-    idle: 'Sin captura', starting: 'Iniciando', recording: 'Grabando',
-    paused: 'En pausa', pending: 'Pendiente de guardar o reintentar', withdrawing: 'Retiro pendiente'
-  };
   let busy = false;
   function showError(error) {
-    status.dataset.kind = 'error';
-    status.textContent = error.message || 'No se pudo completar la operación. Revisa la sesión y vuelve a intentarlo.';
-    status.scrollIntoView?.({ block: 'nearest' });
+    console.error('[Research]', error);
   }
   async function send(type, values = {}) {
     const result = await api.runtime.sendMessage({ type, ...values }).catch(() => {
@@ -23,7 +16,6 @@
   async function render() {
     const state = await send('RESEARCH_STATUS');
     element('researchReceipt').value = state.receipt_id;
-    element('researchEndpoint').textContent = state.api_origin;
     element('researchKeyLabel').textContent = state.enrollment_only ? 'Código de participación del estudio' : 'Clave local del investigador';
     element('researchStart').disabled = busy || state.phase !== 'idle';
     element('researchFinish').disabled = busy || !['recording', 'paused', 'pending'].includes(state.phase);
@@ -34,18 +26,9 @@
     for (const id of ['researchKey', 'researchProtocol', 'researchConsent', 'researchTraining']) {
       element(id).disabled = busy || state.phase !== 'idle';
     }
-    status.textContent = `${phaseLabels[state.phase] || 'Estado desconocido'}: ${state.count} ${state.count === 1 ? 'mensaje guardado' : 'mensajes guardados'} en este navegador.`;
-    if (state.phase === 'withdrawing') status.textContent = 'El texto sin desidentificar se eliminó de este navegador. El retiro en la API está pendiente; vuelve a pulsar Descartar / retirar sesión cuando la API esté disponible.';
-    if (state.receipt_id) status.textContent += state.capture_status === 'interrupted'
-      ? ' Sesión guardada como INTERRUMPIDA: podrían faltar respuestas. Guarda el identificador y avisa al investigador.'
-      : ' Último guardado confirmado. Copia y guarda el identificador.';
-    status.dataset.kind = busy ? 'busy' : 'status';
-    if (busy) status.textContent = 'Procesando la solicitud...';
   }
   async function operation(action) {
     busy = true;
-    status.dataset.kind = 'busy';
-    status.textContent = 'Procesando la solicitud...';
     await render().catch(() => {});
     try {
       await action();
@@ -75,13 +58,10 @@
     }
   });
   element('researchCopy').addEventListener('click', async () => {
-    status.dataset.kind = 'status';
     try {
       await navigator.clipboard.writeText(element('researchReceipt').value);
-      status.textContent = 'Identificador copiado. Guárdalo en un lugar seguro.';
     } catch {
       element('researchReceipt').select();
-      status.textContent = 'Selecciona el identificador y cópialo manualmente.';
     }
   });
   render().catch(showError);

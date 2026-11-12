@@ -165,15 +165,11 @@
         <span class="slider"></span>
       </label>
     </div>
-    <p id="estadoAlcance" class="descripcion estado-alcance">Convierte y protege los documentos adjuntos en los chats compatibles. No anonimiza el texto que escribes en el chat.</p>
   </div>
 
   <div class="card descripcion">
-    Esta extensión <strong>intercepta los documentos</strong> que subes a
-    ChatGPT, Claude y Gemini (por selector de archivos o arrastrar
-    y soltar), los envía a un <strong>servidor</strong> que los convierte
-    a <strong>Markdown</strong>, lo anonimiza y adjunta al chat la versión convertida en
-    lugar del archivo original ya anonimizado.
+    Anonimiza tus mensajes y archivos antes de enviarlos al chat.
+
     <div class="formatos">
       <span class="chip">PDF</span>
       <span class="chip">DOCX</span>
@@ -184,22 +180,14 @@
     </div>
   </div>
 
-  <div class="footer">
-    Requiere el conversor en localhost:5000 y la API de protección en 127.0.0.1:8000.
-    Que respondan no significa que la protección esté activada.
-  </div>
-
   <section class="card descripcion research-panel" aria-labelledby="researchTitle">
-    <h2 id="researchTitle" style="font-size:14px">Captura para investigación (solo texto)</h2>
-    <p>Registra los mensajes enviados y las respuestas visibles en una pestaña de chat nueva; no protege ni desidentifica su contenido. La protección de archivos se pausa solo en esa pestaña mientras la captura está grabando o en pausa.</p>
-    <p>Este modo solo necesita la API de investigación, no el conversor ni el modelo de protección. Las demás pestañas mantienen su configuración de protección.</p>
-    <p>Iniciar, pausar o finalizar la captura no arranca ni detiene Docker; solo cambia el estado de esta pestaña.</p>
-    <p>API de investigación: <span id="researchEndpoint"></span></p>
+    <h2 id="researchTitle" style="font-size:14px">Captura de chats</h2>
+    <p>Registra los mensajes enviados y las respuestas.</p>
     <p><label><span id="researchKeyLabel">Código de participación del estudio</span> <input id="researchKey" type="password" autocomplete="off" style="width:100%"></label></p>
     <p><label>Protocolo <input id="researchProtocol" value="research-v1" style="width:100%"></label></p>
-    <p><label><input id="researchConsent" type="checkbox"> Recibí la información del estudio y doy mi consentimiento para recopilar el texto sin desidentificar.</label></p>
-    <p><label><input id="researchTraining" type="checkbox"> Autorizo por separado el uso de mi sesión para el entrenamiento del modelo.</label></p>
-    <p id="researchStatus" role="status" aria-live="polite"></p>
+    <p><label><input id="researchConsent" type="checkbox"> Declaro estar informado y autorizo recopilar mis textos sin anonimizar.</label></p>
+    <p><label><input id="researchTraining" type="checkbox"> Autorizo utilizar mi sesión para entrenar modelos de IA.</label></p>
+    
     <button id="researchStart" type="button">Iniciar en esta pestaña</button>
     <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label> <button id="researchSetTask" type="button">Asignar tarea</button></p>
     <button id="researchFinish" type="button">Finalizar y guardar / reintentar</button>
