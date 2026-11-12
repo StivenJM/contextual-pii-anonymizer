@@ -76,30 +76,30 @@ Edita las variables por una configuración conveniente.
 
 Los flujos disponibles son:
 
-- **Conversión y protección de adjuntos:** es el flujo por defecto de este apartado. Necesita el stack local completo.
-- **Captura para investigación opcional:** se habilita en la sección 3. No se inicia sola al arrancar el stack.
-- **Investigación sin PostgreSQL ni inferencia:** usa la aplicación independiente o el recolector de campus de la sección 5.
+- **Anonimización:** Conversión y protección de adjuntos, es el flujo por defecto de este apartado. Necesita el stack local completo.
+  - **Captura de chats:** Captura para investigación opcional, se habilita en la sección 3. No se inicia sola al arrancar el stack.
+- **Captura de chats sin anonimización:** usa la aplicación independiente o el recolector de campus de la sección 5.
 
 ### 2.1 Un comando para el flujo ordinario
 
 Desde la raíz del repositorio en la terminal A:
 
 ```powershell
-docker compose up --build --watch
+docker compose up --watch
 ```
 
 Esto arranca cuatro procesos separados:
 
 | Servicio | Responsabilidad | Exposición local |
 |---|---|---|
-| `db` | Configuración de privacidad en PostgreSQL | Interna `db:5432`, sin puerto de host |
+| `db` | Configuración del sistema de anonimización en PostgreSQL | Interna `db:5432`, sin puerto de host |
 | `inference` | Modelos de inferencia con BentoML | Interna `inference:3000`, sin puerto de host |
 | `api` | Detección, política y desidentificación | Loopback `127.0.0.1:8000` |
 | `converter` | Conversión de adjuntos PDF/Office a Markdown | Loopback `localhost:5000` |
 
-La API espera los health checks de base de datos e inferencia y aplica las migraciones de Alembic antes de que arranque su servidor de desarrollo. Son cambios reales en la base de datos cuando el desarrollador ejecuta el comando; no se ejecutó ninguna migración solo por redactar esta guía. El conversor queda disponible cuando responde su health check en `http://127.0.0.1:5000/docs`. `--watch` sincroniza y reinicia el conversor al cambiar `browser-extension/backend/app.py`, y reconstruye su imagen si cambia `requirements.txt`.
+La API espera los health checks de base de datos e inferencia y aplica las migraciones de Alembic antes de que arranque su servidor de desarrollo. 
 
-El conversor sigue siendo su propio proceso y endpoint; la extensión lo llama antes de la API de privacidad. Su ruta `/convertir` espera el campo multipart `archivo` y la cabecera `X-Token`; la extensión los aporta. El CORS usa `EXTENSION_ID_CHROME`; si cambias el ID de la extensión cargada, actualiza `.env` y ejecuta `docker compose up -d converter`.
+El conversor tiene su propio proceso y endpoint; la extensión lo llama antes de la API de anonimización.
 
 ### 2.2 Verificar el arranque
 
@@ -115,47 +115,34 @@ La respuesta de salud de la API contiene `status: active` y el código del conve
 
 PostgreSQL y la inferencia son solo internos en este Compose; no esperes conexiones desde el host a los puertos 5432 ni 3000, y no cambies el binding de loopback de la API ni del conversor para exponer la Admin API de desarrollo.
 
-Administración de desarrollo opcional: reemplaza el comando de arranque por `docker compose --profile dev up --build --watch` para incluir pgAdmin en `http://127.0.0.1:9001`. Sus valores por defecto actuales son solo de desarrollo; no publiques ese servicio en la red del campus. Dentro de pgAdmin, el host de la base de datos es `db`, no el `localhost` del equipo con el navegador.
+> [!Important] Importante 
+> Administración de desarrollo opcional: reemplaza el comando de arranque por `docker compose --profile dev up --watch` para incluir pgAdmin en `http://127.0.0.1:9001`. Sus valores por defecto actuales son solo de desarrollo; no publiques ese servicio cuando esté en producción. Dentro de pgAdmin, el host de la base de datos es `db`, no el `localhost` del equipo con el navegador, ya que todo ocurre dentro de las redes internas de docker.
 
 ### 2.3 Prueba de humo con un adjunto ficticio
 
 1. Confirma que responden las dos URLs de documentación local y que el Compose está saludable.
 2. Actualiza una pestaña de chat compatible. Mantén **Protección de adjuntos** en **Activada**, con la captura para investigación inactiva.
 3. Crea un documento PDF/Office pequeño y válido con texto ficticio y adjúntalo usando una ruta de selector o de arrastre compatible. El conversor admite `.pdf`, `.docx`, `.doc`, `.xlsx`, `.xls` y `.pptx`; un archivo `.txt` plano no sirve como prueba de humo del conversor.
-4. Confirma la conversión, la protección de privacidad y el reemplazo del adjunto. Revisa los errores en lugar de suponer que el archivo original quedó protegido cuando una operación falló. El comportamiento del proveedor real todavía necesita validación manual.
+4. Confirma la conversión, la protección de privacidad y el reemplazo del adjunto. Revisa los errores en lugar de suponer que el archivo original quedó protegido cuando una operación falló.
 
-Consulta [pruebas de integración](integration-testing.md) para las regresiones sintéticas en navegador y las de Docker aislado. La sección 4 describe el alcance exacto del interruptor.
+## 3. Captura de chats opcional
 
-## 3. Captura para investigación opcional
-
-La captura está deshabilitada por defecto. Habilitar la API no inicia una grabación ni implica consentimiento; la extensión exige consentimiento explícito al iniciar cada sesión. El mismo router `/api/research` existe en la API principal y en la aplicación independiente sin modelo.
+La captura está habilitada por defecto, pero se puede desactivar sin consecuencias. Habilitar la API no inicia una grabación ni implica consentimiento; la extensión exige consentimiento explícito al iniciar cada sesión. El mismo router `/api/research` existe en la API principal y en la aplicación independiente sin modelo.
 
 ### 3.1 Habilitarla dentro del stack local
 
-La sobreescritura `compose.research.dev.yaml` habilita el router existente en la API y guarda el archivo SQLite en el volumen nombrado `research_archive`, sin fusionar servicios ni mover datos existentes.
+Las variables de entorno en la sección `Research` de `./api/.api.dev.env` habilita el router existente en la API. Además, los chats se guardan en SQLite en el volumen nombrado `research_archive`, sin fusionar servicios ni mover datos existentes.
 
-Añade una sola vez estos valores al `.env` privado de la raíz. Genera una clave de operador local de al menos 32 caracteres sin depender de `uv`:
+Para generar una clave segura se puede usar los siguientes comandos, despues copiar y pegar en `RESEARCH_API_KEY` de `api/.api.env`:
 
 ```powershell
 $Bytes = New-Object byte[] 32
 [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
 $ResearchKey = [Convert]::ToBase64String($Bytes).Replace('+','-').Replace('/','_').TrimEnd('=')
-Add-Content .env "RESEARCH_API_KEY=$ResearchKey"
-Add-Content .env "RESEARCH_RETENTION_DAYS=7"
-Add-Content .env "RESEARCH_PROTOCOL_VERSION=research-v1"
+$ResearchKey
 ```
 
-Siete días es un **ejemplo ficticio de desarrollo**, no un periodo de retención aprobado para un estudio real. No confirmes `.env` en Git ni reutilices credenciales institucionales. Si el archivo ya contiene esas claves, edítalas en lugar de añadir líneas duplicadas.
-
-Arranca el stack completo con la sobreescritura:
-
-```powershell
-docker compose -f compose.yaml -f compose.research.dev.yaml up --build --watch
-```
-
-Si el stack ya estaba arrancado, vuelve a ejecutar ese mismo comando: Compose recrea la API cuando cambian las variables de entorno.
-
-En la terminal B, confirma la disponibilidad:
+Confirma la disponibilidad:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/api/research/health
@@ -163,7 +150,8 @@ Invoke-RestMethod http://127.0.0.1:8000/api/research/health
 
 Debes obtener `status: ready`. El archivo queda en `/data/research/capture.sqlite3` dentro del volumen `research_archive`; `docker compose down` lo conserva y `down --volumes` lo elimina. No es el mismo archivo que la ruta `workspace/research/` de la aplicación independiente de la sección 5.1.
 
-El servicio de inferencia sigue arrancando porque el stack local lo necesita para proteger adjuntos, y la API espera su health check. Las peticiones de investigación no lo invocan. Si solo necesitas captura sin modelo, usa la aplicación independiente o el recolector de campus de la sección 5.
+> [!note] Nota
+> Si solo necesitas captura sin modelo, usa la aplicación independiente o el recolector de campus de la sección 5.
 
 ### 3.2 Flujo en la extensión
 
@@ -260,7 +248,7 @@ El despliegue de campus conserva su Compose separado, su imagen restringida, HTT
 | Aplicación independiente de investigación | Ctrl+C en su propia terminal; el archivo de `workspace/research/` permanece |
 | Recolector de campus | Sigue el procedimiento del runbook de campus; no lo detengas desde este checkout de desarrollo |
 
-No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o el archivo de investigación para diagnosticar un despliegue del estudio. El `docker compose down` ordinario conserva los volúmenes nombrados `postgres_data`, `huggingface_cache` y, cuando se usa la sobreescritura, `research_archive`. Los logs y el historial del navegador no son un procedimiento de respaldo del archivo.
+No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o el archivo de investigación para diagnosticar un despliegue del estudio. El `docker compose down` ordinario conserva los volúmenes nombrados `postgres_data`, `huggingface_cache` y `research_archive`. Los logs y el historial del navegador no son un procedimiento de respaldo del archivo.
 
 ### 6.2 Diagnóstico
 
@@ -270,7 +258,7 @@ No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o
 | La actualización de la extensión parece ignorarse | Recarga su tarjeta y después actualiza la pestaña del proveedor; no lo hagas a mitad de una sesión |
 | Compose se detiene pidiendo `EXTENSION_ID_CHROME` | Crea o corrige el `.env` de la raíz con el ID de la extensión cargada; Compose falla de forma explícita en vez de permitir un origen vacío |
 | El puerto 8000 ya está en uso | Elige un solo flujo local de API: stack con investigación o aplicación independiente. No mates procesos ajenos ni supongas que aplica la ruta de salud de la otra aplicación |
-| La salud de investigación devuelve 404 | La captura está deshabilitada por defecto; arranca con `compose.research.dev.yaml` o define `RESEARCH_ENABLED=true` en la aplicación independiente |
+| La salud de investigación devuelve 404 | La captura está habilitada por defecto; Comprueba que `RESEARCH_ENABLED=true` en `api/.api.env` y ejecuta `docker compose up -d api` |
 | La salud de investigación devuelve 503 | Revisa la clave de al menos 32 caracteres, la ruta absoluta, la retención entre 1 y 365 días y que no haya fuentes de secretos en conflicto |
 | La captura se queda en `Iniciando` (`starting` internamente) | La autorización o activación se interrumpió; usa el procedimiento documentado de descarte y reintento, no borres el almacenamiento |
 | El inicio dice que la conversación ya tiene mensajes | Abre una conversación nueva y vacía; el historial se excluye a propósito, no se importa ni se borra |
