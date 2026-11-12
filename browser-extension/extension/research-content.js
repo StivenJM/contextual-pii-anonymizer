@@ -13,7 +13,7 @@
   let sending = false;
   let assistantQueue = Promise.resolve();
   let timer;
-  let banner;
+  const notice = typeof createResearchNotice === 'function' ? createResearchNotice(document) : null;
   let baseline = new WeakSet();
   let scopePath = location.pathname;
   let submittedCount = 0;
@@ -27,19 +27,21 @@
   }
   const visible = selector => [...document.querySelectorAll(selector)].find(e => e.getClientRects().length);
   const textOf = node => 'value' in node ? node.value : node.innerText;
-  function show(text) {
-    if (!document.body) return;
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'research-capture-indicator';
-      banner.setAttribute('role', 'status');
-      banner.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:2147483647;max-width:360px;background:#542e00;color:white;padding:12px;font:14px sans-serif;border-radius:8px;pointer-events:none';
-      document.body.append(banner);
+  // A blocking failure is deduplicated by the incident the controller persists.
+  // The success notice never replaces an active incident, and never appears here.
+  async function report(code) {
+    let incident = null;
+    try {
+      const response = await message({ type: 'RESEARCH_INCIDENT', documentNonce, code });
+      incident = response?.incident || null;
+    } catch {
+      incident = null;
     }
-    banner.textContent = text;
-  }
-  function failure() {
-    show('La captura necesita atención. Este envío se bloqueó. Finaliza y guarda la sesión o descártala desde la extensión.');
+    if (!incident) {
+      notice?.showIncident({ id: `local:${code}`, text: 'La captura necesita atención y las operaciones sobre la sesión no están disponibles. Revisa la extensión o recarga esta pestaña.' });
+      return;
+    }
+    notice?.showIncident({ id: incident.id, text: incident.message });
   }
   function checkScope() {
     if (scopeInterrupted) return false;
@@ -58,8 +60,8 @@
     recording = false;
     paused = true;
     clearTimeout(timer);
-    message({ type: 'RESEARCH_INTERRUPTED', documentNonce }).catch(() => {});
-    show('Captura en pausa: cambió la conversación. Finaliza y guarda esta sesión interrumpida o descártala.');
+    message({ type: 'RESEARCH_INTERRUPTED', documentNonce, reason: 'conversation_changed' }).catch(() => {});
+    report('conversation_changed');
     return false;
   }
   async function append(event) {
@@ -100,7 +102,7 @@
     if (!isEnter && !isClick && !isSubmit) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (paused || !editor || !send || send.disabled) { failure(); return; }
+    if (paused || !editor || !send || send.disabled) { report('send_blocked'); return; }
     if (sending) return;
     const text = textOf(editor);
     if (!text?.trim()) return;
@@ -115,8 +117,7 @@
         if (textOf(editor) !== text) throw new Error('El borrador cambió antes de enviarse.');
         replaying = true;
         try { send.click(); } finally { replaying = false; }
-        show('Captura activa: los mensajes enviados y las respuestas visibles se guardan en este navegador. La protección de archivos está en pausa en esta pestaña.');
-      } catch { failure(); }
+      } catch { report('send_failed'); }
       finally { sending = false; }
     })();
   }
@@ -131,7 +132,7 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       if (event.target.type === 'file') event.target.value = '';
-      show('La captura de investigación solo admite texto. No adjuntes archivos, imágenes, audio ni video.');
+      report('file_rejected');
     }, true);
   }
 
@@ -151,13 +152,20 @@
     if (input.type === 'RESEARCH_ACTIVATE' && input.documentNonce === documentNonce) {
       if (!checkScope()) { reply({ activated: false }); return; }
       recording = true; paused = false;
-      show('Captura activa: los mensajes enviados y las respuestas visibles se guardan en este navegador. La protección de archivos está en pausa en esta pestaña.');
+      // The success notice is only shown after the controller persists activation.
       reply({ activated: true });
+      return;
+    }
+    if (input.type === 'RESEARCH_CONFIRM' && input.documentNonce === documentNonce) {
+      if (!recording) { reply({ shown: false }); return; }
+      notice?.showSuccess();
+      reply({ shown: true });
       return;
     }
     if (input.type === 'RESEARCH_STOP') {
       recording = false; paused = false;
-      banner?.remove(); banner = null;
+      clearTimeout(timer);
+      notice?.dispose();
       reply({ stopped: true });
       return;
     }
@@ -168,23 +176,35 @@
       paused = false;
       clearTimeout(timer);
       inFlight.then(snapshotAssistants).then(() => {
-        show('Captura detenida. Confirma el identificador de guardado en la extensión.');
+        notice?.dispose();
         reply({ flushed: true });
-      }, () => { failure(); reply({ flushed: false }); });
+      }, () => { report('flush_failed'); reply({ flushed: false }); });
       return true;
     }
   });
 
+  function noticeNodes(record) {
+    const nodes = [...record.addedNodes, ...record.removedNodes];
+    if (!nodes.length) return false;
+    const host = notice?.element;
+    return nodes.every(node => host && (node === host || host.contains(node)));
+  }
   const observer = new MutationObserver(records => {
-    if (!recording || records.every(r => r.target === banner || banner?.contains(r.target))) return;
+    if (!recording || records.every(noticeNodes)) return;
     if (!checkScope()) return;
     clearTimeout(timer);
-    timer = setTimeout(() => snapshotAssistants().catch(failure), 250);
+    timer = setTimeout(() => snapshotAssistants().catch(() => report('send_failed')), 250);
   });
   observer.observe(document, { childList: true, subtree: true, characterData: true });
   message({ type: 'RESEARCH_STATUS', documentNonce }).then(state => {
     if (!recording) recording = state.recording;
     if (!paused) paused = state.paused;
-    if (paused) show('Captura en pausa después de cambiar de página. Finaliza y guarda la sesión interrumpida o descártala antes de continuar.');
+    if (paused) {
+      // The controller already recorded this interruption for this tab.
+      notice?.showIncident({
+        id: `page_paused:${documentNonce}`,
+        text: 'Captura en pausa después de cambiar de página. Finaliza y guarda la sesión interrumpida o descártala desde la extensión.'
+      });
+    }
   }).catch(() => {});
 })();

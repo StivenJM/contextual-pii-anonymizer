@@ -24,6 +24,8 @@
       padding: 16px;
     }
 
+    [hidden] { display: none !important; }
+
     .header {
       display: flex;
       align-items: center;
@@ -58,7 +60,6 @@
     .estado-texto.on { color: var(--verde); }
     .estado-texto.off { color: var(--rojo); }
     .estado-etiqueta { font-size: 12px; color: var(--texto-suave); margin-bottom: 2px; }
-    .estado-alcance { margin-top: 10px; }
 
     /* Interruptor */
     .switch {
@@ -112,13 +113,8 @@
       color: var(--texto-suave);
     }
 
-    .footer {
-      font-size: 10px;
-      color: var(--texto-suave);
-      text-align: center;
-    }
-
-    .research-panel { display: grid; gap: 10px; }
+    .research-panel { display: block; }
+    .research-block { display: grid; gap: 8px; margin-top: 8px; }
     .research-panel p { line-height: 1.5; }
     .research-panel label { display: block; }
     .research-panel input:not([type="checkbox"]) {
@@ -136,11 +132,19 @@
       background: #35373e; border-color: #555965;
       color: #c3c5cb; cursor: default;
     }
-    .research-panel #researchDiscard { border-color: #d58686; background: #693333; }
+    .research-panel button.secondary { background: #35373e; border-color: #555965; }
+    .research-panel button.danger { border-color: #d58686; background: #693333; }
     .research-panel #researchReceipt { font: 12px monospace; }
-    .research-panel #researchStatus { color: var(--texto); }
-    .research-panel #researchStatus[data-kind="error"] {
-      padding: 8px; border: 1px solid #d58686; border-radius: 5px;
+
+    .research-state { font-size: 13px; font-weight: 600; color: var(--texto); }
+    .research-facts { display: grid; gap: 4px; font-size: 12px; }
+    .research-facts div { display: flex; justify-content: space-between; gap: 10px; }
+    .research-facts dt { color: var(--texto-suave); flex: 0 0 auto; }
+    .research-facts dd { color: var(--texto); text-align: right; overflow-wrap: anywhere; }
+    .ayuda { font-size: 11px; line-height: 1.45; color: var(--texto-suave); }
+    .error {
+      font-size: 12px; line-height: 1.45; padding: 8px;
+      border: 1px solid #d58686; border-radius: 5px;
       background: #4a2020; color: #ffd0d0;
     }
   </style>
@@ -182,19 +186,78 @@
 
   <section class="card descripcion research-panel" aria-labelledby="researchTitle">
     <h2 id="researchTitle" style="font-size:14px">Captura de chats</h2>
-    <p>Registra los mensajes enviados y las respuestas.</p>
-    <p><label><span id="researchKeyLabel">Código de participación del estudio</span> <input id="researchKey" type="password" autocomplete="off" style="width:100%"></label></p>
-    <p><label>Protocolo <input id="researchProtocol" value="research-v1" style="width:100%"></label></p>
-    <p><label><input id="researchConsent" type="checkbox"> Declaro estar informado y autorizo recopilar mis textos sin anonimizar.</label></p>
-    <p><label><input id="researchTraining" type="checkbox"> Autorizo utilizar mi sesión para entrenar modelos de IA.</label></p>
-    
-    <button id="researchStart" type="button">Iniciar en esta pestaña</button>
-    <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label> <button id="researchSetTask" type="button">Asignar tarea</button></p>
-    <button id="researchFinish" type="button">Finalizar y guardar / reintentar</button>
-    <button id="researchDiscard" type="button">Descartar / retirar sesión</button>
-    <p><label>Identificador de guardado confirmado <input id="researchReceipt" readonly style="width:100%"></label></p>
-    <button id="researchCopy" type="button">Copiar identificador</button>
-    <p>Copia y guarda el identificador confirmado en un lugar seguro. Pégalo en el formulario del estudio. Este código por sí solo no permite leer el chat almacenado.</p>
+    <p id="researchHint" class="ayuda">Puedes abrir esta ventana desde el menú de extensiones y fijar su icono a la barra del navegador.</p>
+    <p id="researchPhase" class="research-state" role="status" aria-live="polite">Sin captura</p>
+
+    <div id="researchSetup" class="research-block">
+      <p class="ayuda">Registra los mensajes enviados y las respuestas en una pestaña de chat nueva.</p>
+      <p><label><span id="researchKeyLabel">Clave local del investigador</span> <input id="researchKey" type="password" autocomplete="off"></label></p>
+      <p><label>Protocolo <input id="researchProtocol" value="research-v1"></label></p>
+      <p><label><input id="researchConsent" type="checkbox"> Declaro estar informado y autorizo recopilar mis textos sin anonimizar.</label></p>
+      <p><label><input id="researchTraining" type="checkbox"> Autorizo utilizar mi sesión para entrenar modelos de IA.</label></p>
+      <p id="researchStartError" class="error" role="alert" hidden></p>
+      <button id="researchStart" type="button">Iniciar en esta pestaña</button>
+    </div>
+
+    <div id="researchStarting" class="research-block" hidden>
+      <p class="ayuda">Preparando la captura en la pestaña de chat. No la cierres.</p>
+      <p class="ayuda">Si la activación no se confirma, descarta la configuración incompleta y vuelve a iniciar.</p>
+      <p id="researchStartingError" class="error" role="alert" hidden></p>
+      <button id="researchDiscardStarting" class="secondary" type="button">Descartar configuración incompleta</button>
+    </div>
+
+    <div id="researchActive" class="research-block" hidden>
+      <p class="research-state">Captura activa</p>
+      <dl class="research-facts">
+        <div><dt>Proveedor</dt><dd id="researchProvider">—</dd></div>
+        <div><dt>Pestaña</dt><dd id="researchScope">Esta pestaña</dd></div>
+        <div><dt>Tarea actual</dt><dd id="researchTaskValue">—</dd></div>
+        <div><dt>Mensajes</dt><dd id="researchCount">0</dd></div>
+      </dl>
+      <p class="ayuda">El texto se guarda en este navegador hasta que la sesión se guarde o se descarte. La protección de adjuntos está en pausa en la pestaña capturada.</p>
+      <p id="researchTabNotice" class="ayuda" hidden></p>
+      <button id="researchGoToTab" class="secondary" type="button" hidden>Ir a la pestaña de captura</button>
+      <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label></p>
+      <button id="researchSetTask" class="secondary" type="button">Asignar tarea</button>
+      <p id="researchActionError" class="error" role="alert" hidden></p>
+      <button id="researchFinish" type="button">Finalizar y guardar</button>
+      <button id="researchDiscard" class="danger" type="button">Descartar sesión</button>
+    </div>
+
+    <div id="researchInterrupted" class="research-block" hidden>
+      <p class="research-state">Captura interrumpida</p>
+      <p id="researchInterruptReason" class="ayuda"></p>
+      <p class="ayuda">Esta captura no se puede reanudar. Guarda los datos disponibles o descártalos.</p>
+      <p id="researchInterruptedError" class="error" role="alert" hidden></p>
+      <button id="researchFinishInterrupted" type="button">Finalizar y guardar</button>
+      <button id="researchDiscardInterrupted" class="danger" type="button">Descartar sesión</button>
+    </div>
+
+    <div id="researchPending" class="research-block" hidden>
+      <p class="research-state">Captura detenida, pendiente de guardar</p>
+      <p class="ayuda">Los datos permanecen en este navegador hasta que la API confirme el guardado.</p>
+      <p id="researchPendingReason" class="ayuda"></p>
+      <p id="researchPendingError" class="error" role="alert" hidden></p>
+      <button id="researchRetrySave" type="button">Reintentar guardado</button>
+      <button id="researchDiscardPending" class="danger" type="button">Descartar sesión</button>
+    </div>
+
+    <div id="researchSaved" class="research-block" hidden>
+      <p class="research-state">Sesión guardada</p>
+      <p><label>Identificador confirmado <input id="researchReceipt" readonly></label></p>
+      <button id="researchCopy" class="secondary" type="button">Copiar identificador</button>
+      <p id="researchCopyError" class="error" role="alert" hidden></p>
+      <p class="ayuda">Copia y guarda el identificador confirmado en un lugar seguro. Pégalo en el formulario del estudio. Este código por sí solo no permite leer el chat almacenado.</p>
+      <button id="researchWithdrawReceipt" class="danger" type="button">Retirar sesión guardada</button>
+      <button id="researchNewSession" class="secondary" type="button">Iniciar una nueva sesión</button>
+    </div>
+
+    <div id="researchWithdrawing" class="research-block" hidden>
+      <p class="research-state">Retiro pendiente</p>
+      <p class="ayuda">El texto sin anonimizar ya se eliminó de este navegador. Falta confirmar la eliminación remota.</p>
+      <p id="researchWithdrawPendingError" class="error" role="alert" hidden></p>
+      <button id="researchRetryWithdraw" type="button">Reintentar retiro</button>
+    </div>
   </section>
   <script src="popup.js"></script>
   <script src="research-popup.js"></script>

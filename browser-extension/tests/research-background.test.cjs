@@ -8,12 +8,14 @@ function fixture() {
   let rejectReceiptWrite = false;
   let badReceipt = false;
   const calls = [];
+  const seen = [];
   const options = {
     read: async () => structuredClone(saved),
     write: async value => {
       if (rejectReceiptWrite && value.session === null) throw new Error('synthetic storage quota');
       saved = structuredClone(value);
     },
+    onChange: async value => { seen.push(structuredClone(value)); },
     request: async (path, options, apiOrigin) => {
       calls.push({ path, options, apiOrigin });
       if (fail) throw new Error('offline');
@@ -23,7 +25,7 @@ function fixture() {
     }
   };
   const controller = createResearchController(options);
-  return { controller, calls, state: () => saved,
+  return { controller, calls, seen, state: () => saved,
     recreate: () => createResearchController(options),
     rejectReceiptWrite: value => { rejectReceiptWrite = value; },
     badReceipt: value => { badReceipt = value; },
@@ -179,4 +181,60 @@ test('offline withdrawal clears raw local text immediately but retains deletion 
   f.fail(false);
   await f.controller.discard();
   assert.equal(f.state().session, null);
+});
+
+test('records one deduplicated incident per unresolved failure and rejects foreign senders', async () => {
+  const f = fixture();
+  await start(f.controller);
+  const first = await f.controller.incident(7, 'document-1', 'send_blocked');
+  const second = await f.controller.incident(7, 'document-1', 'send_blocked');
+  assert.equal(second.incident.id, first.incident.id);
+  assert.match(first.incident.message, /se bloque/);
+  assert.equal(f.state().incident.id, first.incident.id);
+  await assert.rejects(f.controller.incident(8, 'document-1', 'send_blocked'));
+  await assert.rejects(f.controller.incident(7, 'other-document', 'send_blocked'));
+  await assert.rejects(f.controller.incident(7, 'document-1', 'unknown_code'));
+});
+
+test('a successful send resolves the incident and a later failure gets a new identity', async () => {
+  const f = fixture();
+  await start(f.controller);
+  const first = await f.controller.incident(7, 'document-1', 'send_blocked');
+  await f.controller.append(7, 'document-1', event());
+  assert.equal(f.state().incident, null);
+  const second = await f.controller.incident(7, 'document-1', 'send_blocked');
+  assert.notEqual(second.incident.id, first.incident.id);
+});
+
+test('an interruption keeps a discoverable reason and a closed tab pauses capture', async () => {
+  const f = fixture();
+  await start(f.controller);
+  await f.controller.append(7, 'document-1', event());
+  assert.deepEqual(await f.controller.interrupt('tab_closed', 99), { interrupted: false });
+  assert.deepEqual(await f.controller.interrupt('tab_closed', 7), { interrupted: true });
+  assert.equal(f.state().session.phase, 'paused');
+  assert.equal(f.state().session.pausedReason, 'tab_closed');
+  await f.controller.freeze('complete');
+  assert.equal(f.state().session.batch.capture_status, 'interrupted');
+});
+
+test('a failed operation stays discoverable until a later success clears it', async () => {
+  const f = fixture();
+  await start(f.controller);
+  await f.controller.append(7, 'document-1', event());
+  await f.controller.freeze('complete');
+  f.fail(true);
+  await assert.rejects(f.controller.upload());
+  await f.controller.fail('No se pudo conectar con la API de investigación.');
+  assert.match(f.state().lastError, /No se pudo conectar/);
+  f.fail(false);
+  await f.controller.upload();
+  assert.equal(f.state().lastError, null);
+});
+
+test('every persisted change notifies the indicator sync', async () => {
+  const f = fixture();
+  await start(f.controller);
+  assert.equal(f.seen[0].session.phase, 'starting');
+  assert.equal(f.seen.at(-1).session.phase, 'recording');
 });

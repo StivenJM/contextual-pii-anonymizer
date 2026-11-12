@@ -29,7 +29,7 @@ La extensión es JavaScript puro: esta instalación no requiere `npm install`, u
 2. Pulsa **Load unpacked** y selecciona **`browser-extension/extension` dentro de este repositorio**.
 3. Confirma que **IA Middleware** aparece habilitada. Fija su icono en la barra si te resulta útil.
 4. Copia el **ID** de la extensión que muestra la página de extensiones. El conversor usa ese ID como origen permitido del navegador; instalarla primero evita adivinar ese valor.
-5. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura para investigación (solo texto)**.
+5. Abre el popup. Deben estar presentes la interfaz existente de adjuntos y la sección separada **Captura de chats**.
 6. Después de cargar o recargar la extensión, actualiza cualquier pestaña de chat compatible que ya estuviera abierta. Para las pruebas de captura, empieza una conversación nueva y vacía.
 
 > NOTA. Instalar la extensión por sí sola no arranca ningún backend, esos servicios deben estar activos antes.
@@ -156,12 +156,12 @@ Debes obtener `status: ready`. El archivo queda en `/data/research/capture.sqlit
 ### 3.2 Flujo en la extensión
 
 1. Abre un chat compatible nuevo; usa las [tarjetas de escenario ficticias](../project/experimentacion/research-study/scenario-cards.md).
-2. Abre el popup. Confirma que **API de investigación** apunta a `http://127.0.0.1:8000`, introduce la **Clave local del investigador** y `research-v1`, y revisa explícitamente el consentimiento de recolección. El permiso opcional de entrenamiento queda sin marcar salvo que se haya acordado aparte.
-3. Pulsa **Iniciar en esta pestaña**. Confirma el indicador de grabación antes de enviar nada. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Solo pausa la protección ordinaria de adjuntos en la pestaña seleccionada mientras graba o está en pausa.
+2. Abre el popup de la extensión. Introduce la **Clave local del investigador** y `research-v1`, y revisa explícitamente el consentimiento de recolección.
+3. Pulsa **Iniciar en esta pestaña**. Confirma el aviso **Captura activa** antes de enviar nada; se cierra con **×** o solo tras unos segundos, y cerrarlo no detiene la captura. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Solo pausa la protección ordinaria de adjuntos en la pestaña seleccionada mientras graba o está en pausa.
    El progreso y los errores aparecen justo encima de ese botón. Una conversación existente se rechaza de forma explícita: abre un chat nuevo y vacío en lugar de intentar importar su historial. Un editor vacío visible puede no mostrar el botón de envío hasta que escribas; eso no impide la activación. Un editor o adaptador de página ausente es un error distinto. Los inicios fallidos conservan los campos de configuración en el popup actual; la clave solo se limpia después de una activación confirmada y nunca se guarda como configuración del popup. Cerrar el popup del navegador descarta sus campos transitorios.
 4. Define **Identificador de tarea** y pulsa **Asignar tarea**; envía texto ficticio y espera a que termine la respuesta. El modo de investigación es solo texto: no adjuntes archivos.
-5. Pulsa **Finalizar y guardar / reintentar**. Una confirmación de la API debe mostrar un identificador. Usa **Copiar identificador**; no consideres que un búfer local es un guardado correcto en la API.
-6. Si la subida falla, conserva el perfil y la extensión y reintenta. No borres el almacenamiento del navegador para resolver el error. **Descartar / retirar sesión** es la ruta explícita de eliminación, con su propia confirmación y semántica de reintento.
+5. Pulsa **Finalizar y guardar**. Una confirmación de la API debe mostrar un identificador. Usa **Copiar identificador**; no consideres que un búfer local es un guardado correcto en la API.
+6. Si la subida falla, conserva el perfil y la extensión y usa **Reintentar guardado**. No borres el almacenamiento del navegador para resolver el error. **Descartar sesión** y **Retirar sesión guardada** son la ruta explícita de eliminación, con su propia confirmación y semántica de reintento.
 
 Los demás límites de la operación de investigación, el consentimiento, la exportación y los procedimientos de retiro están en [captura sin modelo](research-capture.md). Nada de este ensayo crea un Google Form ni autoriza reclutamiento.
 

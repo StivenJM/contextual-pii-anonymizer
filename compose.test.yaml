@@ -35,7 +35,7 @@ services:
     build:
       context: ./browser-extension/backend
     environment:
-      MIDDLEWARE_SECRET: ${E2E_MIDDLEWARE_TOKEN:-e2e-middleware-token}
+      SECRET_TOKEN: ${E2E_MIDDLEWARE_TOKEN:-e2e-middleware-token}
     ports:
       - "127.0.0.1:${CONVERTER_PORT:-5000}:5000"
     healthcheck:
