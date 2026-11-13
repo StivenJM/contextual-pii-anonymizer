@@ -233,15 +233,13 @@ test('a failed operation stays discoverable until a later success clears it', as
   assert.equal(f.state().lastError, null);
 });
 
-test('every persisted change notifies the indicator sync', async () => {
-  const f = fixture();
+test('every persisted change notifies the indicator sync', async () => {  const f = fixture();
   await start(f.controller);
   assert.equal(f.seen[0].session.phase, 'starting');
   assert.equal(f.seen.at(-1).session.phase, 'recording');
 });
 
-test('adopts provider document replacements while sending, not after the reply', async () => {
-  const f = fixture();
+test('adopts provider document replacements while sending, not after the reply', async () => {  const f = fixture();
   await start(f.controller);
   await f.controller.append(7, 'document-1', event());
   assert.deepEqual(await f.controller.adopt(7, 'document-2', '/c/abc12345'), { adopted: true });
@@ -269,4 +267,22 @@ test('adopts a document replaced during the send, but never after the reply', ()
   assert.equal(shouldAdopt(base, '', 'document-2'), false);
   assert.equal(shouldAdopt(base, '/c/abc12345', 'document-1'), false);
   assert.equal(shouldAdopt({ ...base, adoptions: 500 }, '/c/other', 'document-2'), false);
+});
+
+test('forgetting the last receipt clears the saved session for a new one', async () => {
+  const f = fixture();
+  await start(f.controller);
+  await f.controller.append(7, 'document-1', event());
+  await f.controller.freeze('complete');
+  await f.controller.upload();
+  assert.ok(f.state().receipt);
+  await f.controller.forgetReceipt();
+  assert.equal(f.state().receipt, null);
+  assert.equal(f.state().session, null);
+});
+
+test('forgetting the receipt is refused while a session is active', async () => {
+  const f = fixture();
+  await start(f.controller);
+  await assert.rejects(f.controller.forgetReceipt());
 });
