@@ -36,13 +36,15 @@ def research_api(tmp_path, request):
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     origin = f"http://127.0.0.1:{port}"
+    callspec = getattr(request.node, "callspec", None)
+    require_enrollment = (
+        "true" if callspec is not None and callspec.params.get("scenario") == "campus" else "false"
+    )
     env = os.environ | {
         "RESEARCH_ENABLED": "true",
         "RESEARCH_API_KEY": KEY,
         "RESEARCH_ENROLLMENT_KEY": ENROLLMENT,
-        "RESEARCH_REQUIRE_ENROLLMENT": "true"
-        if request.node.callspec.params.get("scenario") == "campus"
-        else "false",
+        "RESEARCH_REQUIRE_ENROLLMENT": require_enrollment,
         "RESEARCH_STORAGE_PATH": str(tmp_path / "archive.sqlite3"),
     }
     process = subprocess.Popen(
@@ -206,11 +208,16 @@ def test_research_session_roundtrip_without_inference(
         page.wait_for_timeout(350)
         if scenario == "navigation":
             page.evaluate("""() => {
-                history.pushState({}, '', '/old-conversation');
+                const historyNode = document.querySelector('#history');
+                historyNode.replaceChildren();
+                const other = document.createElement('div');
+                other.dataset.researchRole = 'user';
+                other.textContent = 'Another conversation prompt';
                 const previous = document.createElement('div');
                 previous.dataset.researchRole = 'assistant';
                 previous.textContent = 'Historical unrelated reply';
-                document.querySelector('#history').append(previous);
+                historyNode.append(other, previous);
+                history.pushState({}, '', '/old-conversation');
             }""")
             page.wait_for_timeout(350)
         if scenario == "reload":
@@ -391,6 +398,54 @@ def test_research_startup_rejection_preserves_setup(
         screenshot = os.environ.get("RESEARCH_START_QA_SCREENSHOT")
         if startup_case == "history" and screenshot:
             popup.locator("body").screenshot(path=screenshot)
+    finally:
+        page.close()
+        popup.close()
+
+
+def test_research_capture_intercepts_a_renamed_composer_send_control(
+    browser_factory, chat_site, research_api, converter, middleware
+):
+    """Enter must be captured even when the provider renames its send button."""
+    harness = browser_factory(
+        chat_origin=chat_site,
+        converter_url=f"{converter.base_url}/convertir",
+        middleware_url=f"{research_api}/api/interactions/protect",
+        name="research-composer-" + uuid4().hex[:8],
+    )
+    page = harness.context.new_page()
+    popup = harness.context.new_page()
+    popup.on("dialog", lambda dialog: dialog.accept())
+    try:
+        page.goto(f"{chat_site}/research-composer.html")
+        page.locator("#prompt-textarea").wait_for()
+        popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
+        popup.locator("#researchKey").fill(KEY)
+        popup.locator("#researchConsent").check()
+        page.bring_to_front()
+        popup.evaluate("() => document.getElementById('researchStart').click()")
+        page.wait_for_function("() => !!document.querySelector('[data-research-notice]')")
+
+        page.locator("#prompt-textarea").click()
+        page.keyboard.type("Synthetic composer prompt")
+        page.keyboard.press("Enter")
+        page.wait_for_function("() => window.sentPrompts.length === 1")
+        page.wait_for_function(
+            "() => document.querySelector('[data-research-role=assistant]')?.textContent"
+            " === 'Synthetic complete reply'"
+        )
+        page.wait_for_timeout(400)
+
+        state = harness.worker.evaluate(
+            "async () => (await chrome.storage.local.get('researchState')).researchState"
+        )
+        assert state["session"]["phase"] == "recording"
+        assert [(event["role"], event["text"]) for event in state["session"]["events"]] == [
+            ("user", "Synthetic composer prompt"),
+            ("assistant", "Synthetic complete reply"),
+        ]
+        assert page.evaluate("() => window.sentPrompts") == ["Synthetic composer prompt"]
+        assert page.locator("[data-research-notice]").count() == 1
     finally:
         page.close()
         popup.close()

@@ -4,6 +4,7 @@
 
   const INCIDENTS = Object.freeze({
     send_blocked: 'La captura está en pausa o la conversación cambió. Este envío se bloqueó: finaliza y guarda la sesión o descártala desde la extensión.',
+    send_control_missing: 'No se encontró el control de envío de este chat. Este envío se bloqueó para no enviar texto sin capturar; actualiza la página o usa un chat compatible.',
     send_failed: 'No se pudo guardar este envío en este navegador. El mensaje se bloqueó; vuelve a intentarlo o revisa la captura desde la extensión.',
     flush_failed: 'No se pudo guardar la última respuesta. La captura quedó detenida; reintenta el guardado desde la extensión.',
     file_rejected: 'La captura de investigación solo admite texto. No adjuntes archivos, imágenes, audio ni video.',
@@ -11,6 +12,19 @@
     page_paused: 'Captura en pausa después de cambiar de página. Finaliza y guarda la sesión interrumpida o descártala antes de continuar.',
     tab_closed: 'La pestaña de la captura se cerró. Guarda los datos disponibles o descarta la sesión desde la extensión.'
   });
+
+  // A provider can replace the document while sending (new nonce, same or new
+  // URL). Adopt it only right after our own user message, before its reply.
+  function shouldAdopt(session, path, receivedNonce, now = Date.now()) {
+    if (!session || session.phase !== 'recording') return false;
+    if (session.documentNonce === receivedNonce) return false;
+    if (typeof path !== 'string' || !path) return false;
+    const events = session.events || [];
+    const last = events[events.length - 1];
+    if (!last || last.role !== 'user') return false;
+    if (!session.lastEventAt || now - session.lastEventAt > 10000) return false;
+    return (session.adoptions || 0) < 500;
+  }
 
   function createResearchController({ read, write, request, onChange }) {
     let queue = Promise.resolve();
@@ -54,7 +68,7 @@
         }, session.apiOrigin);
         return { session_id: session.id };
       }),
-      activate: (tabId, nonce) => serial(async () => {
+      activate: (tabId, nonce, path) => serial(async () => {
         const state = await snapshot();
         const session = state.session;
         if (session?.phase !== 'starting' || session.tabId !== tabId || session.documentNonce !== nonce) {
@@ -62,10 +76,24 @@
         }
         session.phase = 'recording';
         session.pausedReason = null;
+        session.path = typeof path === 'string' ? path : '';
+        session.adoptions = 0;
         state.lastError = null;
         await persist(state);
       }),
-      pause: (tabId, nonce, reason) => serial(async () => {
+      // A provider may navigate to the conversation URL it assigned, replacing
+      // the document. Adopt that document once so the capture keeps recording.
+      adopt: (tabId, nonce, path) => serial(async () => {
+        const state = await snapshot();
+        const session = state.session;
+        if (!shouldAdopt(session, path, nonce) || session.tabId !== tabId) return { adopted: false };
+        session.documentNonce = nonce;
+        session.path = path;
+        session.adoptions = (session.adoptions || 0) + 1;
+        await persist(state);
+        return { adopted: true };
+      }),
+      pause: (tabId, nonce, reason, from, to) => serial(async () => {
         const state = await snapshot();
         const session = state.session;
         if (!session || session.tabId !== tabId || session.documentNonce !== nonce) {
@@ -74,17 +102,25 @@
         if (session.phase === 'recording') {
           session.phase = 'paused';
           session.pausedReason = reason || 'conversation_changed';
+          if (typeof from === 'string' && typeof to === 'string') {
+            session.pausedFrom = from.slice(0, 300);
+            session.pausedTo = to.slice(0, 300);
+          }
           await persist(state);
         }
       }),
       // A closed capture tab cannot continue; keep the collected text available.
-      interrupt: (reason, tabId) => serial(async () => {
+      interrupt: (reason, tabId, from, to) => serial(async () => {
         const state = await snapshot();
         const session = state.session;
         if (!session || session.phase !== 'recording') return { interrupted: false };
         if (tabId !== undefined && session.tabId !== tabId) return { interrupted: false };
         session.phase = 'paused';
         session.pausedReason = reason || 'tab_closed';
+        if (typeof from === 'string' && typeof to === 'string') {
+          session.pausedFrom = from.slice(0, 300);
+          session.pausedTo = to.slice(0, 300);
+        }
         await persist(state);
         return { interrupted: true };
       }),
@@ -136,6 +172,7 @@
         // A send that the controller accepted resolves the blocking incident.
         state.incident = null;
         state.lastError = null;
+        session.lastEventAt = Date.now();
         await persist(state);
         return { stored: true };
       }),
@@ -291,10 +328,10 @@
   }
 
   if (typeof module !== 'undefined') {
-    module.exports = { createResearchController, describeView, badgeForState, createBadgeSync, INCIDENTS };
+    module.exports = { createResearchController, describeView, badgeForState, createBadgeSync, shouldAdopt, INCIDENTS };
   } else {
     root.createResearchController = createResearchController;
-    root.researchUi = { describeView, badgeForState, createBadgeSync };
+    root.researchUi = { describeView, badgeForState, createBadgeSync, shouldAdopt };
   }
 })(globalThis);
 
@@ -377,14 +414,18 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
       if (message.type === 'RESEARCH_STATUS') {
         if (!popup) {
           const ownTab = !!state.session && state.session.tabId === sender.tab?.id;
-          const paused = ownTab && state.session.documentNonce !== message.documentNonce;
+          let paused = ownTab && state.session.documentNonce !== message.documentNonce;
+          let adopted = false;
           if (paused && state.session.phase === 'recording') {
-            // The authorized document was replaced (reload/navigation).
-            await controller.interrupt('page_paused', sender.tab.id).catch(() => {});
+            const result = await controller.adopt(sender.tab.id, message.documentNonce, message.path).catch(() => ({ adopted: false }));
+            adopted = !!result?.adopted;
+            paused = !adopted;
+            if (!adopted) await controller.interrupt('page_paused', sender.tab.id, state.session.path, message.path).catch(() => {});
           }
           return {
             recording: ownTab && !paused && state.session.phase === 'recording',
             paused,
+            adopted,
             incident: state.incident ? { code: state.incident.code, message: state.incident.message } : null
           };
         }
@@ -396,6 +437,8 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
           provider: session?.provider || '',
           task: session?.task || '',
           paused_reason: session?.pausedReason || '',
+          paused_from: session?.pausedFrom || '',
+          paused_to: session?.pausedTo || '',
           api_origin: session?.apiOrigin || state.receipt?.apiOrigin || campusOrigin || localOrigin,
           enrollment_only: !!campusOrigin,
           receipt_id: !session && !state.withdrawing ? state.receipt?.receipt_id || '' : '',
@@ -415,7 +458,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
         return controller.incident(sender.tab?.id, message.documentNonce, message.code);
       }
       if (message.type === 'RESEARCH_INTERRUPTED') {
-        return controller.pause(sender.tab?.id, message.documentNonce, message.reason);
+        return controller.pause(sender.tab?.id, message.documentNonce, message.reason, message.from, message.to);
       }
       if (!popup) throw new Error('Solo el panel de la extensión puede controlar una sesión.');
       if (message.type === 'RESEARCH_FOCUS') {
@@ -447,7 +490,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
           const activated = await api.tabs.sendMessage(tab.id, { type: 'RESEARCH_ACTIVATE', documentNonce: prepared.documentNonce }).catch(() => null);
           if (!activated?.activated) throw new Error('No se pudo activar la captura. Descarta la configuración incompleta.');
           try {
-            await controller.activate(tab.id, prepared.documentNonce);
+            await controller.activate(tab.id, prepared.documentNonce, activated.path);
           } catch (error) {
             await api.tabs.sendMessage(tab.id, { type: 'RESEARCH_STOP' }).catch(() => {});
             throw error;

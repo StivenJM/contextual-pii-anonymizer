@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Synthetic research chat with a contenteditable composer</title>
+<body>
+  <div id="history"></div>
+  <form id="composer">
+    <div id="prompt-textarea" contenteditable="true" role="textbox" aria-label="Chat with ChatGPT"></div>
+    <button type="submit" aria-label="Send message">Send</button>
+  </form>
+  <script>
+    window.sentPrompts = [];
+    const form = document.querySelector('#composer');
+    const editor = document.querySelector('#prompt-textarea');
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const text = editor.innerText.trim();
+      if (!text) return;
+      window.sentPrompts.push(text);
+      const user = document.createElement('div');
+      user.dataset.researchRole = 'user';
+      user.textContent = text;
+      document.querySelector('#history').append(user);
+      editor.textContent = '';
+      const answer = document.createElement('div');
+      answer.dataset.researchRole = 'assistant';
+      answer.textContent = 'Synthetic complete reply';
+      document.querySelector('#history').append(answer);
+    });
+  </script>
+</body>
+</html>
