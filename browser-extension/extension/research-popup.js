@@ -156,7 +156,6 @@
     setDisabled('researchFinishInterrupted', busy || view.view !== 'interrupted');
     setDisabled('researchRetrySave', busy || view.view !== 'pending');
     setDisabled('researchRetryWithdraw', busy || view.view !== 'withdrawing');
-    setDisabled('researchWithdrawReceipt', busy || !view.sections.saved);
     setDisabled('researchNewSession', busy || !view.canStart);
     setDisabled('researchGoToTab', busy || !view.canGoToTab);
     setDisabled('researchDiscardStarting', busy || view.view !== 'starting');
@@ -223,7 +222,6 @@
     ['researchDiscard', 'researchActionError'],
     ['researchDiscardInterrupted', 'researchInterruptedError'],
     ['researchDiscardPending', 'researchPendingError'],
-    ['researchWithdrawReceipt', 'researchWithdrawPendingError'],
     ['researchRetryWithdraw', 'researchWithdrawPendingError'],
     ['researchDiscardStarting', 'researchStartingError']
   ]) {

@@ -76,7 +76,6 @@ test('the capture card keeps the requested consent copy separate and unchecked',
     'Finalizar y guardar',
     'Reintentar guardado',
     'Reintentar retiro',
-    'Retirar sesión guardada',
     'Ir a la pestaña de captura'
   ]) {
     assert.ok(panel.includes(text), `Missing Spanish UI: ${text}`);
@@ -213,6 +212,16 @@ test('a confirmed receipt is copied without touching the research state', async 
   await settle();
   assert.deepEqual(p.copied, [receipt]);
   assert.equal(p.calls.filter(call => call.type === 'RESEARCH_STATUS').length >= 1, true);
+});
+
+test('a saved session offers no withdrawal action from the extension', async () => {
+  const p = await popup({ view: 'saved', receipt_id: receipt });
+  assert.equal(p.elements.has('researchWithdrawReceipt'), false);
+  assert.ok(!html.includes('Retirar sesión guardada'));
+  assert.equal(p.elements.get('researchNewSession').hidden, false);
+  p.elements.get('researchNewSession').listeners.click();
+  await settle();
+  assert.equal(p.elements.get('researchSetup').hidden, false);
 });
 
 test('destructive actions ask for confirmation and keep the documented warning', async () => {
