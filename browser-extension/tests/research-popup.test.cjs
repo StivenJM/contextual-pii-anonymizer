@@ -15,7 +15,7 @@ const receipt = 'r'.repeat(32);
 async function popup(overrides = {}) {
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, {
     value: '', checked: false, disabled: false, hidden: false, textContent: '',
-    listeners: {}, attributes: {},
+    listeners: {}, attributes: {}, dataset: {},
     addEventListener(type, listener) { this.listeners[type] = listener; },
     setAttribute(name, value) { this.attributes[name] = value; },
     select() { this.selected = true; }
@@ -28,17 +28,40 @@ async function popup(overrides = {}) {
   const calls = [];
   const copied = [];
   const dialogs = [];
+  const timers = [];
+  let timerSequence = 0;
   let clipboardFails = false;
   let runtimeFails = false;
   let startError = null;
   let held = null;
+  const advance = ms => {
+    for (const timer of [...timers]) {
+      if (!timer.cancelled && timer.at <= ms) {
+        timer.cancelled = true;
+        timer.fn();
+      }
+    }
+  };
   vm.runInNewContext(script, {
     document: { getElementById: id => elements.get(id) },
+    setTimeout: (fn, ms) => {
+      const id = ++timerSequence;
+      timers.push({ id, fn, at: ms, cancelled: false });
+      return id;
+    },
+    clearTimeout: id => {
+      const timer = timers.find(item => item.id === id);
+      if (timer) timer.cancelled = true;
+    },
     chrome: {
       runtime: { sendMessage: async message => {
         if (runtimeFails) throw new Error('synthetic runtime connection failure');
         calls.push(JSON.parse(JSON.stringify(message)));
         if (held && held.type === message.type) await held.promise;
+        if (message.type === 'RESEARCH_RESET') {
+          state = { ...state, view: 'idle', receipt_id: '', has_receipt: false };
+          return { ok: true };
+        }
         if (message.type === 'RESEARCH_START' && startError) return { ok: false, error: startError };
         return message.type === 'RESEARCH_STATUS' ? { ok: true, ...state } : { ok: true };
       } },
@@ -52,7 +75,7 @@ async function popup(overrides = {}) {
   });
   await settle();
   return {
-    elements, calls, copied, dialogs,
+    elements, calls, copied, dialogs, advance,
     failClipboard() { clipboardFails = true; },
     failRuntime() { runtimeFails = true; },
     failStart(message) { startError = message; },
@@ -214,14 +237,54 @@ test('a confirmed receipt is copied without touching the research state', async 
   assert.equal(p.calls.filter(call => call.type === 'RESEARCH_STATUS').length >= 1, true);
 });
 
-test('a saved session offers no withdrawal action from the extension', async () => {
+test('the copy control confirms success with a temporary check and a hoverable button', async () => {
+  const p = await popup({ view: 'saved', receipt_id: receipt });
+  const button = p.elements.get('researchCopy');
+  assert.equal(button.dataset.state, 'idle');
+  assert.equal(button.attributes['aria-label'], 'Copiar identificador');
+  assert.match(html, /\.icon-button:hover/);
+  assert.match(html, /no podrás recuperarlo después/);
+
+  await button.listeners.click();
+  await settle();
+  assert.equal(button.dataset.state, 'copied');
+  assert.equal(button.attributes['aria-label'], 'Identificador copiado');
+
+  p.advance(2600);
+  assert.equal(button.dataset.state, 'idle');
+  assert.equal(button.attributes['aria-label'], 'Copiar identificador');
+});
+
+test('a failed copy shows an error state that also returns to the normal icon', async () => {
+  const p = await popup({ view: 'saved', receipt_id: receipt });
+  p.failClipboard();
+  await p.elements.get('researchCopy').listeners.click();
+  await settle();
+  assert.equal(p.elements.get('researchCopy').dataset.state, 'error');
+  assert.equal(p.elements.get('researchCopy').attributes['aria-label'], 'No se pudo copiar');
+  assert.equal(p.elements.get('researchCopyError').hidden, false);
+  p.advance(2600);
+  assert.equal(p.elements.get('researchCopy').dataset.state, 'idle');
+});
+
+test('a saved session offers no withdrawal action and starts clean', async () => {
   const p = await popup({ view: 'saved', receipt_id: receipt });
   assert.equal(p.elements.has('researchWithdrawReceipt'), false);
   assert.ok(!html.includes('Retirar sesión guardada'));
-  assert.equal(p.elements.get('researchNewSession').hidden, false);
+  p.elements.get('researchKey').value = 'old-key';
+  p.elements.get('researchConsent').checked = true;
+  p.elements.get('researchTraining').checked = true;
+  p.elements.get('researchTask').value = 'B';
   p.elements.get('researchNewSession').listeners.click();
   await settle();
+  assert.ok(p.calls.some(call => call.type === 'RESEARCH_RESET'));
+  assert.equal(p.elements.get('researchSaved').hidden, true);
   assert.equal(p.elements.get('researchSetup').hidden, false);
+  assert.equal(p.elements.get('researchKey').value, '');
+  assert.equal(p.elements.get('researchProtocol').value, 'research-v1');
+  assert.equal(p.elements.get('researchConsent').checked, false);
+  assert.equal(p.elements.get('researchTraining').checked, false);
+  assert.equal(p.elements.get('researchTask').value, 'A');
 });
 
 test('destructive actions ask for confirmation and keep the documented warning', async () => {

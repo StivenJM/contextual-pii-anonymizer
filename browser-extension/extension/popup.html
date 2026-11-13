@@ -135,6 +135,27 @@
     .research-panel button.secondary { background: #35373e; border-color: #555965; }
     .research-panel button.danger { border-color: #d58686; background: #693333; }
     .research-panel #researchReceipt { font: 12px monospace; }
+    .receipt-row { display: flex; gap: 8px; align-items: center; }
+    .receipt-row #researchReceipt { flex: 1 1 auto; min-width: 0; }
+    .research-panel .icon-button {
+      width: 38px; min-height: 34px; flex: 0 0 auto;
+      display: inline-flex; align-items: center; justify-content: center; padding: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .research-panel .icon-button:hover { background: #3a3c42; border-color: #4f8cff; color: #ffffff; }
+    .research-panel .icon-button:active { transform: scale(0.94); }
+    .research-panel .icon-button:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
+    .research-panel .icon-button[data-state="copied"] { border-color: #3ecf8e; color: #3ecf8e; }
+    .research-panel .icon-button[data-state="error"] { border-color: #d58686; color: #ffd0d0; }
+    .icon-button svg { width: 18px; height: 18px; display: block; }
+    .icon-button .icon-copied { display: none; }
+    .icon-button[data-state="copied"] .icon-copy { display: none; }
+    .icon-button[data-state="copied"] .icon-copied { display: block; }
+    .advertencia {
+      font-size: 12px; line-height: 1.45; padding: 8px;
+      border: 1px solid #b26a00; border-radius: 5px;
+      background: #2e2417; color: #ffd8a8;
+    }
 
     .research-state { font-size: 13px; font-weight: 600; color: var(--texto); }
     .research-facts { display: grid; gap: 4px; font-size: 12px; }
@@ -244,10 +265,17 @@
 
     <div id="researchSaved" class="research-block" hidden>
       <p class="research-state">Sesión guardada</p>
-      <p><label>Identificador confirmado <input id="researchReceipt" readonly></label></p>
-      <button id="researchCopy" class="secondary" type="button">Copiar identificador</button>
+      <p class="advertencia">Copia y guarda este identificador ahora: no podrás recuperarlo después.</p>
+      <div class="receipt-row">
+        <input id="researchReceipt" readonly aria-label="Identificador confirmado">
+        <button id="researchCopy" class="icon-button" type="button" aria-label="Copiar identificador" title="Copiar identificador" data-state="idle">
+          <svg id="researchCopyIcon" class="icon-copy" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 9h10v10H9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 9V5H5v10h4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <svg id="researchCopiedIcon" class="icon-copied" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
       <p id="researchCopyError" class="error" role="alert" hidden></p>
-      <p class="ayuda">Copia y guarda el identificador confirmado en un lugar seguro. Pégalo en el formulario del estudio. Este código por sí solo no permite leer el chat almacenado.</p>
+      <p class="ayuda">Pégalo en el formulario del estudio. Este código por sí solo no permite leer el chat almacenado.</p>
+      <p id="researchNewSessionError" class="error" role="alert" hidden></p>
       <button id="researchNewSession" class="secondary" type="button">Iniciar una nueva sesión</button>
     </div>
 

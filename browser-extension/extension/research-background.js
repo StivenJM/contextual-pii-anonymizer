@@ -238,6 +238,12 @@
           method: 'DELETE', headers: { Authorization: `Bearer ${target.token}` }
         }, target.apiOrigin);
         await persist({ session: null, receipt: state.session ? state.receipt : null, incident: null, lastError: null });
+      }),
+      // Drop the last receipt so a new session starts from a clean panel.
+      forgetReceipt: () => serial(async () => {
+        const state = await snapshot();
+        if (state.session || state.withdrawing) throw new Error('Primero finaliza o descarta la sesión actual.');
+        await persist({ session: null, receipt: null, incident: null, lastError: null });
       })
     };
   }
@@ -505,6 +511,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
         }
       }
       if (message.type === 'RESEARCH_TASK') return controller.task(message.task);
+      if (message.type === 'RESEARCH_RESET') return controller.forgetReceipt();
       if (message.type === 'RESEARCH_FINISH') {
         try {
           if (state.session?.phase === 'recording') {

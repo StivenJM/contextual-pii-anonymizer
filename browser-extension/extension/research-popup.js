@@ -76,7 +76,7 @@
     withdrawing: 'researchWithdrawing'
   };
   const inFlight = new Set();
-  let setupRequested = false;
+  let copiedReceipt = '';
   let lastState = { view: 'idle' };
 
   function messageOf(error) {
@@ -114,13 +114,53 @@
     const element = byId(id);
     if (element) element.disabled = !!disabled;
   }
+  // The copy control shows a check for a few seconds, then returns to the icon.
+  const COPY_FEEDBACK_MS = 2500;
+  let copyTimer = null;
+  function setCopyState(state) {
+    const button = byId('researchCopy');
+    if (!button) return;
+    button.dataset.state = state;
+    const label = state === 'copied'
+      ? 'Identificador copiado'
+      : (state === 'error' ? 'No se pudo copiar' : 'Copiar identificador');
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+  }
+  function scheduleCopyReset() {
+    if (copyTimer !== null) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      copyTimer = null;
+      copiedReceipt = '';
+      setCopyState('idle');
+    }, COPY_FEEDBACK_MS);
+  }
+  function resetCopyFeedback() {
+    if (copyTimer !== null) clearTimeout(copyTimer);
+    copyTimer = null;
+    copiedReceipt = '';
+    setCopyState('idle');
+  }
+  function resetSetupFields() {
+    const key = byId('researchKey');
+    const protocol = byId('researchProtocol');
+    const consent = byId('researchConsent');
+    const training = byId('researchTraining');
+    const task = byId('researchTask');
+    if (key) key.value = '';
+    if (protocol) protocol.value = 'research-v1';
+    if (consent) consent.checked = false;
+    if (training) training.checked = false;
+    if (task) task.value = 'A';
+    resetCopyFeedback();
+    clearError(['researchStartError', 'researchStartingError', 'researchCopyError', 'researchNewSessionError']);
+  }
   function render(state) {
     const view = describe(state);
-    if (view.view !== 'saved') setupRequested = false;
     for (const [key, id] of Object.entries(SECTION_IDS)) {
       const element = byId(id);
       if (!element) continue;
-      element.hidden = !(view.sections[key] || (key === 'setup' && setupRequested));
+      element.hidden = !view.sections[key];
     }
     const busy = inFlight.size > 0;
     setText('researchPhase', view.label);
@@ -148,6 +188,10 @@
 
     const receipt = byId('researchReceipt');
     if (receipt) receipt.value = view.receipt;
+    if (view.receipt !== copiedReceipt) {
+      copiedReceipt = '';
+      setCopyState('idle');
+    }
     setDisabled('researchCopy', busy || !view.receipt);
     setDisabled('researchStart', busy || !view.canStart);
     setDisabled('researchSetTask', busy || view.view !== 'recording');
@@ -233,18 +277,24 @@
 
   byId('researchCopy')?.addEventListener('click', async () => {
     clearError('researchCopyError');
+    const value = byId('researchReceipt').value;
     try {
-      await navigator.clipboard.writeText(byId('researchReceipt').value);
+      await navigator.clipboard.writeText(value);
+      copiedReceipt = value;
+      setCopyState('copied');
     } catch {
       byId('researchReceipt').select();
       showError('researchCopyError', 'No se pudo copiar automáticamente. El identificador quedó seleccionado; cópialo manualmente.');
+      setCopyState('error');
     }
+    scheduleCopyReset();
   });
 
-  byId('researchNewSession')?.addEventListener('click', () => {
-    setupRequested = true;
-    render(lastState);
-  });
+  byId('researchNewSession')?.addEventListener('click', () => run('new', async () => {
+    // Discard the previous session from this panel before starting over.
+    await send('RESEARCH_RESET');
+    resetSetupFields();
+  }, 'researchNewSessionError'));
 
   if (api.storage?.onChanged) {
     api.storage.onChanged.addListener((changes, area) => {
