@@ -4,7 +4,7 @@
   const api = typeof browser !== 'undefined' ? browser : chrome;
   const documentNonce = crypto.randomUUID();
   const editorSelector = '[data-research-editor], #prompt-textarea, textarea[data-mobile-composer-prompt], div.ProseMirror[contenteditable="true"], rich-textarea [contenteditable="true"], [contenteditable="true"][role="textbox"]';
-  const sendSelector = '[data-research-send], [data-testid="send-button"], [data-testid="send-message-button"], button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Send Message"], button[aria-label="Enviar mensaje"], button[aria-label="Enviar"], button.send-button';
+  const sendSelector = '[data-research-send], [data-testid="send-button"], [data-testid="send-message-button"], button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Send Message"], button[aria-label="Enviar mensaje"], button[aria-label="Enviar"], #composer-submit-button, form button[type="submit"], button[aria-label*="Send" i], button[aria-label*="Enviar" i], button.send-button';
   const assistantSelector = '[data-research-role="assistant"], [data-message-author-role="assistant"], .font-claude-response, model-response';
   let recording = false;
   let paused = false;
@@ -26,7 +26,57 @@
     return response;
   }
   const visible = selector => [...document.querySelectorAll(selector)].find(e => e.getClientRects().length);
+  function composerForm(editor) {
+    return editor.closest?.('form') || null;
+  }
+  // "ready": a visible enabled control; "form": the provider renamed the control
+  // but the composer still submits; "hidden"/"disabled"/"missing": do not send.
+  function sendReadiness(editor) {
+    const form = composerForm(editor);
+    const candidates = [...(form || document).querySelectorAll(sendSelector)];
+    const button = candidates.find(element => element.getClientRects().length);
+    if (button) return button.disabled ? 'disabled' : 'ready';
+    if (candidates.length) return 'hidden';
+    return form?.requestSubmit ? 'form' : 'missing';
+  }
+  function replaySend(editor) {
+    const form = composerForm(editor);
+    const button = [...(form || document).querySelectorAll(sendSelector)].find(element => element.getClientRects().length);
+    if (button && !button.disabled) { button.click(); return true; }
+    if (!button && form?.requestSubmit) { form.requestSubmit(); return true; }
+    return false;
+  }
   const textOf = node => 'value' in node ? node.value : node.innerText;
+  const userNodeSelector = '[data-message-author-role="user"], [data-research-role="user"], [data-testid="user-message"], .user-query';
+  // A provider publishes the conversation URL after the first submission, and
+  // may replace a temporary identifier with the final one. Follow those changes
+  // only while the message we captured is still the conversation on screen.
+  const EMPTY_CHAT_PATHS = new Set(['/', '/new', '/app']);
+  let sentText = '';
+
+  function normalizeText(value) {
+    return (value || '').replace(/\s+/g, ' ').trim();
+  }
+  // Ignore markdown punctuation so a rendered message still matches what was typed.
+  function normalizeForMatch(value) {
+    return normalizeText(value).replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
+  }
+  function transcriptReadable() {
+    return document.querySelectorAll(userNodeSelector).length > 0;
+  }
+  function stillShowsSentMessage() {
+    const wanted = normalizeForMatch(sentText).slice(0, 80);
+    if (!wanted) return false;
+    return [...document.querySelectorAll(userNodeSelector)]
+      .some(node => normalizeForMatch(textOf(node)).includes(wanted));
+  }
+  function acceptsAssignment(next) {
+    if (EMPTY_CHAT_PATHS.has(next)) return false;
+    // Unknown provider markup: the URL is the only available signal.
+    if (!transcriptReadable()) return true;
+    // The provider may rename the URL; accept only while our message is shown.
+    return stillShowsSentMessage();
+  }
   // A blocking failure is deduplicated by the incident the controller persists.
   // The success notice never replaces an active incident, and never appears here.
   async function report(code) {
@@ -47,20 +97,14 @@
     if (scopeInterrupted) return false;
     const next = location.pathname;
     if (next === scopePath) return true;
-    // Providers assign the first newly created conversation an URL after send.
-    // Permit that single known transition, never switching to a second history.
-    const firstAssignment = submittedCount === 1 && (
-      (location.hostname === 'chatgpt.com' && scopePath === '/' && /^\/c\/[^/]+$/.test(next)) ||
-      (location.hostname === 'chatgpt.com' && /^\/g\/[^/]+$/.test(scopePath) && next.startsWith(scopePath + '/c/')) ||
-      (location.hostname === 'claude.ai' && scopePath === '/new' && /^\/chat\/[^/]+$/.test(next)) ||
-      (location.hostname === 'gemini.google.com' && scopePath === '/app' && /^\/app\/[^/]+$/.test(next))
-    );
-    if (firstAssignment) { scopePath = next; return true; }
+    // Empty-chat routes may be normalised before the first message.
+    if (EMPTY_CHAT_PATHS.has(scopePath) && EMPTY_CHAT_PATHS.has(next)) { scopePath = next; return true; }
+    if (acceptsAssignment(next)) { scopePath = next; return true; }
     scopeInterrupted = true;
     recording = false;
     paused = true;
     clearTimeout(timer);
-    message({ type: 'RESEARCH_INTERRUPTED', documentNonce, reason: 'conversation_changed' }).catch(() => {});
+    message({ type: 'RESEARCH_INTERRUPTED', documentNonce, reason: 'conversation_changed', from: scopePath, to: next }).catch(() => {});
     report('conversation_changed');
     return false;
   }
@@ -95,14 +139,17 @@
     if (replaying || (!recording && !paused)) return;
     checkScope();
     const editor = visible(editorSelector);
-    const send = visible(sendSelector);
     const isEnter = event.type === 'keydown' && event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && !event.isComposing && editor?.contains(event.target);
-    const isClick = event.type === 'click' && event.target.closest?.(sendSelector);
-    const isSubmit = event.type === 'submit' && event.target.contains(editor);
+    const isClick = event.type === 'click' && !!event.target.closest?.(sendSelector);
+    const isSubmit = event.type === 'submit' && !!editor && event.target.contains(editor);
     if (!isEnter && !isClick && !isSubmit) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (paused || !editor || !send || send.disabled) { report('send_blocked'); return; }
+    if (paused || !editor) { report('send_blocked'); return; }
+    // The composer may hide or rename its send control; never send uncaptured.
+    const readiness = sendReadiness(editor);
+    if (readiness === 'hidden' || readiness === 'disabled') { report('send_blocked'); return; }
+    if (readiness === 'missing') { report('send_control_missing'); return; }
     if (sending) return;
     const text = textOf(editor);
     if (!text?.trim()) return;
@@ -112,11 +159,14 @@
         await snapshotAssistants();
         if (!checkScope()) throw new Error('La conversación cambió.');
         await append({ event_id: crypto.randomUUID(), role: 'user', text, captured_at: new Date().toISOString() });
+        sentText = text;
         submittedCount += 1;
         if (!checkScope()) throw new Error('La conversación cambió.');
         if (textOf(editor) !== text) throw new Error('El borrador cambió antes de enviarse.');
         replaying = true;
-        try { send.click(); } finally { replaying = false; }
+        try {
+          if (!replaySend(editor)) throw new Error('No se encontró el control de envío.');
+        } finally { replaying = false; }
       } catch { report('send_failed'); }
       finally { sending = false; }
     })();
@@ -142,7 +192,8 @@
       scopePath = location.pathname;
       submittedCount = 0;
       scopeInterrupted = false;
-      const hasHistory = document.querySelector('[data-message-author-role="user"], [data-research-role="user"], .user-query');
+      sentText = '';
+      const hasHistory = document.querySelector(userNodeSelector);
       // Empty editors may show a voice control instead of Send until typing.
       // Sending still requires a visible enabled send control in intercept().
       const reason = hasHistory ? 'history' : (!visible(editorSelector) ? 'editor_unavailable' : null);
@@ -153,7 +204,7 @@
       if (!checkScope()) { reply({ activated: false }); return; }
       recording = true; paused = false;
       // The success notice is only shown after the controller persists activation.
-      reply({ activated: true });
+      reply({ activated: true, path: location.pathname });
       return;
     }
     if (input.type === 'RESEARCH_CONFIRM' && input.documentNonce === documentNonce) {
@@ -196,10 +247,18 @@
     timer = setTimeout(() => snapshotAssistants().catch(() => report('send_failed')), 250);
   });
   observer.observe(document, { childList: true, subtree: true, characterData: true });
-  message({ type: 'RESEARCH_STATUS', documentNonce }).then(state => {
+  message({ type: 'RESEARCH_STATUS', documentNonce, path: location.pathname }).then(state => {
+    if (state.adopted) {
+      // The provider navigated to the conversation it assigned.
+      baseline = new WeakSet(assistantNodes());
+      scopePath = location.pathname;
+      submittedCount = 0;
+      sentText = '';
+      scopeInterrupted = false;
+    }
     if (!recording) recording = state.recording;
     if (!paused) paused = state.paused;
-    if (paused) {
+    if (state.paused) {
       // The controller already recorded this interruption for this tab.
       notice?.showIncident({
         id: `page_paused:${documentNonce}`,

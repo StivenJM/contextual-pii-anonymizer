@@ -25,6 +25,9 @@
     const tabMissing = view === 'recording' && !!tab && tab.exists === false;
     const otherTab = view === 'recording' && !!tab && tab.exists !== false && tab.active === false;
     const task = input.task && input.task !== 'unassigned' ? input.task : 'Sin asignar';
+    const from = input.paused_from || '';
+    const to = input.paused_to || '';
+    const route = from || to ? ` (${from || '—'} → ${to || '—'})` : '';
     return {
       view,
       label: LABELS[view],
@@ -47,7 +50,7 @@
       canGoToTab: view === 'recording' && !!tab && tab.exists !== false && tab.active === false,
       canStart: view === 'idle' || view === 'saved',
       receipt: input.receipt_id || '',
-      interruptReason: REASONS[input.paused_reason] || 'La captura dejó de estar activa en esta conversación.',
+      interruptReason: (REASONS[input.paused_reason] || 'La captura dejó de estar activa en esta conversación.') + route,
       pendingReason: input.last_error || 'La API todavía no ha confirmado el guardado de este lote.',
       withdrawalReason: input.last_error || 'La eliminación remota no se ha confirmado todavía.',
       scopeNotice: tabMissing

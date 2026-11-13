@@ -133,6 +133,8 @@ test('capture scope distinguishes this tab, another tab and a closed tab', () =>
 test('interruption, pending and withdrawal explain a known reason without inventing success', () => {
   const interrupted = describe({ view: 'interrupted', paused_reason: 'tab_closed' });
   assert.match(interrupted.interruptReason, /pestaña de la captura se cerró/);
+  const routed = describe({ view: 'interrupted', paused_reason: 'conversation_changed', paused_from: '/', paused_to: '/c/abc' });
+  assert.match(routed.interruptReason, /\/ → \/c\/abc/);
   assert.equal(describe({ view: 'pending' }).label.includes('guardar'), true);
   assert.match(describe({ view: 'pending', last_error: 'La API respondió con el código 503.' }).pendingReason, /503/);
   assert.match(describe({ view: 'withdrawing', last_error: 'offline' }).withdrawalReason, /offline/);

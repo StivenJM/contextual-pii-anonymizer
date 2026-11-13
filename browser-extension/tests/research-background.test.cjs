@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createResearchController } = require('../extension/research-background.js');
+const { createResearchController, shouldAdopt } =
+  require('../extension/research-background.js');
 
 function fixture() {
   let saved = {};
@@ -34,7 +35,7 @@ function fixture() {
 
 const start = async c => {
   await c.start({ tabId: 7, origin: 'https://chatgpt.com', documentNonce: 'document-1', provider: 'chatgpt', consent: true, trainingConsent: false, key: 'setup-key', protocol: 'research-v1' });
-  await c.activate(7, 'document-1');
+  await c.activate(7, 'document-1', '/');
 };
 const event = (text = '  exact prompt\n') => ({ event_id: crypto.randomUUID(), role: 'user', text, captured_at: new Date().toISOString() });
 
@@ -237,4 +238,35 @@ test('every persisted change notifies the indicator sync', async () => {
   await start(f.controller);
   assert.equal(f.seen[0].session.phase, 'starting');
   assert.equal(f.seen.at(-1).session.phase, 'recording');
+});
+
+test('adopts provider document replacements while sending, not after the reply', async () => {
+  const f = fixture();
+  await start(f.controller);
+  await f.controller.append(7, 'document-1', event());
+  assert.deepEqual(await f.controller.adopt(7, 'document-2', '/c/abc12345'), { adopted: true });
+  assert.equal(f.state().session.documentNonce, 'document-2');
+  // Another replacement while the reply has not been captured is still a send.
+  assert.deepEqual(await f.controller.adopt(7, 'document-3', '/c/abc12345'), { adopted: true });
+  // Once the reply is captured, a new document is a switch, not a send.
+  await f.controller.append(7, 'document-3', { ...event('reply'), role: 'assistant' });
+  assert.deepEqual(await f.controller.adopt(7, 'document-4', '/c/abc12345'), { adopted: false });
+  assert.equal(f.state().session.phase, 'recording');
+});
+
+test('adopts a document replaced during the send, but never after the reply', () => {
+  const base = {
+    phase: 'recording', documentNonce: 'document-1', path: '/c/abc12345',
+    lastEventAt: Date.now(), events: [{ role: 'user' }]
+  };
+  assert.equal(shouldAdopt(base, '/c/abc12345', 'document-2'), true);
+  assert.equal(shouldAdopt(base, '/c/other', 'document-2'), true);
+  assert.equal(shouldAdopt({ ...base, events: [{ role: 'user' }, { role: 'assistant' }] }, '/c/abc12345', 'document-2'), false);
+  assert.equal(shouldAdopt({ ...base, events: [] }, '/c/abc12345', 'document-2'), false);
+  assert.equal(shouldAdopt({ ...base, phase: 'pending' }, '/c/abc12345', 'document-2'), false);
+  assert.equal(shouldAdopt({ ...base, lastEventAt: Date.now() - 60000 }, '/c/abc12345', 'document-2'), false);
+  assert.equal(shouldAdopt({ ...base, lastEventAt: 0 }, '/c/abc12345', 'document-2'), false);
+  assert.equal(shouldAdopt(base, '', 'document-2'), false);
+  assert.equal(shouldAdopt(base, '/c/abc12345', 'document-1'), false);
+  assert.equal(shouldAdopt({ ...base, adoptions: 500 }, '/c/other', 'document-2'), false);
 });
