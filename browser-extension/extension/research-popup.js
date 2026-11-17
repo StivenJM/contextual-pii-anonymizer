@@ -40,7 +40,7 @@
         saved: view === 'saved',
         withdrawing: view === 'withdrawing'
       },
-      keyLabel: input.enrollment_only ? 'Código de participación del estudio' : 'Clave local del investigador',
+      keyLabel: 'Código de participación',
       provider: input.provider || '—',
       task,
       count: Number.isInteger(input.count) ? input.count : 0,

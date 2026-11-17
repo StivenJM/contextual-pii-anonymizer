@@ -29,6 +29,6 @@ Estas guías explican procedimientos recurrentes para preparar y operar el proye
 ## Recolección para investigación
 
 - [Captura para investigación sin modelo](research-capture.md): ejecuta la API local separada y el modo de captura de la extensión, con procedimientos de acceso, reintento y retiro.
-- [Despliegue en la red universitaria](research-campus-deployment.md): prepara Docker de producción separado, HTTPS con IP privada y confianza de clientes, y un paquete de extensión específico para participantes.
+- Despliegue de producción: no incluido en este checkout. No hay Compose de producción, guía de campus, TLS/CA ni paquete de extensión generado; el Compose de desarrollo no es un despliegue para estudiantes.
 - [Kit del estudio con estudiantes](../project/experimentacion/research-study/README.md): evidencia, tarjetas de escenario, protocolo propuesto, instrumentos y materiales de análisis y reporte.
 - [Borrador de revisión de riesgos de seguridad](../project/experimentacion/research-study/security-risk-review.md): riesgos pendientes, evaluación proporcional del cifrado en reposo y decisiones del propietario aún abiertas.

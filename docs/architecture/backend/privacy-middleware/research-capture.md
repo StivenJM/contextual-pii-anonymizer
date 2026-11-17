@@ -38,12 +38,12 @@ The API does not observe browser drafts directly. The extension records a submis
 
 ## API contract
 
-All routes are under /api/research and return 404 while disabled. Enable explicitly, supply a researcher key of 32–4096 UTF-8 bytes, an absolute archive path and a valid retention setting. JSON uploads are limited to 1,000,000 UTF-8 bytes, 1,000 events and 100,000 characters per event; invalid research payloads do not echo the input.
+All routes are under /api/research and return 404 while disabled. Enable explicitly, supply a researcher key and a distinct participant enrollment code of 32–4096 UTF-8 bytes each, an absolute archive path and a valid retention setting. Missing, invalid or identical secrets make configuration fail closed with 503. JSON uploads are limited to 1,000,000 UTF-8 bytes, 1,000 events and 100,000 characters per event; invalid research payloads do not echo the input.
 
 | Method and path | Authorization | Result |
 |---|---|---|
 | GET /health | No credential; explicit enabled/configuration checks | Configuration and archive access readiness; no raw content or secrets |
-| POST /sessions | X-Research-Enrollment; legacy X-Research-Key only when enrollment-only mode is disabled | Consent/protocol/provider/session UUID and client-generated capability recorded; idempotent with identical metadata and capability |
+| POST /sessions | X-Research-Enrollment only; X-Research-Key is rejected even with the valid researcher key | Consent/protocol/provider/session UUID and client-generated capability recorded; idempotent with identical metadata and capability |
 | PUT /sessions/{session_id}/complete | Bearer per-session capability | Commit an immutable batch, then return receipt_id and event_count; identical retry returns the same receipt; different retry returns 409 |
 | GET /records/{receipt_id} | X-Research-Key | Restricted raw record and consent metadata, with Cache-Control: no-store |
 | DELETE /sessions/{session_id} | Bearer capability | Withdraw the active or last saved session; no other session is accessible with that capability |
@@ -52,15 +52,26 @@ All routes are under /api/research and return 404 while disabled. Enable explici
 
 The opaque receipt is a **linkage identifier, not a read token**. Raw record access requires researcher authorization. Session capabilities are stored hashed in the API archive; the extension retains the capability for retry/withdrawal and never forwards it into the page/Google Forms. No public list/raw download endpoint is provided.
 
-`RESEARCH_ENROLLMENT_KEY` is optional for local compatibility, but production requires a distinct enrollment key and sets `RESEARCH_REQUIRE_ENROLLMENT=true`. Enrollment permits starts only, not export, purge or investigator deletion. This cohort code is not a single-use participant identity. Both keys support a mutually exclusive `_FILE` source for local Compose secret mounts; unreadable/conflicting sources fail configuration without echoing paths/values. Retention/protocol checks and session capability semantics are unchanged.
+`RESEARCH_ENROLLMENT_KEY` is required whenever research capture is enabled and must differ from `RESEARCH_API_KEY`; there is no enrollment-only compatibility mode. Enrollment permits starts only, not export, purge or investigator deletion. This cohort code is not a single-use participant identity. Both keys support a mutually exclusive `_FILE` source for local Compose secret mounts; unreadable/conflicting sources fail configuration without echoing paths/values. Retention/protocol checks and session capability semantics are unchanged.
 
-## Private-network deployment decision
+### Fail-closed enrollment migration
 
-The user confirmed participant-owned computers and a campus-private fixed IP without a domain. The separate [production Compose](../../../../compose.research.yaml) runs only a non-reloading collector and Caddy's internal-CA TLS entry point. Neither the original Compose nor its model/database lifecycle is replaced. The proxy terminates HTTPS; the collector's HTTP port is not published. TLS and archive volumes persist separately; both containers run non-root with dropped capabilities and read-only root filesystems. This is transport protection, not application-level archive encryption or institutional authorization.
+The previous API accepted the researcher key at `POST /sessions` when enrollment was not required. The current `participant` dependency accepts only `X-Research-Enrollment`, and `configuration` requires a non-empty `RESEARCH_ENROLLMENT_KEY` distinct from `RESEARCH_API_KEY`. There is no compatibility flag:
 
-The [preparation command](../../../../deployment/research/prepare.py) emits a new extension copy with exactly one additional HTTPS private-IP permission; it does not request access to all HTTPS hosts. The normal protection endpoint stays unchanged. The public research endpoint is compiled into the copy, not supplied by the chatbot page. New session/receipt/withdrawal state retains its API origin; future package configuration cannot reroute an in-progress upload or deletion. Legacy state without an origin uses the original local API. No raw data/capability migration happens on repackaging.
+1. Provision a distinct `RESEARCH_ENROLLMENT_KEY` in every environment. This configuration change does not alter the previous server's behavior.
+2. Deploy the current API first with research capture enabled. It returns 401 for `X-Research-Key` session starts and 503 for missing, invalid or identical enrollment configuration. Older extensions that send the researcher key cannot start during this window; sessions already started retain their capability for completion and withdrawal.
+3. Deploy the unified extension, which sends only `X-Research-Enrollment`.
+4. Verify and remove `RESEARCH_REQUIRE_ENROLLMENT` from configuration. The current code ignores it; leaving it does not restore the previous mode.
 
-Tradeoff: a study-specific package must be rebuilt/reapproved if the IP changes, but avoids broad optional host permissions and a participant-facing endpoint editor. Caddy's internal CA avoids public DNS/ACME requirements, but its public root must be verified and deliberately trusted on every client; the CA private keys must stay on the restricted host. Root trust is broader than this one service. An institutional CA remains an IT-managed alternative, not an automatic fallback. See the [campus operation guide](../../../guides/research-campus-deployment.md) for trust rollout, separate key distribution and deployment limits.
+Do not deploy the extension before the current API. While the previous server remains enabled, its legacy path accepts the researcher key for session start. Schedule maintenance or stop session starts instead of preserving that server as "compatibility".
+
+Rollback must not redeploy the previous API with research capture enabled, because that restores privileged-key enrollment. Keep the current API and roll back only the extension (older extensions fail closed with 401), or set `RESEARCH_ENABLED=false` to return 404 and disable capture until the fix is ready. Do not restore `RESEARCH_REQUIRE_ENROLLMENT` expecting the old mode. Privileged export, investigator-mediated deletion and purge continue to require `X-Research-Key` and reject the participation code.
+
+## Deployment status in this checkout
+
+This checkout contains the local/loopback research API and the development Compose only. It does not contain the former production collector Compose, TLS entry point, extension-packaging command or campus operation guide; those paths must not be inferred from this tree. The extension can bind a remote API origin through its packaged configuration, but a production deployment, private-IP HTTPS, client trust, host hardening, secret distribution and participant packaging require a separate product and institutional decision.
+
+The development Compose and the standalone model-free entry point are not production deployments. Do not expose the development Admin API, run the reloading development server on a campus network, or claim that this repository provides a deployment-ready collector.
 
 ## State and failure semantics
 
@@ -109,7 +120,7 @@ R-numbers resolve to the [32-paper bibliography](../../../project/experimentacio
 
 ## Security and operational limits
 
-This is a **supervised pilot**, not a hardened multi-tenant service. Use loopback for local development; private-network operation requires the separate TLS deployment, verified client trust, a university-subnet firewall rule and approved host controls. Do not expose the collector directly or deploy the development server to the campus network. Researcher keys and session capabilities are bearer credentials; CORS is not authentication. Do not share them with the page, Forms, source control, screenshots or logs. Browser/profile access, compromised extensions, malicious page DOM, local malware and a stolen key remain threats.
+This is a **supervised pilot**, not a hardened multi-tenant service. Use loopback for local development; any private-network operation would require a separately designed TLS deployment, verified client trust, a university-subnet firewall rule and approved host controls, none of which are included in this checkout. Do not expose the collector directly or deploy the development server to the campus network. Researcher keys, participant enrollment codes and session capabilities are bearer credentials; CORS is not authentication. Do not share them with the page, Forms, source control, screenshots or logs. Browser/profile access, compromised extensions, malicious page DOM, local malware and a stolen key remain threats.
 
 Neither SQLite nor storage.local encrypts this archive on the application's behalf. Restrict the OS account/filesystem, use institutional encrypted storage and backups, and keep raw data outside Git. SQLite secure_delete and deleting a browser key are not guarantees of forensic erasure from SSDs, journals or backups. Expiry denies access; the purge command/schedule and backup expiry implement the physical-retention policy. The default 30-day parameter is a technical pilot default, **not an approved retention policy**.
 

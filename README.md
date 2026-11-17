@@ -64,5 +64,7 @@ Start with the [research plan](docs/project/experimentacion/research-capture-pla
 [student study kit](docs/project/experimentacion/research-study/README.md); institutional
 approval and live-provider adapter checks remain prerequisites for real fieldwork.
 
-For student-owned computers, use the [university-network deployment guide](docs/guides/research-campus-deployment.md)
-to prepare the separate collector, private-IP HTTPS and endpoint-specific extension copy.
+This checkout does not include a production deployment guide, production collector Compose,
+private-IP HTTPS/CA configuration or endpoint-specific extension package. The development
+Compose and local research API are not a campus deployment; preparing one for student-owned
+computers requires a separate approved design.

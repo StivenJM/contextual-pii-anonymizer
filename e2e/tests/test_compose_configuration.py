@@ -14,10 +14,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 EXTENSION_ID = "a" * 32
 RESEARCH_KEY = "synthetic-local-research-key-at-least-32-chars"
+ENROLLMENT_KEY = "synthetic-local-enrollment-code-at-least-32-chars"
 INTERPOLATED = {
     "EXTENSION_ID_CHROME",
     "MIDDLEWARE_SECRET",
     "RESEARCH_API_KEY",
+    "RESEARCH_ENROLLMENT_KEY",
     "RESEARCH_PROTOCOL_VERSION",
     "RESEARCH_RETENTION_DAYS",
 }
@@ -155,6 +157,9 @@ def test_default_stack_enables_research_with_persistent_archive(tmp_path: Path) 
     assert set(services) == {"db", "inference", "api", "converter"}
     assert environment["RESEARCH_ENABLED"] == "true"
     assert len(environment["RESEARCH_API_KEY"].encode("utf-8")) >= 32
+    assert len(environment["RESEARCH_ENROLLMENT_KEY"].encode("utf-8")) >= 32
+    assert environment["RESEARCH_ENROLLMENT_KEY"] != environment["RESEARCH_API_KEY"]
+    assert "RESEARCH_REQUIRE_ENROLLMENT" not in environment
     assert environment["RESEARCH_STORAGE_PATH"] == "/data/research/capture.sqlite3"
     assert environment["RESEARCH_PROTOCOL_VERSION"] == "research-v1"
     assert environment["RESEARCH_RETENTION_DAYS"] == "7"
@@ -172,6 +177,7 @@ def test_research_environment_can_override_defaults(tmp_path: Path) -> None:
             "EXTENSION_ID_CHROME": EXTENSION_ID,
             "RESEARCH_ENABLED": "false",
             "RESEARCH_API_KEY": RESEARCH_KEY,
+            "RESEARCH_ENROLLMENT_KEY": ENROLLMENT_KEY,
             "RESEARCH_PROTOCOL_VERSION": "research-test",
             "RESEARCH_RETENTION_DAYS": "14",
         },
@@ -180,6 +186,7 @@ def test_research_environment_can_override_defaults(tmp_path: Path) -> None:
     environment = config["services"]["api"]["environment"]
     assert environment["RESEARCH_ENABLED"] == "false"
     assert environment["RESEARCH_API_KEY"] == RESEARCH_KEY
+    assert environment["RESEARCH_ENROLLMENT_KEY"] == ENROLLMENT_KEY
     assert environment["RESEARCH_PROTOCOL_VERSION"] == "research-test"
     assert environment["RESEARCH_RETENTION_DAYS"] == "14"
     assert "research_archive" in config["volumes"]

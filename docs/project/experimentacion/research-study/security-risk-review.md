@@ -44,19 +44,19 @@ Sources: [research controller](../../../../browser-extension/extension/research-
 
 **Potential consequence:** a leaked researcher key gives broad access to known records and destructive operations; attribution and selective revocation are limited. Possession of a session receipt alone does **not** grant raw-record access. A stolen session capability has narrower upload/withdrawal rights and must also be protected.
 
-**Existing controls:** separate enrollment/admin keys, hashed server-side session capabilities, researcher checks on export/purge/investigator deletion, and production rejection of admin-header session starts.
+**Existing controls:** separate enrollment/admin keys, hashed server-side session capabilities, researcher checks on export/purge/investigator deletion, and all-environment rejection of admin-header session starts.
 
-**Review action:** identify authorized operators, restrict secret/configuration files, define rotation and incident procedures, and decide whether a supervised pilot can operate with one controlled administrator. Wider multi-researcher operation needs a deliberate permissions/audit design. The original development Admin API is a separate local-only boundary; the standalone campus collector must not be replaced by publicly exposing the entire development application.
+**Review action:** identify authorized operators, restrict secret/configuration files, define rotation and incident procedures, and decide whether a supervised pilot can operate with one controlled administrator. Wider multi-researcher operation needs a deliberate permissions/audit design. The original development Admin API is a separate local-only boundary. No production collector is included in this checkout, and any future deployment must not expose the entire development application.
 
-### Internal certificate authority and client trust
+### Production TLS and client trust (not implemented in this checkout)
 
-**Known facts:** private-IP production preparation uses Caddy's internal CA. Its public root must be verified and deliberately trusted on participant devices. Root/intermediate private keys persist on the server's TLS volume.
+**Known facts:** this checkout contains no production collector, Caddy internal CA or participant client-trust procedure. The former private-IP deployment artifacts are absent. The extension rejects plain HTTP for remote API origins; loopback development may use HTTP.
 
-**Potential consequence:** trusting the wrong root or theft of the CA's signing keys can enable forged certificates accepted by enrolled trust stores. Root trust is broader than the single research IP. This does not mean theft automatically decrypts all past sessions.
+**Potential consequence:** if a future deployment introduces a private CA, trusting the wrong root or theft of its signing keys could enable forged certificates accepted by enrolled trust stores. Root trust is broader than a single research IP. This does not mean theft automatically decrypts all past sessions.
 
-**Existing controls:** TLS validation is not disabled, the configured IP certificate is selected for no-SNI clients, private CA material is not distributed in the extension, and no host/client trust installation occurred during preparation.
+**Existing controls:** no production CA or trust configuration is included in this tree, and the extension does not disable TLS validation. A private CA must not be distributed in the extension as a trust shortcut.
 
-**Review action:** involve university IT, verify the public certificate fingerprint through an independent channel, protect/restrict CA state/backups and define trust removal. An institutional CA is an alternative if available and approved; do not assume it already exists. Never ask students to bypass browser warnings.
+**Review action:** treat production TLS, client trust and certificate lifecycle as a separate deployment decision. If one is designed, involve university IT, verify the public fingerprint through an independent channel, protect CA state/backups and define trust removal. An institutional CA is an alternative if available and approved; do not assume it exists. Never ask students to bypass browser warnings.
 
 ### Reusable cohort enrollment, fabricated records and resource exhaustion
 
@@ -90,13 +90,13 @@ Sources: [research controller](../../../../browser-extension/extension/research-
 
 ### Unverified operating environment, recovery and extension/provider changes
 
-**Known facts:** production Docker/TLS and browser fixtures were tested locally with synthetic data. No actual campus routing/firewall, student trust rollout, university host hardening, live provider DOM, Firefox or disaster restoration was verified. The preparation command produces an unpacked extension copy, not signed enterprise distribution.
+**Known facts:** local browser and API fixtures were tested with synthetic data. This checkout contains no production collector, Docker/TLS deployment, private network/CA volume, participant packaging command or signed enterprise distribution. No actual campus routing/firewall, student trust rollout, university host hardening, live provider DOM, Firefox or disaster restoration was verified.
 
-**Potential consequence:** mistaken exposure, a modified extension package, an outdated adapter, unavailable server or failed recovery could expose data, omit/mix captures or lose study records. A single university computer is a single point of failure. A passing fixture is not proof of complete provider transcript capture.
+**Potential consequence:** mistaken exposure, a modified extension package, an outdated adapter, unavailable server or failed recovery could expose data, omit/mix captures or lose study records. A single computer is a single point of failure. A passing fixture is not proof of complete provider transcript capture.
 
-**Existing controls:** separate non-root/read-only collector and TLS containers, internal collector network, only a selected host TLS port published, persistent archive/CA volumes, exact-IP extension permission and session-bound upload/withdrawal origin. Existing attachment regression and research lifecycle/TLS tests passed at the recorded milestone; these do not replace an independent security audit.
+**Existing controls:** local synthetic fixtures, session-bound upload/withdrawal origin and extension remote-origin HTTPS validation exist in this checkout. Separate non-root/read-only collector and TLS containers, private networking, persistent archive/CA volumes and exact-IP extension packaging are not included. Local tests do not replace an independent security audit.
 
-**Review action:** verify the actual host/subnet/firewall and client trust, control extension distribution/updates, perform live-provider rehearsal using fictional data, monitor capacity/availability and test recovery in isolation. No remote access, deployment or independent delegated review is claimed.
+**Review action:** if a production deployment is approved, verify the actual host/subnet/firewall and client trust, control extension distribution/updates, perform live-provider rehearsal using fictional data, monitor capacity/availability and test recovery in isolation. No remote access, deployment or independent delegated review is claimed.
 
 ## Proportional storage-encryption assessment
 
@@ -116,8 +116,8 @@ SQLite versus PostgreSQL is not the deciding security property. Changing databas
 - [ ] Confirm the phase: fictional rehearsal only, or identifiable real-data collection.
 - [ ] Record necessary Form attributes and who can access the receipt-to-identity link.
 - [ ] Verify actual host/profile permissions, storage encryption and backup/export handling.
-- [ ] Assign custody and rotation/recovery procedures for researcher/enrollment/session/CA credentials.
-- [ ] Confirm campus firewall/trust and approved extension distribution without warning bypasses.
+- [ ] Assign custody and rotation/recovery procedures for researcher/enrollment/session credentials, and for CA credentials if a production TLS design is approved.
+- [ ] If a production deployment is approved, confirm firewall/trust and extension distribution without warning bypasses.
 - [ ] Decide retention for API, local buffers, Forms, exports and backups; schedule purge and withdrawal follow-up.
 - [ ] Decide acceptable enrollment/volume limits for the expected supervised cohort.
 - [ ] Complete synthetic live-provider rehearsal and an isolated restore test.
@@ -152,5 +152,5 @@ The reviewed materials do not establish a student-disclosure percentage, automat
 
 - [Extension-first developer startup](../../../guides/developer-startup.md)
 - [Research capture operation](../../../guides/research-capture.md)
-- [University-network deployment and trust/backup procedures](../../../guides/research-campus-deployment.md)
+- Production deployment and trust/backup procedures: not included in this checkout; a separate approved design is required.
 - [Fictional task cards](scenario-cards.md), [instruments/linkage/withdrawal](instruments.md), [proposed real-data amendment](real-data-amendment.md)

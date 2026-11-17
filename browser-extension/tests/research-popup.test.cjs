@@ -22,7 +22,7 @@ async function popup(overrides = {}) {
   }]));
   let state = {
     view: 'idle', phase: 'idle', count: 0, receipt_id: '', provider: '',
-    task: 'unassigned', paused_reason: '', enrollment_only: false, last_error: '',
+    task: 'unassigned', paused_reason: '', last_error: '',
     tab: null, incident: null, ...overrides
   };
   const calls = [];
@@ -162,9 +162,13 @@ test('interruption, pending and withdrawal explain a known reason without invent
   assert.match(describe({ view: 'withdrawing', last_error: 'offline' }).withdrawalReason, /offline/);
 });
 
-test('enrollment and researcher labels stay distinct', () => {
-  assert.equal(describe({ view: 'idle' }).keyLabel, 'Clave local del investigador');
-  assert.equal(describe({ view: 'idle', enrollment_only: true }).keyLabel, 'Código de participación del estudio');
+test('the participation-code label never depends on origin or key type', () => {
+  const label = 'Código de participación';
+  assert.equal(describe({ view: 'idle' }).keyLabel, label);
+  assert.equal(describe({ view: 'idle', api_origin: 'https://10.20.30.40' }).keyLabel, label);
+  assert.equal(describe({ view: 'idle', api_origin: 'http://127.0.0.1:8000' }).keyLabel, label);
+  assert.ok(html.includes(label));
+  assert.ok(!html.includes('Clave local del investigador'));
 });
 
 test('failed start keeps the setup inputs editable and shows feedback next to the action', async () => {
@@ -200,14 +204,14 @@ test('a start that is already in flight cannot be sent twice', async () => {
   assert.equal(p.elements.get('researchStart').disabled, false);
 });
 
-test('successful start clears the operator key instead of persisting it', async () => {
+test('successful start clears the participation code instead of persisting it', async () => {
   const p = await popup();
-  p.elements.get('researchKey').value = 'synthetic-local-key';
+  p.elements.get('researchKey').value = 'synthetic-participation-code';
   p.elements.get('researchConsent').checked = true;
   await p.elements.get('researchStart').listeners.click();
   await settle();
   assert.equal(p.elements.get('researchKey').value, '');
-  assert.equal(p.calls.find(call => call.type === 'RESEARCH_START').key, 'synthetic-local-key');
+  assert.equal(p.calls.find(call => call.type === 'RESEARCH_START').key, 'synthetic-participation-code');
 });
 
 test('browser messaging failure shows a local Spanish explanation', async () => {

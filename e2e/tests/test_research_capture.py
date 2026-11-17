@@ -17,11 +17,11 @@ from support.waiting import open_chat, wait_for_received
 
 ROOT = Path(__file__).resolve().parents[2]
 KEY = "synthetic-research-key-with-at-least-32-characters"
-ENROLLMENT = "synthetic-enrollment-only-code-at-least-32-characters"
+ENROLLMENT = "synthetic-participation-code-at-least-32-characters"
 
 
 @pytest.fixture
-def research_api(tmp_path, request):
+def research_api(tmp_path):
     python = (
         ROOT
         / "api"
@@ -36,15 +36,10 @@ def research_api(tmp_path, request):
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     origin = f"http://127.0.0.1:{port}"
-    callspec = getattr(request.node, "callspec", None)
-    require_enrollment = (
-        "true" if callspec is not None and callspec.params.get("scenario") == "campus" else "false"
-    )
     env = os.environ | {
         "RESEARCH_ENABLED": "true",
         "RESEARCH_API_KEY": KEY,
         "RESEARCH_ENROLLMENT_KEY": ENROLLMENT,
-        "RESEARCH_REQUIRE_ENROLLMENT": require_enrollment,
         "RESEARCH_STORAGE_PATH": str(tmp_path / "archive.sqlite3"),
     }
     process = subprocess.Popen(
@@ -142,11 +137,10 @@ def test_research_session_roundtrip_without_inference(
         expect(popup.locator("#researchTitle")).to_have_text("Captura de chats")
         expect(popup.locator("#researchStart")).to_have_text("Iniciar en esta pestaña")
         expect(popup.locator("#researchFinish")).to_have_text("Finalizar y guardar")
-        popup.locator("#researchKey").fill(ENROLLMENT if scenario == "campus" else KEY)
-        if scenario == "campus":
-            expect(popup.locator("#researchKeyLabel")).to_have_text(
-                "Código de participación del estudio"
-            )
+        expect(popup.locator("#researchKeyLabel")).to_have_text(
+            "Código de participación"
+        )
+        popup.locator("#researchKey").fill(ENROLLMENT)
         popup.locator("#researchConsent").check()
         page.bring_to_front()
         popup.locator("#researchStart").evaluate("el => el.click()")
@@ -369,7 +363,7 @@ def test_research_startup_rejection_preserves_setup(
         else:
             page.locator("textarea").evaluate("el => el.remove()")
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
-        popup.locator("#researchKey").fill(KEY)
+        popup.locator("#researchKey").fill(ENROLLMENT)
         popup.locator("#researchConsent").check()
         popup.locator("#researchTraining").uncheck()
         popup.locator("#researchStart").scroll_into_view_if_needed()
@@ -382,7 +376,7 @@ def test_research_startup_rejection_preserves_setup(
         )
         expect(popup.locator("#researchStartError")).to_contain_text(expected)
         expect(popup.locator("#researchStartError")).to_be_in_viewport()
-        expect(popup.locator("#researchKey")).to_have_value(KEY)
+        expect(popup.locator("#researchKey")).to_have_value(ENROLLMENT)
         expect(popup.locator("#researchProtocol")).to_have_value("research-v1")
         expect(popup.locator("#researchConsent")).to_be_checked()
         expect(popup.locator("#researchTraining")).not_to_be_checked()
@@ -420,7 +414,7 @@ def test_research_capture_intercepts_a_renamed_composer_send_control(
         page.goto(f"{chat_site}/research-composer.html")
         page.locator("#prompt-textarea").wait_for()
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
-        popup.locator("#researchKey").fill(KEY)
+        popup.locator("#researchKey").fill(ENROLLMENT)
         popup.locator("#researchConsent").check()
         page.bring_to_front()
         popup.evaluate("() => document.getElementById('researchStart').click()")

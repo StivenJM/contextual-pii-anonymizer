@@ -59,7 +59,7 @@
         // Save the capability first: an interrupted authorization can be discarded.
         await persist({ ...state, session, lastError: null });
         await request('/sessions', {
-          method: 'POST', headers: { [input.enrollmentOnly ? 'X-Research-Enrollment' : 'X-Research-Key']: input.key },
+          method: 'POST', headers: { 'X-Research-Enrollment': input.key },
           body: JSON.stringify({
             session_id: session.id, upload_token: session.token,
             protocol_version: session.protocol, provider: session.provider,
@@ -446,7 +446,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
           paused_from: session?.pausedFrom || '',
           paused_to: session?.pausedTo || '',
           api_origin: session?.apiOrigin || state.receipt?.apiOrigin || campusOrigin || localOrigin,
-          enrollment_only: !!campusOrigin,
           receipt_id: !session && !state.withdrawing ? state.receipt?.receipt_id || '' : '',
           capture_status: !session && !state.withdrawing ? state.receipt?.capture_status || '' : '',
           has_receipt: !!state.receipt && !state.withdrawing,
@@ -492,7 +491,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
           if (prepared?.reason === 'editor_unavailable') throw new Error('No se encontró el editor del chat. Espera a que cargue la página o abre una conversación nueva compatible.');
           if (!prepared?.ready) throw new Error('No se pudo acceder al editor o al botón de envío. Usa una conversación nueva en un chat compatible.');
           const result = await controller.start({ ...message, tabId: tab.id, origin, provider, documentNonce: prepared.documentNonce,
-            apiOrigin: campusOrigin || localOrigin, enrollmentOnly: !!campusOrigin });
+            apiOrigin: campusOrigin || localOrigin });
           const activated = await api.tabs.sendMessage(tab.id, { type: 'RESEARCH_ACTIVATE', documentNonce: prepared.documentNonce }).catch(() => null);
           if (!activated?.activated) throw new Error('No se pudo activar la captura. Descarta la configuración incompleta.');
           try {

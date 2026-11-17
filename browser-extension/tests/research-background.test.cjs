@@ -39,11 +39,11 @@ const start = async c => {
 };
 const event = (text = '  exact prompt\n') => ({ event_id: crypto.randomUUID(), role: 'user', text, captured_at: new Date().toISOString() });
 
-test('campus enrollment and API origin remain bound through retry and withdrawal', async () => {
+test('participation enrollment and API origin remain bound through retry and withdrawal', async () => {
   const f = fixture();
   const apiOrigin = 'https://10.20.30.40';
-  await f.controller.start({ tabId: 7, origin: 'https://chatgpt.com', documentNonce: 'document-1', provider: 'chatgpt', consent: true, key: 'enrollment-only', enrollmentOnly: true, apiOrigin, protocol: 'research-v1' });
-  assert.deepEqual(f.calls[0].options.headers, { 'X-Research-Enrollment': 'enrollment-only' });
+  await f.controller.start({ tabId: 7, origin: 'https://chatgpt.com', documentNonce: 'document-1', provider: 'chatgpt', consent: true, key: 'synthetic-participation-code', apiOrigin, protocol: 'research-v1' });
+  assert.deepEqual(f.calls[0].options.headers, { 'X-Research-Enrollment': 'synthetic-participation-code' });
   assert.equal(f.state().session.apiOrigin, apiOrigin);
   assert.equal(f.calls[0].apiOrigin, apiOrigin);
   await f.controller.activate(7, 'document-1');
@@ -59,6 +59,23 @@ test('campus enrollment and API origin remain bound through retry and withdrawal
   await f.controller.discard();
   assert.equal(f.calls.at(-1).apiOrigin, apiOrigin);
   assert.equal(f.state().receipt, null);
+});
+
+test('always sends the participation code header for local and remote APIs', async () => {
+  for (const apiOrigin of [undefined, 'https://10.20.30.40']) {
+    const f = fixture();
+    await f.controller.start({ tabId: 7, origin: 'https://chatgpt.com', documentNonce: 'document-1', provider: 'chatgpt', consent: true, key: 'synthetic-participation-code', apiOrigin, protocol: 'research-v1' });
+    assert.deepEqual(f.calls[0].options.headers, { 'X-Research-Enrollment': 'synthetic-participation-code' });
+    assert.equal('X-Research-Key' in f.calls[0].options.headers, false);
+  }
+});
+
+test('the participation code never enters persisted state or request bodies', async () => {
+  const f = fixture();
+  const code = 'probe-participation-code-0123456789abcdef';
+  await f.controller.start({ tabId: 7, origin: 'https://chatgpt.com', documentNonce: 'document-1', provider: 'chatgpt', consent: true, key: code, protocol: 'research-v1' });
+  assert.equal(JSON.stringify(f.state()).includes(code), false);
+  assert.equal(JSON.stringify(f.calls[0].options.body).includes(code), false);
 });
 
 test('persists exact submissions before acknowledgement; serializes concurrent appends', async () => {
