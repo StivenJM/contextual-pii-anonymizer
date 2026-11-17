@@ -282,7 +282,7 @@ test('a new-chat route normalised before sending is not an interruption', async 
   assert.equal(h.sent.filter(message => message.type === 'RESEARCH_INTERRUPTED').length, 0);
 });
 
-test('chat protection gates research capture and replays protected text once', async () => {
+test('research capture bypasses chat protection and records the raw draft once', async () => {
   const calls = [];
   const chatProtection = {
     enabled: true,
@@ -304,8 +304,34 @@ test('chat protection gates research capture and replays protected text once', a
   await settle();
 
   const appends = h.sent.filter(message => message.type === 'RESEARCH_APPEND');
-  assert.deepEqual(calls, ['mensaje con ana@example.com']);
+  assert.deepEqual(calls, []);
   assert.equal(appends.length, 1);
-  assert.equal(appends[0].event.text, 'mensaje protegido');
+  assert.equal(appends[0].event.text, 'mensaje con ana@example.com');
+  assert.equal(h.button.clicks, 1);
+});
+
+test('chat protection resumes after research capture stops', async () => {
+  const calls = [];
+  const chatProtection = {
+    enabled: true,
+    readText: editor => editor.value,
+    async authorize({ editor, text }) {
+      calls.push(text);
+      editor.value = 'mensaje protegido';
+      return { status: 'send', text: 'mensaje protegido' };
+    }
+  };
+  const h = harness({ chatProtection });
+  const { documentNonce } = await h.prepared;
+  await settle();
+  await send(h.listeners.message, { type: 'RESEARCH_ACTIVATE' }, documentNonce);
+  await send(h.listeners.message, { type: 'RESEARCH_STOP' });
+  h.editor.value = 'mensaje con ana@example.com';
+  h.clickSend();
+  await settle();
+  await settle();
+
+  assert.deepEqual(calls, ['mensaje con ana@example.com']);
+  assert.equal(h.sent.filter(message => message.type === 'RESEARCH_APPEND').length, 0);
   assert.equal(h.button.clicks, 1);
 });

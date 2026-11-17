@@ -60,6 +60,8 @@
     .estado-texto.on { color: var(--verde); }
     .estado-texto.off { color: var(--rojo); }
     .estado-etiqueta { font-size: 12px; color: var(--texto-suave); margin-bottom: 2px; }
+    .card[data-disabled="true"] { opacity: 0.55; }
+    .card[data-disabled="true"] .switch { pointer-events: none; }
 
     /* Interruptor */
     .switch {
@@ -180,7 +182,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div id="attachmentProtectionCard" class="card">
     <div class="fila-toggle">
       <div>
         <div class="estado-etiqueta">Protección de adjuntos</div>
@@ -193,7 +195,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div id="chatProtectionCard" class="card">
     <div class="fila-toggle">
       <div>
         <div class="estado-etiqueta">Protección de chats</div>
@@ -250,7 +252,7 @@
         <div><dt>Tarea actual</dt><dd id="researchTaskValue">—</dd></div>
         <div><dt>Mensajes</dt><dd id="researchCount">0</dd></div>
       </dl>
-      <p class="ayuda">El texto se guarda en este navegador hasta que la sesión se guarde o se descarte. La protección de adjuntos está en pausa en la pestaña capturada.</p>
+      <p class="ayuda">El texto se guarda en este navegador hasta que la sesión se guarde o se descarte. Las protecciones de adjuntos y chats están desactivadas en la pestaña capturada.</p>
       <p id="researchTabNotice" class="ayuda" hidden></p>
       <button id="researchGoToTab" class="secondary" type="button" hidden>Ir a la pestaña de captura</button>
       <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label></p>

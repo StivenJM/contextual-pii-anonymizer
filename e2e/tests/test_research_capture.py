@@ -150,6 +150,11 @@ def test_research_session_roundtrip_without_inference(
         )
         expect(popup.locator("#researchConsent")).to_be_disabled()
         expect(popup.locator("#researchTraining")).to_be_disabled()
+        expect(popup.locator("#estadoTexto")).to_have_text("Desactivada")
+        expect(popup.locator("#estadoChats")).to_have_text("Desactivada")
+        expect(popup.locator("#attachmentProtectionCard")).to_have_css("opacity", "0.55")
+        expect(popup.locator("#toggleActivo")).to_be_disabled()
+        expect(popup.locator("#toggleChats")).to_be_disabled()
         if scenario == "send_later":
             # Activation must not weaken the send-time guard while Send is absent.
             page.locator("textarea").evaluate(

@@ -11,24 +11,26 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 
 async function popup(stored = { activo: true }) {
   const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, {
-    checked: false, textContent: '', hidden: false, classList: {
+    checked: false, textContent: '', hidden: false, attributes: {}, classList: {
       values: new Set(),
       toggle(name, enabled) { enabled ? this.values.add(name) : this.values.delete(name); }
     },
     listeners: {},
-    addEventListener(type, listener) { this.listeners[type] = listener; }
+    addEventListener(type, listener) { this.listeners[type] = listener; },
+    setAttribute(name, value) { this.attributes[name] = String(value); }
   }]));
   const writes = [];
   const chrome = { storage: { local: {
     get: (defaults, callback) => callback({ ...defaults, ...stored }),
     set: values => { writes.push(values); Object.assign(stored, values); }
   } } };
-  vm.runInNewContext(script, {
+  const context = {
     document: { getElementById: id => elements.get(id) },
     chrome
-  });
+  };
+  vm.runInNewContext(script, context);
   await settle();
-  return { elements, writes };
+  return { elements, writes, context };
 }
 
 test('the attachment toggle names its own scope instead of implying whole-extension state', async () => {
@@ -49,6 +51,25 @@ test('disabling protection persists only the attachment preference', async () =>
   assert.equal(p.writes.length, 1);
   assert.deepEqual(Object.keys(p.writes[0]), ['activo']);
   assert.equal(p.writes[0].activo, false);
+});
+
+test('active research capture disables and dims both protection sections', async () => {
+  const p = await popup();
+  p.context.protectionUi.setDisabledByCapture(true);
+  assert.equal(p.elements.get('estadoTexto').textContent, 'Desactivada');
+  assert.equal(p.elements.get('estadoChats').textContent, 'Desactivada');
+  assert.equal(p.elements.get('toggleActivo').checked, false);
+  assert.equal(p.elements.get('toggleChats').checked, false);
+  assert.equal(p.elements.get('estadoTexto').classList.values.has('off'), true);
+  assert.equal(p.elements.get('estadoChats').classList.values.has('off'), true);
+  assert.equal(p.elements.get('attachmentProtectionCard').attributes['data-disabled'], 'true');
+  assert.equal(p.elements.get('chatProtectionCard').attributes['data-disabled'], 'true');
+
+  p.context.protectionUi.setDisabledByCapture(false);
+  assert.equal(p.elements.get('estadoTexto').textContent, 'Activada');
+  assert.equal(p.elements.get('estadoChats').textContent, 'Desactivada');
+  assert.equal(p.elements.get('toggleActivo').checked, true);
+  assert.equal(p.elements.get('attachmentProtectionCard').attributes['data-disabled'], 'false');
 });
 
 test('chat protection is independent, off by default, and persists its own preference', async () => {
