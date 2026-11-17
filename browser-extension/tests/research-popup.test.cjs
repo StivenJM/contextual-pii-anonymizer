@@ -91,7 +91,10 @@ async function popup(overrides = {}) {
 }
 
 test('the capture card keeps the requested consent copy separate and unchecked', () => {
-  const panel = html.match(/<section[^>]*research-panel[\s\S]*?<\/section>/)[0];
+  const panel = html.match(/<details[^>]*research-panel[\s\S]*?<\/details>/)[0];
+  assert.match(panel, /<summary class="research-summary">/);
+  assert.match(panel, /id="researchPhase"/);
+  assert.ok(!/<details[^>]*\bopen\b/.test(panel), 'capture panel starts collapsed');
   for (const text of [
     'Captura de chats',
     'Puedes abrir esta ventana desde el menú de extensiones y fijar su icono a la barra del navegador.',

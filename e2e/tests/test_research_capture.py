@@ -134,6 +134,7 @@ def test_research_session_roundtrip_without_inference(
                 });
             }""")
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
+        popup.locator("#researchPanel").evaluate("el => { el.open = true; }")
         expect(popup.locator("#researchTitle")).to_have_text("Captura de chats")
         expect(popup.locator("#researchStart")).to_have_text("Iniciar en esta pestaña")
         expect(popup.locator("#researchFinish")).to_have_text("Finalizar y guardar")
@@ -368,6 +369,7 @@ def test_research_startup_rejection_preserves_setup(
         else:
             page.locator("textarea").evaluate("el => el.remove()")
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
+        popup.locator("#researchPanel").evaluate("el => { el.open = true; }")
         popup.locator("#researchKey").fill(ENROLLMENT)
         popup.locator("#researchConsent").check()
         popup.locator("#researchTraining").uncheck()
@@ -419,6 +421,7 @@ def test_research_capture_intercepts_a_renamed_composer_send_control(
         page.goto(f"{chat_site}/research-composer.html")
         page.locator("#prompt-textarea").wait_for()
         popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
+        popup.locator("#researchPanel").evaluate("el => { el.open = true; }")
         popup.locator("#researchKey").fill(ENROLLMENT)
         popup.locator("#researchConsent").check()
         page.bring_to_front()

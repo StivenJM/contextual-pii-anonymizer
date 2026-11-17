@@ -63,3 +63,8 @@ Implement chat-message protection in the browser extension: independent switch, 
 - The captured tab records the raw submitted text again; chat protection resumes after the capture stops. Other tabs keep their independent protections.
 - Updated the popup capture notice and the developer/research guides. Added unit coverage for per-tab effective state and for chat protection being bypassed during capture and resuming after stop.
 - The popup now makes the effective state visible: while the captured tab is active, both protection cards are dimmed, their switches are unchecked and disabled, and their labels read `Desactivada`. The stored global preferences are preserved and restored after capture ends. The research browser test asserts the labels, `opacity: 0.55`, and disabled switches while capture is active.
+
+### L6 — collapsible capture panel
+
+- Moved the secondary research-capture controls into a native `<details>`/`<summary>` panel. The summary shows `Captura de chats` plus the live state, and the panel starts collapsed so the primary protection switches stay prominent.
+- The capture fields, status details, errors, and actions remain inside the expandable body. E2E tests open the panel before interacting with its fields; the HTML contract test asserts it starts collapsed.
