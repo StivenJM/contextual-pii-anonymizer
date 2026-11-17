@@ -7,26 +7,34 @@
   <form id="chat">
     <textarea data-research-editor aria-label="Prompt"></textarea>
     <button data-research-send type="submit">Send</button>
+    <button id="stop-button" data-testid="stop-button" type="button" hidden>Stop</button>
     <input type="file" aria-label="Attachment">
   </form>
   <script>
     window.sentPrompts = [];
     const form = document.querySelector('form');
     const editor = document.querySelector('textarea');
+    const stop = document.querySelector('#stop-button');
     form.addEventListener('submit', event => {
       event.preventDefault();
       const text = editor.value;
       window.sentPrompts.push(text);
+      stop.hidden = false;
       const user = document.createElement('div');
       user.dataset.researchRole = 'user';
       user.textContent = text;
       document.querySelector('#history').append(user);
       editor.value = '';
-      const answer = document.createElement('div');
-      answer.dataset.researchRole = 'assistant';
-      answer.textContent = 'Partial';
+      let answer = document.querySelector('[data-research-role="assistant"]:empty');
+      if (!answer) {
+        answer = document.createElement('div');
+        answer.dataset.researchRole = 'assistant';
+      }
+      // The assistant turn follows the submitted user turn in the transcript.
       document.querySelector('#history').append(answer);
+      answer.textContent = 'Partial';
       setTimeout(() => { answer.textContent = 'Synthetic complete reply'; }, 30);
+      setTimeout(() => { stop.hidden = true; }, 300);
     });
   </script>
 </body>
