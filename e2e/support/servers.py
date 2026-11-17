@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from http.server import (
@@ -126,6 +127,7 @@ class ConverterStub(StubServer):
         self.token = token
         self.markdown = DEFAULT_MARKDOWN
         self.status = 200
+        self.delay = 0.0
         self.error = {"ok": False, "error": "synthetic failure"}
         super().__init__({("POST", "/convertir"): self._convert}, "converter")
 
@@ -136,6 +138,8 @@ class ConverterStub(StubServer):
             return 401, {"ok": False, "error": "No autorizado"}
         if self.status != 200:
             return self.status, self.error
+        if self.delay:
+            time.sleep(self.delay)
         match = FILENAME.search(request.body)
         filename = match.group(1).decode("utf-8") if match else ""
         return 200, {

@@ -197,6 +197,7 @@ def deterministic_state(
     converter.requests.clear()
     converter.markdown = DEFAULT_MARKDOWN
     converter.status = 200
+    converter.delay = 0.0
     middleware.requests.clear()
     middleware.status = 200
     middleware.protect = default_protect
