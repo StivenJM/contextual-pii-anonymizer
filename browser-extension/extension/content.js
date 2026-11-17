@@ -74,6 +74,11 @@ function enviarAlBackground(payload) {
   });
 }
 
+// El estado visual vive en el mundo aislado; este script solo envía señales.
+function notifyAttachmentStatus(action, detail = {}) {
+  window.postMessage({ direction: 'MAIN_TO_ATTACHMENT_STATUS', action, ...detail }, '*');
+}
+
 // Al cargar la página, consultamos el estado guardado.
 // Reintentamos porque el bridge puede tardar unos ms en estar listo.
 (function consultarEstadoInicial(intento = 0) {
@@ -90,9 +95,11 @@ function enviarAlBackground(payload) {
 async function processFile(file) {
   const TAMANO_MAXIMO = 20 * 1024 * 1024;
   if (file.size > TAMANO_MAXIMO) {
+    notifyAttachmentStatus('error', { message: 'El archivo supera el límite de 20 MB.' });
     console.error('[Middleware] Archivo demasiado grande:', file.size, 'bytes');
     return null;
   }
+  notifyAttachmentStatus('start', { name: file.name });
   console.log(`[Middleware] Interceptado: ${file.name}`);
 
   // Convertimos a base64
@@ -151,7 +158,9 @@ document.addEventListener('change', async (event) => {
     // viajará en el evento change sintético que disparamos a continuación
     target.dataset.lastProcessed = archivoModificado.name + archivoModificado.size;
     target.dispatchEvent(new Event('change', { bubbles: true }));
+    notifyAttachmentStatus('done');
   } catch (error) {
+    notifyAttachmentStatus('error', { message: 'No se pudo procesar el documento. Vuelve a intentarlo.' });
     console.error('[Middleware] Error en change:', error);
   }
 }, true);
@@ -354,6 +363,7 @@ window.addEventListener('drop', async (event) => {
       const omitirDragEnter = esChatGPT;
       if (despacharDropSintetico(archivoModificado, coords, targetOriginal, omitirDragEnter)) {
         console.log('[Middleware][C] Drop sintético despachado (Modo Optimizado):', archivoModificado.name);
+        notifyAttachmentStatus('done');
         return;
       }
     } else {
@@ -364,12 +374,14 @@ window.addEventListener('drop', async (event) => {
       // 1. Estrategia A: input oculto
       if (await inyectarEnInput(archivoModificado)) {
         console.log('[Middleware][A] Drop redirigido al input de archivos:', archivoModificado.name);
+        notifyAttachmentStatus('done');
         return;
       }
 
       // 2. Estrategia B: paste sintético (Gemini)
       if (inyectarPorPaste(archivoModificado)) {
         console.log('[Middleware][B] Archivo inyectado por paste sintético:', archivoModificado.name);
+        notifyAttachmentStatus('done');
         return;
       }
 
@@ -378,10 +390,13 @@ window.addEventListener('drop', async (event) => {
       // así que no lo omitimos.
       if (despacharDropSintetico(archivoModificado, coords, targetOriginal, false)) {
         console.log('[Middleware][C] Drop sintético completo despachado:', archivoModificado.name);
+        notifyAttachmentStatus('done');
         return;
       }
     }
+    notifyAttachmentStatus('error', { message: 'No se pudo adjuntar el documento al chat. Vuelve a intentarlo.' });
   } catch (error) {
+    notifyAttachmentStatus('error', { message: 'No se pudo procesar el documento. Vuelve a intentarlo.' });
     console.error('[Middleware] Error en drop:', error);
   }
 }, true);

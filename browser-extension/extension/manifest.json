@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "IA Middleware",
-  "version": "1.3",
+  "version": "1.3.1",
   "browser_specific_settings": {
     "gecko": {
       "id": "middleware@tu-dominio.com",
@@ -48,6 +48,7 @@
       "js": [
         "bridge.js",
         "research-notice.js",
+        "attachment-status.js",
         "research-content.js"
       ],
       "run_at": "document_start"
