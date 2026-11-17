@@ -138,7 +138,7 @@
 
   function intercept(event) {
     if (replaying) return;
-    const chatEnabled = !!chat?.enabled;
+    const chatEnabled = !!chat?.enabled && !recording && !paused;
     if (!chatEnabled && !recording && !paused) return;
     if ((recording || paused) && !checkScope()) return;
     const editor = visible(editorSelector);

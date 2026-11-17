@@ -47,7 +47,7 @@ Implement chat-message protection in the browser extension: independent switch, 
 - Refactored the background protection call to retain the full response and added `PROTEGER_TEXTO`; attachment protection still consumes only `protected_text`.
 - Added chat protection with contenteditable CSS-highlight ranges and a transparent textarea mirror; Python code-point offsets are converted to UTF-16 before drawing.
 - Integrated the protection gate before research capture. Research capture receives the confirmed protected text; a failed replay still reports a research incident.
-- Final checks: extension 86 passed; API 75 passed, 2 skipped; chat browser tests 12 passed; research browser tests 15 passed; attachment browser tests 6 passed; E2E non-integration 35 passed, 6 deselected; Ruff and `git diff --check` clean; documentation local links 50 files, 0 broken.
+- Final checks: extension 91 passed; API 75 passed, 2 skipped; chat browser tests 12 passed; research browser tests 15 passed; attachment browser tests 6 passed; E2E non-integration 35 passed, 6 deselected; Ruff and `git diff --check` clean; documentation local links 50 files, 0 broken.
 - Limitations: real-provider editors were not exercised; textarea and one synthetic contenteditable stand in for ChatGPT, Claude and Gemini. An editor-update failure path is implemented but not reproduced end-to-end. Server-side model/configuration changes are not observed while a confirmation card is open; the result remains bound to the in-memory draft/conversation snapshot. Docker integration tests were not run.
 
 ### L4 — card placement follow-up
@@ -55,3 +55,11 @@ Implement chat-message protection in the browser extension: independent switch, 
 - Moved the confirmation/status card from editor-relative positioning to the fixed bottom-right corner at 16 px, matching the attachment-processing card. Removed the editor-relative placement and its scroll/resize listeners.
 - When an attachment is still processing, the chat card is suppressed so it does not cover the attachment spinner; the attachment status remains the visible feedback.
 - E2E asserts computed `position: fixed`, `right: 16px`, `bottom: 16px`; chat tests 12 passed, full non-integration E2E 35 passed.
+
+### L5 — research capture pauses both protections
+
+- `obtenerChatProtection(tabId)` now returns false while that tab's research session is recording or paused, matching the existing attachment behavior. The background broadcasts the effective per-tab state.
+- `research-content` also bypasses the chat gate whenever its own recording/paused state is active, covering the interval before a broadcast arrives.
+- The captured tab records the raw submitted text again; chat protection resumes after the capture stops. Other tabs keep their independent protections.
+- Updated the popup capture notice and the developer/research guides. Added unit coverage for per-tab effective state and for chat protection being bypassed during capture and resuming after stop.
+- The popup now makes the effective state visible: while the captured tab is active, both protection cards are dimmed, their switches are unchecked and disabled, and their labels read `Desactivada`. The stored global preferences are preserved and restored after capture ends. The research browser test asserts the labels, `opacity: 0.55`, and disabled switches while capture is active.

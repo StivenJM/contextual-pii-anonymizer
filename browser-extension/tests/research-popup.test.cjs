@@ -28,6 +28,7 @@ async function popup(overrides = {}) {
   const calls = [];
   const copied = [];
   const dialogs = [];
+  const captureDisabled = [];
   const timers = [];
   let timerSequence = 0;
   let clipboardFails = false;
@@ -71,11 +72,12 @@ async function popup(overrides = {}) {
       if (clipboardFails) throw new Error('synthetic clipboard failure');
       copied.push(value);
     } } },
+    protectionUi: { setDisabledByCapture(value) { captureDisabled.push(value); } },
     confirm: text => { dialogs.push(text); return true; }
   });
   await settle();
   return {
-    elements, calls, copied, dialogs, advance,
+    elements, calls, copied, dialogs, captureDisabled, advance,
     failClipboard() { clipboardFails = true; },
     failRuntime() { runtimeFails = true; },
     failStart(message) { startError = message; },
@@ -160,6 +162,29 @@ test('interruption, pending and withdrawal explain a known reason without invent
   assert.equal(describe({ view: 'pending' }).label.includes('guardar'), true);
   assert.match(describe({ view: 'pending', last_error: 'La API respondió con el código 503.' }).pendingReason, /503/);
   assert.match(describe({ view: 'withdrawing', last_error: 'offline' }).withdrawalReason, /offline/);
+});
+
+test('active capture disables protections only on the captured tab', async () => {
+  const recording = await popup({
+    view: 'recording',
+    phase: 'recording',
+    tab: { id: 7, exists: true, active: true }
+  });
+  assert.equal(recording.captureDisabled.at(-1), true);
+
+  const paused = await popup({
+    view: 'interrupted',
+    phase: 'paused',
+    tab: { id: 7, exists: true, active: true }
+  });
+  assert.equal(paused.captureDisabled.at(-1), true);
+
+  const otherTab = await popup({
+    view: 'recording',
+    phase: 'recording',
+    tab: { id: 7, exists: true, active: false }
+  });
+  assert.equal(otherTab.captureDisabled.at(-1), false);
 });
 
 test('the participation-code label never depends on origin or key type', () => {

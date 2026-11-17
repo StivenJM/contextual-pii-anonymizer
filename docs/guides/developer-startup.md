@@ -169,7 +169,7 @@ Debes obtener `status: ready`. El archivo queda en `/data/research/capture.sqlit
 
 1. Abre un chat compatible nuevo; usa las [tarjetas de escenario ficticias](../project/experimentacion/research-study/scenario-cards.md).
 2. Abre el popup de la extensión. Introduce el **Código de participación** y `research-v1`, y revisa explícitamente el consentimiento de recolección. La clave del investigador nunca se escribe en este campo.
-3. Pulsa **Iniciar en esta pestaña**. Confirma el aviso **Captura activa** antes de enviar nada; se cierra con **×** o solo tras unos segundos, y cerrarlo no detiene la captura. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Solo pausa la protección ordinaria de adjuntos en la pestaña seleccionada mientras graba o está en pausa.
+3. Pulsa **Iniciar en esta pestaña**. Confirma el aviso **Captura activa** antes de enviar nada; se cierra con **×** o solo tras unos segundos, y cerrarlo no detiene la captura. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Desactiva las protecciones ordinarias de adjuntos y chats en la pestaña seleccionada mientras graba o está en pausa.
    El progreso y los errores aparecen justo encima de ese botón. Una conversación existente se rechaza de forma explícita: abre un chat nuevo y vacío en lugar de intentar importar su historial. Un editor vacío visible puede no mostrar el botón de envío hasta que escribas; eso no impide la activación. Un editor o adaptador de página ausente es un error distinto. Los inicios fallidos conservan los campos de configuración en el popup actual; el código de participación solo se limpia después de una activación confirmada y nunca se guarda como configuración del popup. Cerrar el popup del navegador descarta sus campos transitorios.
 4. Define **Identificador de tarea** y pulsa **Asignar tarea**; envía texto ficticio y espera a que termine la respuesta. El modo de investigación es solo texto: no adjuntes archivos.
 5. Pulsa **Finalizar y guardar**. Una confirmación de la API debe mostrar un identificador. Cópialo antes de iniciar otra sesión.
@@ -185,7 +185,7 @@ La extensión reutiliza un único interruptor global y un estado de investigaci�
 |---|---|---|
 | **Protección de adjuntos: Activada** | Convierte los adjuntos compatibles a Markdown y los envía a la API para desidentificarlos antes de reemplazarlos en el chat | No anonimiza el texto que escribes en el chat; solo cubre adjuntos |
 | **Protección de adjuntos: Desactivada** | Los adjuntos se envían sin convertir ni proteger | No detiene Docker, no desactiva la API de investigación y no autoriza una grabación |
-| **Protección de chats: Activada** | Revisa el borrador al intentar enviarlo; si propone cambios, muestra un resumen y exige confirmación antes de enviar la versión protegida | No analiza mientras escribes, no oculta al proveedor el texto que ya escribiste y no sustituye la protección de adjuntos |
+| **Protección de chats: Activada** | Revisa el borrador al intentar enviarlo; si propone cambios, muestra un resumen y exige confirmación antes de enviar la versión protegida | No analiza mientras escribes, no oculta al proveedor el texto que ya escribiste, no sustituye la protección de adjuntos y se desactiva en la pestaña con captura de investigación |
 | **Protección de chats: Desactivada** | El texto se envía sin la revisión de la extensión | No afecta la protección de adjuntos ni la captura de investigación |
 | **Sin captura** | No hay una sesión de investigación activa en esta pestaña | No impide el flujo ordinario de adjuntos |
 | **Iniciando** | La autorización de la sesión está en curso; todavía no se recolecta | No confirma el consentimiento por sí solo |
@@ -194,9 +194,9 @@ La extensión reutiliza un único interruptor global y un estado de investigaci�
 | **Pendiente de guardar o reintentar** | La sesión está congelada esperando la API; la protección ordinaria se reanuda | No confirma un guardado sin un identificador de la API |
 | **Retiro pendiente** | El texto local ya se borró y falta confirmar la eliminación remota | No elimina respaldos externos, formularios ni historial del proveedor |
 
-La captura en una pestaña pausa **solo** la protección de esa pestaña mientras graba o está en pausa. Las demás pestañas conservan su comportamiento. Una sesión pendiente de guardar o en retiro reanuda la protección ordinaria. El interruptor global se deshabilita mientras hay una sesión de investigación activa para evitar cambiar la política a mitad de la captura.
+La captura en una pestaña desactiva **solo** las protecciones de esa pestaña mientras graba o está en pausa. Las demás pestañas conservan su comportamiento. Una sesión pendiente de guardar o en retiro reactiva las protecciones ordinarias. Los interruptores globales se deshabilitan mientras hay una sesión de investigación activa para evitar cambiar la política a mitad de la captura.
 
-Ambos interruptores son independientes. La protección de chats empieza **desactivada** en instalaciones existentes y debe habilitarse explícitamente.
+Ambos interruptores son independientes. La protección de chats empieza **desactivada** en instalaciones existentes y debe habilitarse explícitamente. Mientras la captura de investigación graba o está en pausa, las dos protecciones se desactivan en esa pestaña y se reactivan al terminar.
 
 Que la API o el conversor respondan no significa que la protección esté activada. El pie del popup indica qué backends necesita el flujo; el estado real es el del interruptor **Protección de adjuntos**. Tampoco existe un modo para convertir sin anonimizar: añadirlo sería una decisión de producto separada, no una variante silenciosa del flujo actual.
 

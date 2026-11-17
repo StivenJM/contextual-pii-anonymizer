@@ -157,6 +157,8 @@
   }
   function render(state) {
     const view = describe(state);
+    const captureDisabled = (view.view === 'recording' || view.view === 'interrupted') && state.tab?.active === true;
+    globalThis.protectionUi?.setDisabledByCapture(captureDisabled);
     for (const [key, id] of Object.entries(SECTION_IDS)) {
       const element = byId(id);
       if (!element) continue;
@@ -207,6 +209,7 @@
       setDisabled(id, busy || !view.sections.setup);
     }
     setDisabled('toggleActivo', state.view !== 'idle' && state.view !== 'saved');
+    setDisabled('toggleChats', state.view !== 'idle' && state.view !== 'saved');
   }
 
   async function refresh() {

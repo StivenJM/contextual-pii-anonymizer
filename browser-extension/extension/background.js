@@ -28,10 +28,10 @@ async function obtenerEstado(tabId) {
   return activo && !isResearchCapturing(researchState, tabId);
 }
 
-async function obtenerChatProtection() {
-  const { chatProtection } =
-    await browserAPI.storage.local.get({ chatProtection: false });
-  return chatProtection === true;
+async function obtenerChatProtection(tabId) {
+  const { chatProtection, researchState } =
+    await browserAPI.storage.local.get({ chatProtection: false, researchState: null });
+  return chatProtection === true && !isResearchCapturing(researchState, tabId);
 }
 
 browserAPI.storage.onChanged.addListener((changes, area) => {
@@ -41,7 +41,7 @@ browserAPI.storage.onChanged.addListener((changes, area) => {
     { url: SITIOS_SOPORTADOS },
     (tabs) => {
       for (const tab of tabs) {
-        Promise.all([obtenerEstado(tab.id), obtenerChatProtection()])
+        Promise.all([obtenerEstado(tab.id), obtenerChatProtection(tab.id)])
           .then(([activo, chatProtection]) => browserAPI.tabs.sendMessage(
             tab.id,
             {
@@ -509,7 +509,7 @@ browserAPI.runtime.onMessage.addListener(
     // --------------------------------------------------------
 
     if (message.type === 'OBTENER_ESTADO') {
-      Promise.all([obtenerEstado(sender.tab?.id), obtenerChatProtection()])
+      Promise.all([obtenerEstado(sender.tab?.id), obtenerChatProtection(sender.tab?.id)])
         .then(([activo, chatProtection]) => {
           sendResponse({
             ok: true,
