@@ -164,6 +164,9 @@ class MiddlewareStub(StubServer):
         self.token = token
         self.status = 200
         self.protect: Callable[[str], str] = default_protect
+        self.operations: list[dict[str, object]] | None = None
+        self.warnings: list[str] = []
+        self.delay = 0.0
         super().__init__(
             {("POST", "/api/interactions/protect"): self._protect},
             "middleware",
@@ -174,8 +177,22 @@ class MiddlewareStub(StubServer):
     ) -> tuple[int, object]:
         if self.status != 200:
             return self.status, {"message": "synthetic protection failure"}
+        if self.delay:
+            time.sleep(self.delay)
         payload = request.json
-        return 200, {"protected_text": self.protect(payload.get("text", ""))}
+        original = payload.get("text", "")
+        protected = self.protect(original)
+        operations = self.operations
+        if operations is None:
+            operations = default_operations(original)
+        return 200, {
+            "original_text": original,
+            "protected_text": protected,
+            "detections": [],
+            "operations": operations,
+            "mapping_gaps": [],
+            "warnings": self.warnings,
+        }
 
     @property
     def last_text(self) -> str:
@@ -187,6 +204,36 @@ class MiddlewareStub(StubServer):
 def default_protect(text: str) -> str:
     protected = EMAIL.sub("<EMAIL>", text)
     return PHONE.sub("<PHONE>", protected)
+
+
+def default_operations(text: str) -> list[dict[str, object]]:
+    """Derive the operations a real response would report for the default rule."""
+    operations: list[dict[str, object]] = []
+    for match in EMAIL.finditer(text):
+        operations.append(
+            {
+                "canonical_type": "EMAIL",
+                "start": match.start(),
+                "end": match.end(),
+                "original_text": match.group(),
+                "replacement": "<EMAIL>",
+                "action": "REPLACE_WITH_LABEL",
+                "mapping_gap": False,
+            }
+        )
+    for match in PHONE.finditer(text):
+        operations.append(
+            {
+                "canonical_type": "PHONE",
+                "start": match.start(),
+                "end": match.end(),
+                "original_text": match.group(),
+                "replacement": "<PHONE>",
+                "action": "REPLACE_WITH_LABEL",
+                "mapping_gap": False,
+            }
+        )
+    return operations
 
 
 class _QuietStaticHandler(SimpleHTTPRequestHandler):

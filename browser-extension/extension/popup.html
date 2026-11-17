@@ -163,6 +163,7 @@
     .research-facts dt { color: var(--texto-suave); flex: 0 0 auto; }
     .research-facts dd { color: var(--texto); text-align: right; overflow-wrap: anywhere; }
     .ayuda { font-size: 11px; line-height: 1.45; color: var(--texto-suave); }
+    .toggle-help { margin-top: 4px; max-width: 220px; }
     .error {
       font-size: 12px; line-height: 1.45; padding: 8px;
       border: 1px solid #d58686; border-radius: 5px;
@@ -187,6 +188,20 @@
       </div>
       <label class="switch">
         <input type="checkbox" id="toggleActivo">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="fila-toggle">
+      <div>
+        <div class="estado-etiqueta">Protección de chats</div>
+        <span id="estadoChats" class="estado-texto off">Desactivada</span>
+        <p class="ayuda toggle-help">Revisa y protege tus mensajes antes de enviarlos</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="toggleChats">
         <span class="slider"></span>
       </label>
     </div>

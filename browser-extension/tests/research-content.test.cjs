@@ -10,13 +10,16 @@ const script = fs.readFileSync(
 );
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
-function harness() {
+function harness(options = {}) {
   const listeners = {};
   const sent = [];
   const notices = { success: 0, disposed: 0, incidents: [] };
   const windowListeners = {};
   const editor = { value: '', innerText: '', getClientRects: () => [1], contains: () => false };
-  const sendButton = { getClientRects: () => [1], click() {}, closest: () => null };
+  const sendButton = {
+    getClientRects: () => [1], closest: () => null, clicks: 0,
+    click() { sendButton.clicks += 1; }
+  };
   const location = { pathname: '/', hostname: 'chatgpt.com' };
   let userText = '';
   const RealDate = Date;
@@ -45,6 +48,7 @@ function harness() {
     },
     location,
     Date: TestDate,
+    chatProtection: options.chatProtection,
     window: { addEventListener(type, listener) { windowListeners[type] = listener; } },
     MutationObserver: class { observe() {} disconnect() {} },
     crypto: { randomUUID: () => `uuid-${Math.random().toString(16).slice(2)}` },
@@ -276,4 +280,32 @@ test('a new-chat route normalised before sending is not an interruption', async 
   h.clickStray();
   await settle();
   assert.equal(h.sent.filter(message => message.type === 'RESEARCH_INTERRUPTED').length, 0);
+});
+
+test('chat protection gates research capture and replays protected text once', async () => {
+  const calls = [];
+  const chatProtection = {
+    enabled: true,
+    readText: editor => editor.value,
+    async authorize({ editor, text }) {
+      calls.push(text);
+      editor.value = 'mensaje protegido';
+      return { status: 'send', text: 'mensaje protegido' };
+    }
+  };
+  const h = harness({ chatProtection });
+  const { documentNonce } = await h.prepared;
+  await settle();
+  await send(h.listeners.message, { type: 'RESEARCH_ACTIVATE' }, documentNonce);
+  h.editor.value = 'mensaje con ana@example.com';
+  h.clickSend();
+  await settle();
+  await settle();
+  await settle();
+
+  const appends = h.sent.filter(message => message.type === 'RESEARCH_APPEND');
+  assert.deepEqual(calls, ['mensaje con ana@example.com']);
+  assert.equal(appends.length, 1);
+  assert.equal(appends[0].event.text, 'mensaje protegido');
+  assert.equal(h.button.clicks, 1);
 });

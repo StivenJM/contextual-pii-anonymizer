@@ -50,3 +50,20 @@ test('disabling protection persists only the attachment preference', async () =>
   assert.deepEqual(Object.keys(p.writes[0]), ['activo']);
   assert.equal(p.writes[0].activo, false);
 });
+
+test('chat protection is independent, off by default, and persists its own preference', async () => {
+  const p = await popup();
+  assert.ok(html.includes('Protección de chats'));
+  assert.ok(html.includes('Revisa y protege tus mensajes antes de enviarlos'));
+  assert.equal(p.elements.get('toggleChats').checked, false);
+  assert.equal(p.elements.get('estadoChats').textContent, 'Desactivada');
+
+  p.elements.get('toggleChats').checked = true;
+  p.elements.get('toggleChats').listeners.change();
+  await settle();
+
+  assert.equal(p.elements.get('estadoChats').textContent, 'Activada');
+  assert.equal(p.elements.get('estadoTexto').textContent, 'Activada');
+  assert.deepEqual(Object.keys(p.writes.at(-1)), ['chatProtection']);
+  assert.equal(p.writes.at(-1).chatProtection, true);
+});

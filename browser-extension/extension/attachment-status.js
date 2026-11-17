@@ -201,6 +201,7 @@
     function start(name) {
       removeAll();
       pendingName = typeof name === 'string' ? name.trim() : '';
+      state = 'processing';
       startTimer = delay(() => {
         startTimer = null;
         mount();
@@ -210,10 +211,12 @@
 
     function done() {
       clearStart();
-      if (state === 'error' || !host) {
-        if (!host) pendingName = '';
+      if (!host) {
+        state = 'idle';
+        pendingName = '';
         return;
       }
+      if (state === 'error') return;
       setState('done');
       scheduleRemove(doneDuration);
     }

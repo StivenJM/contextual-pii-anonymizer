@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Synthetic chat protection - textarea</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; }
+  #prompt { width: 28rem; height: 7rem; }
+</style>
+<body>
+  <h1>Fake chat protection - textarea</h1>
+  <form id="chat">
+    <textarea id="prompt" data-research-editor aria-label="Prompt"></textarea>
+    <input id="file" type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx">
+    <button id="send" data-research-send type="submit">Send</button>
+  </form>
+  <script>
+    window.sentPrompts = [];
+    const editor = document.querySelector('#prompt');
+    document.querySelector('form').addEventListener('submit', event => {
+      event.preventDefault();
+      window.sentPrompts.push(editor.value);
+      editor.value = '';
+    });
+  </script>
+</body>
+</html>

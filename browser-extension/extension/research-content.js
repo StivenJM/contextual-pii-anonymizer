@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const api = typeof browser !== 'undefined' ? browser : chrome;
+  const chat = typeof chatProtection !== 'undefined' ? chatProtection : null;
   const documentNonce = crypto.randomUUID();
   const editorSelector = '[data-research-editor], #prompt-textarea, textarea[data-mobile-composer-prompt], div.ProseMirror[contenteditable="true"], rich-textarea [contenteditable="true"], [contenteditable="true"][role="textbox"]';
   const sendSelector = '[data-research-send], [data-testid="send-button"], [data-testid="send-message-button"], button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Send Message"], button[aria-label="Enviar mensaje"], button[aria-label="Enviar"], #composer-submit-button, form button[type="submit"], button[aria-label*="Send" i], button[aria-label*="Enviar" i], button.send-button';
@@ -136,8 +137,10 @@
   }
 
   function intercept(event) {
-    if (replaying || (!recording && !paused)) return;
-    checkScope();
+    if (replaying) return;
+    const chatEnabled = !!chat?.enabled;
+    if (!chatEnabled && !recording && !paused) return;
+    if ((recording || paused) && !checkScope()) return;
     const editor = visible(editorSelector);
     const isEnter = event.type === 'keydown' && event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && !event.isComposing && editor?.contains(event.target);
     const isClick = event.type === 'click' && !!event.target.closest?.(sendSelector);
@@ -145,30 +148,60 @@
     if (!isEnter && !isClick && !isSubmit) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    if (paused || !editor) { report('send_blocked'); return; }
+    if (paused) { report('send_blocked'); return; }
+    if (!editor) { if (recording) report('send_blocked'); return; }
     // The composer may hide or rename its send control; never send uncaptured.
     const readiness = sendReadiness(editor);
-    if (readiness === 'hidden' || readiness === 'disabled') { report('send_blocked'); return; }
-    if (readiness === 'missing') { report('send_control_missing'); return; }
+    if (readiness === 'hidden' || readiness === 'disabled') {
+      if (recording) report('send_blocked');
+      return;
+    }
+    if (readiness === 'missing') {
+      if (recording) report('send_control_missing');
+      return;
+    }
     if (sending) return;
-    const text = textOf(editor);
-    if (!text?.trim()) return;
+    const editorText = () => chat?.enabled && chat.readText ? chat.readText(editor) : textOf(editor);
+    const originalText = editorText();
+    if (!originalText?.trim()) return;
     sending = true;
     inFlight = (async () => {
+      let text = originalText;
+      let researchAttempt = false;
       try {
+        if (chatEnabled) {
+          const outcome = await chat.authorize({
+            editor,
+            text: originalText,
+            conversation: location.href
+          });
+          if (outcome.status !== 'send') return;
+          text = outcome.text;
+          if (!chat.enabled) return;
+        }
+        if (!recording && !paused) {
+          if (editorText() !== text) throw new Error('El borrador cambió antes de enviarse.');
+          replaying = true;
+          try {
+            if (!replaySend(editor)) throw new Error('No se encontró el control de envío.');
+          } finally { replaying = false; }
+          return;
+        }
+        researchAttempt = true;
         await snapshotAssistants();
         if (!checkScope()) throw new Error('La conversación cambió.');
         await append({ event_id: crypto.randomUUID(), role: 'user', text, captured_at: new Date().toISOString() });
         sentText = text;
         submittedCount += 1;
         if (!checkScope()) throw new Error('La conversación cambió.');
-        if (textOf(editor) !== text) throw new Error('El borrador cambió antes de enviarse.');
+        if (editorText() !== text) throw new Error('El borrador cambió antes de enviarse.');
         replaying = true;
         try {
           if (!replaySend(editor)) throw new Error('No se encontró el control de envío.');
         } finally { replaying = false; }
-      } catch { report('send_failed'); }
-      finally { sending = false; }
+      } catch {
+        if (researchAttempt) report('send_failed');
+      } finally { sending = false; }
     })();
   }
   for (const type of ['click', 'keydown', 'submit']) window.addEventListener(type, intercept, true);

@@ -185,6 +185,8 @@ La extensión reutiliza un único interruptor global y un estado de investigaci�
 |---|---|---|
 | **Protección de adjuntos: Activada** | Convierte los adjuntos compatibles a Markdown y los envía a la API para desidentificarlos antes de reemplazarlos en el chat | No anonimiza el texto que escribes en el chat; solo cubre adjuntos |
 | **Protección de adjuntos: Desactivada** | Los adjuntos se envían sin convertir ni proteger | No detiene Docker, no desactiva la API de investigación y no autoriza una grabación |
+| **Protección de chats: Activada** | Revisa el borrador al intentar enviarlo; si propone cambios, muestra un resumen y exige confirmación antes de enviar la versión protegida | No analiza mientras escribes, no oculta al proveedor el texto que ya escribiste y no sustituye la protección de adjuntos |
+| **Protección de chats: Desactivada** | El texto se envía sin la revisión de la extensión | No afecta la protección de adjuntos ni la captura de investigación |
 | **Sin captura** | No hay una sesión de investigación activa en esta pestaña | No impide el flujo ordinario de adjuntos |
 | **Iniciando** | La autorización de la sesión está en curso; todavía no se recolecta | No confirma el consentimiento por sí solo |
 | **Grabando** | La sesión archiva el texto enviado y las respuestas visibles en la pestaña elegida | No protege ni desidentifica ese texto |
@@ -193,6 +195,8 @@ La extensión reutiliza un único interruptor global y un estado de investigaci�
 | **Retiro pendiente** | El texto local ya se borró y falta confirmar la eliminación remota | No elimina respaldos externos, formularios ni historial del proveedor |
 
 La captura en una pestaña pausa **solo** la protección de esa pestaña mientras graba o está en pausa. Las demás pestañas conservan su comportamiento. Una sesión pendiente de guardar o en retiro reanuda la protección ordinaria. El interruptor global se deshabilita mientras hay una sesión de investigación activa para evitar cambiar la política a mitad de la captura.
+
+Ambos interruptores son independientes. La protección de chats empieza **desactivada** en instalaciones existentes y debe habilitarse explícitamente.
 
 Que la API o el conversor respondan no significa que la protección esté activada. El pie del popup indica qué backends necesita el flujo; el estado real es el del interruptor **Protección de adjuntos**. Tampoco existe un modo para convertir sin anonimizar: añadirlo sería una decisión de producto separada, no una variante silenciosa del flujo actual.
 

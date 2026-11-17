@@ -28,18 +28,26 @@ async function obtenerEstado(tabId) {
   return activo && !isResearchCapturing(researchState, tabId);
 }
 
+async function obtenerChatProtection() {
+  const { chatProtection } =
+    await browserAPI.storage.local.get({ chatProtection: false });
+  return chatProtection === true;
+}
+
 browserAPI.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || (!('activo' in changes) && !('researchState' in changes))) return;
+  if (area !== 'local' || (!('activo' in changes) && !('chatProtection' in changes) && !('researchState' in changes))) return;
 
   browserAPI.tabs.query(
     { url: SITIOS_SOPORTADOS },
     (tabs) => {
       for (const tab of tabs) {
-        obtenerEstado(tab.id).then((activo) => browserAPI.tabs.sendMessage(
+        Promise.all([obtenerEstado(tab.id), obtenerChatProtection()])
+          .then(([activo, chatProtection]) => browserAPI.tabs.sendMessage(
             tab.id,
             {
               type: 'ESTADO_CAMBIADO',
-              activo
+              activo,
+              chatProtection
             }
           ))
           .catch(() => { });
@@ -421,29 +429,23 @@ function limpiarMarkdown(markdown) {
 // Anonimización Markdown -> protected_text
 // ============================================================
 
-async function anonimizarMarkdown(markdown) {
+async function protegerTexto(text) {
   console.log(
-    '[Middleware] Enviando Markdown al anonimizador...'
+    '[Middleware] Enviando texto al anonimizador...'
   );
   const inicio = performance.now();
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ text })
+  };
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    options.signal = AbortSignal.timeout(30000);
+  }
 
-  const respuesta = await fetch(
-    SERVIDOR_ANONIMIZACION,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-
-      // JSON.stringify convierte automáticamente
-      // los saltos de línea reales en \n para transportarlos
-      // correctamente dentro del JSON.
-      body: JSON.stringify({
-        text: markdown
-      })
-    }
-  );
-
+  const respuesta = await fetch(SERVIDOR_ANONIMIZACION, options);
   const textoRespuesta = await respuesta.text();
 
   let data;
@@ -452,35 +454,28 @@ async function anonimizarMarkdown(markdown) {
     data = JSON.parse(textoRespuesta);
   } catch {
     throw new Error(
-      'El servidor de anonimización devolvió una respuesta no válida: ' +
-      textoRespuesta
+      'El servidor de anonimización devolvió una respuesta no válida.'
     );
   }
 
   if (!respuesta.ok) {
-    let detalle = '';
-
-    if (data.message) {
-      detalle = data.message;
-    } else if (data.detail) {
-      detalle =
-        typeof data.detail === 'string'
-          ? data.detail
-          : JSON.stringify(data.detail);
-    }
-
     throw new Error(
-      detalle ||
       `Error en servidor de anonimización (${respuesta.status})`
     );
   }
 
   if (
+    !data ||
+    data.original_text !== text ||
     typeof data.protected_text !== 'string' ||
-    data.protected_text.length === 0
+    data.protected_text.length === 0 ||
+    !Array.isArray(data.detections) ||
+    !Array.isArray(data.operations) ||
+    !Array.isArray(data.mapping_gaps) ||
+    !Array.isArray(data.warnings)
   ) {
     throw new Error(
-      'El anonimizador no devolvió protected_text válido.'
+      'El anonimizador devolvió una respuesta inconsistente.'
     );
   }
 
@@ -491,10 +486,14 @@ async function anonimizarMarkdown(markdown) {
     `[Middleware][TIEMPO] Anonimización: ${segundos} segundos`
   );
 
+  return data;
+}
+
+async function anonimizarMarkdown(markdown) {
+  const data = await protegerTexto(markdown);
   console.log(
     '[Middleware] Anonimización completada correctamente.'
   );
-
   return data.protected_text;
 }
 
@@ -510,11 +509,12 @@ browserAPI.runtime.onMessage.addListener(
     // --------------------------------------------------------
 
     if (message.type === 'OBTENER_ESTADO') {
-      obtenerEstado(sender.tab?.id)
-        .then((activo) => {
+      Promise.all([obtenerEstado(sender.tab?.id), obtenerChatProtection()])
+        .then(([activo, chatProtection]) => {
           sendResponse({
             ok: true,
-            activo
+            activo,
+            chatProtection
           });
         })
         .catch((error) => {
@@ -524,6 +524,28 @@ browserAPI.runtime.onMessage.addListener(
           });
         });
 
+      return true;
+    }
+
+    if (message.type === 'PROTEGER_TEXTO') {
+      const text = message.text;
+      if (typeof text !== 'string' || !text.trim()) {
+        sendResponse({ ok: false, error: 'El mensaje está vacío.' });
+        return true;
+      }
+      if (text.length > 200000) {
+        sendResponse({
+          ok: false,
+          error: 'El mensaje es demasiado largo para revisarlo.'
+        });
+        return true;
+      }
+      protegerTexto(text)
+        .then(protection => sendResponse({ ok: true, protection }))
+        .catch(() => sendResponse({
+          ok: false,
+          error: 'No se pudo revisar el mensaje. Revisa la conexión e inténtalo de nuevo.'
+        }));
       return true;
     }
 

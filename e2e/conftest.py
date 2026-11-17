@@ -201,6 +201,9 @@ def deterministic_state(
     middleware.requests.clear()
     middleware.status = 200
     middleware.protect = default_protect
+    middleware.operations = None
+    middleware.warnings = []
+    middleware.delay = 0.0
 
 
 @pytest.fixture
