@@ -68,3 +68,15 @@ Implement chat-message protection in the browser extension: independent switch, 
 
 - Moved the secondary research-capture controls into a native `<details>`/`<summary>` panel. The summary shows `Captura de chats` plus the live state, and the panel starts collapsed so the primary protection switches stay prominent.
 - The capture fields, status details, errors, and actions remain inside the expandable body. E2E tests open the panel before interacting with its fields; the HTML contract test asserts it starts collapsed.
+
+### L7 — assistant response capture hardening
+
+- Assistant baseline tracking changed from node identity to node-to-initial-text. An empty assistant placeholder present before capture is now recorded once it receives the real response instead of being skipped as historical.
+- Expanded assistant selectors for ChatGPT, Claude and Gemini, and added delayed snapshots after a research send as a fallback to the mutation observer.
+- Added an E2E scenario with an assistant placeholder created before capture; the stored record now proves the assistant response is included.
+- Added support for the new ChatGPT layout selectors (`data-chatgpt-search-unit-key`, `data-markdown-text-style="assistant-message"`) and new user markers.
+- Replaced fixed 1.2 s/4 s snapshots with provider streaming/Stop detection: the observer updates the current response, and the transition back to idle triggers a short final settle snapshot. The finish path still takes a last snapshot; no fixed post-send timer decides completion.
+- Assistant captures are now bounded to nodes **after the last matching user turn**. Surveys, virtualized history, and re-mounted old assistant messages above that anchor are ignored instead of being appended again. If no user anchor exists and generation is idle, no assistant snapshot is taken.
+- Added an E2E regression that prepends an old assistant message (survey-like remount) before finishing; the record still contains exactly the current user/assistant pair.
+- Documentation states that both the submitted message and the rendered assistant reply are stored.
+- Final checks: extension 91 passed; research browser tests 17 passed; full non-integration E2E 37 passed, 6 deselected; `git diff --check` clean.

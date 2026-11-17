@@ -90,6 +90,7 @@ def research_api(tmp_path):
         "send_later",
         "mobile_composer",
         "mobile_composer_enter",
+        "assistant_placeholder",
     ],
 )
 def test_research_session_roundtrip_without_inference(
@@ -108,6 +109,12 @@ def test_research_session_roundtrip_without_inference(
     try:
         page.goto(f"{chat_site}/research-chat.html")
         page.locator("textarea").wait_for()
+        if scenario == "assistant_placeholder":
+            page.evaluate("""() => {
+                const placeholder = document.createElement('div');
+                placeholder.dataset.researchRole = 'assistant';
+                document.querySelector('#history').append(placeholder);
+            }""")
         if scenario in ("mobile_composer", "mobile_composer_enter"):
             # Reproduce the semantic attributes supplied from the live composer.
             # Do not retain provider-generated classes, signal IDs or user text.
@@ -153,7 +160,9 @@ def test_research_session_roundtrip_without_inference(
         expect(popup.locator("#researchTraining")).to_be_disabled()
         expect(popup.locator("#estadoTexto")).to_have_text("Desactivada")
         expect(popup.locator("#estadoChats")).to_have_text("Desactivada")
-        expect(popup.locator("#attachmentProtectionCard")).to_have_css("opacity", "0.55")
+        expect(popup.locator("#attachmentProtectionCard")).to_have_css(
+            "opacity", "0.55"
+        )
         expect(popup.locator("#toggleActivo")).to_be_disabled()
         expect(popup.locator("#toggleChats")).to_be_disabled()
         if scenario == "send_later":
@@ -326,6 +335,74 @@ def test_research_session_roundtrip_without_inference(
                 )
                 is None
             )
+    finally:
+        page.close()
+        popup.close()
+
+
+def test_new_chatgpt_layout_stores_user_and_assistant_events(
+    browser_factory, chat_site, research_api
+):
+    harness = browser_factory(
+        chat_origin=chat_site,
+        converter_url=f"{research_api}/convertir",
+        middleware_url=f"{research_api}/api/interactions/protect",
+        name="research-new-chatgpt-" + uuid4().hex[:8],
+    )
+    page = harness.context.new_page()
+    popup = harness.context.new_page()
+    try:
+        page.goto(f"{chat_site}/research-chat-new-chatgpt.html")
+        editor = page.locator("#prompt-textarea")
+        editor.wait_for()
+        popup.goto(f"chrome-extension://{harness.extension_id}/popup.html")
+        popup.locator("#researchPanel").evaluate("el => { el.open = true; }")
+        popup.locator("#researchKey").fill(ENROLLMENT)
+        popup.locator("#researchConsent").check()
+        page.bring_to_front()
+        popup.locator("#researchStart").evaluate("el => el.click()")
+        page.wait_for_function(
+            "document.querySelector('[data-research-notice]')"
+            "?.shadowRoot?.textContent.includes('Captura activa')"
+        )
+
+        prompt = "  Synthetic new layout prompt\n"
+        editor.fill(prompt)
+        page.locator("#composer-submit-button").click()
+        page.wait_for_function("() => window.sentPrompts.length === 1")
+        page.wait_for_function(
+            "document.querySelector('[data-markdown-text-style=\"assistant-message\"]')"
+            "?.textContent === 'Synthetic complete reply'"
+        )
+        page.wait_for_timeout(400)
+        page.evaluate(
+            """() => {
+                const old = document.createElement('div');
+                old.dataset.markdownTextStyle = 'assistant-message';
+                old.textContent = 'Old assistant message that must not be captured';
+                document.querySelector('#history').prepend(old);
+            }"""
+        )
+        page.wait_for_timeout(400)
+
+        popup.locator(
+            "#researchFinish:enabled, #researchFinishInterrupted:enabled, "
+            "#researchRetrySave:enabled"
+        ).first.evaluate("el => el.click()")
+        popup.wait_for_function(
+            "() => document.querySelector('#researchReceipt')?.value.length === 32"
+        )
+        receipt = popup.locator("#researchReceipt").input_value()
+        exported = httpx.get(
+            f"{research_api}/api/research/records/{receipt}",
+            headers={"X-Research-Key": KEY},
+        )
+        assert exported.status_code == 200
+        record = exported.json()
+        events = [(event["role"], event["text"]) for event in record["events"]]
+        assert [role for role, _text in events] == ["user", "assistant"]
+        assert "Synthetic new layout prompt" in events[0][1]
+        assert events[1][1] == "Synthetic complete reply"
     finally:
         page.close()
         popup.close()

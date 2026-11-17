@@ -6,7 +6,7 @@
   const documentNonce = crypto.randomUUID();
   const editorSelector = '[data-research-editor], #prompt-textarea, textarea[data-mobile-composer-prompt], div.ProseMirror[contenteditable="true"], rich-textarea [contenteditable="true"], [contenteditable="true"][role="textbox"]';
   const sendSelector = '[data-research-send], [data-testid="send-button"], [data-testid="send-message-button"], button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Send Message"], button[aria-label="Enviar mensaje"], button[aria-label="Enviar"], #composer-submit-button, form button[type="submit"], button[aria-label*="Send" i], button[aria-label*="Enviar" i], button.send-button';
-  const assistantSelector = '[data-research-role="assistant"], [data-message-author-role="assistant"], .font-claude-response, model-response';
+  const assistantSelector = '[data-research-role="assistant"], [data-message-author-role="assistant"], [data-message-author="assistant"], [data-testid="assistant-message"], [data-testid="assistant-turn"], [data-chatgpt-search-unit-key$=":assistant"], [data-content-search-unit-key$=":assistant"], [data-markdown-text-style="assistant-message"], .font-claude-response, .response-content, model-response, .model-response-text, message-content';
   let recording = false;
   let paused = false;
   let replaying = false;
@@ -14,8 +14,11 @@
   let sending = false;
   let assistantQueue = Promise.resolve();
   let timer;
+  let generationTimer = null;
+  let generationPoll = null;
+  let sawGenerating = false;
   const notice = typeof createResearchNotice === 'function' ? createResearchNotice(document) : null;
-  let baseline = new WeakSet();
+  let baseline = new WeakMap();
   let scopePath = location.pathname;
   let submittedCount = 0;
   let scopeInterrupted = false;
@@ -48,7 +51,7 @@
     return false;
   }
   const textOf = node => 'value' in node ? node.value : node.innerText;
-  const userNodeSelector = '[data-message-author-role="user"], [data-research-role="user"], [data-testid="user-message"], .user-query';
+  const userNodeSelector = '[data-message-author-role="user"], [data-research-role="user"], [data-testid="user-message"], [data-chatgpt-search-unit-key$=":user"], [data-content-search-unit-key$=":user"], [data-user-message-bubble="true"], [data-markdown-text-style="user-message"], .user-query';
   // A provider publishes the conversation URL after the first submission, and
   // may replace a temporary identifier with the final one. Follow those changes
   // only while the message we captured is still the conversation on screen.
@@ -105,6 +108,7 @@
     recording = false;
     paused = true;
     clearTimeout(timer);
+    clearGenerationTracking();
     message({ type: 'RESEARCH_INTERRUPTED', documentNonce, reason: 'conversation_changed', from: scopePath, to: next }).catch(() => {});
     report('conversation_changed');
     return false;
@@ -113,16 +117,88 @@
     return message({ type: 'RESEARCH_APPEND', documentNonce, event });
   }
   function assistantNodes() {
+    const directText = [...document.querySelectorAll('[data-markdown-text-style="assistant-message"]')];
+    if (directText.length) return directText;
     return [...document.querySelectorAll(assistantSelector)].filter(node => !node.parentElement?.closest(assistantSelector));
+  }
+  function assistantText(node) {
+    const answer = node.matches?.('[data-markdown-text-style="assistant-message"]')
+      ? node
+      : node.querySelector?.('[data-markdown-text-style="assistant-message"]');
+    return (answer || node).innerText || '';
+  }
+  function currentUserNode() {
+    const nodes = [...document.querySelectorAll(userNodeSelector)];
+    const wanted = normalizeForMatch(sentText).slice(0, 80);
+    if (wanted) {
+      const matches = nodes.filter(node => normalizeForMatch(textOf(node)).includes(wanted));
+      if (matches.length) return matches[matches.length - 1];
+    }
+    return nodes[nodes.length - 1] || null;
+  }
+  function resetBaseline() {
+    baseline = new WeakMap();
+    for (const node of assistantNodes()) baseline.set(node, assistantText(node));
+  }
+  function generationSelectors() {
+    const host = location.hostname;
+    if (host.includes('chatgpt.com')) {
+      return '[data-testid="stop-button"], button[aria-label="Stop streaming"], button[aria-label="Stop generating"], button[aria-label="Detener"], button[aria-label="Detener respuesta"]';
+    }
+    if (host.includes('claude.ai')) {
+      return '[data-is-streaming="true"], button[aria-label="Stop response"], button[aria-label="Stop"]';
+    }
+    if (host.includes('gemini.google.com')) {
+      return '[data-is-streaming="true"], button[aria-label="Stop response"], button[aria-label="Stop"], button[aria-label="Detener"]';
+    }
+    return '[data-is-streaming="true"], [data-testid="stop-button"], button[aria-label*="Stop" i], button[aria-label*="Detener" i]';
+  }
+  function isGenerating() {
+    return [...document.querySelectorAll(generationSelectors())]
+      .some(element => element.getClientRects().length > 0);
+  }
+  function clearGenerationTracking() {
+    if (generationTimer !== null) clearTimeout(generationTimer);
+    generationTimer = null;
+    if (generationPoll !== null) clearInterval(generationPoll);
+    generationPoll = null;
+    sawGenerating = false;
+  }
+  function checkGenerationState() {
+    if (!recording) return;
+    const generating = isGenerating();
+    if (generating) {
+      sawGenerating = true;
+      return;
+    }
+    if (!sawGenerating) return;
+    sawGenerating = false;
+    if (generationTimer !== null) clearTimeout(generationTimer);
+    generationTimer = setTimeout(() => {
+      generationTimer = null;
+      if (recording) snapshotAssistants().catch(() => report('send_failed'));
+    }, 200);
+  }
+  function startGenerationTracking() {
+    clearGenerationTracking();
+    sawGenerating = isGenerating();
+    generationPoll = setInterval(checkGenerationState, 500);
   }
   function snapshotAssistants() {
     assistantQueue = assistantQueue.catch(() => {}).then(async () => {
       if (!checkScope()) throw new Error('La conversación cambió.');
+      const anchor = currentUserNode();
+      if (!anchor && !isGenerating()) return;
       for (const node of assistantNodes()) {
         if (!checkScope()) throw new Error('La conversación cambió.');
-        if (baseline.has(node)) continue;
-        const text = node.innerText;
+        // 4 is Node.DOCUMENT_POSITION_FOLLOWING.
+        if (anchor?.compareDocumentPosition &&
+            !(anchor.compareDocumentPosition(node) & 4)) {
+          continue;
+        }
+        const text = assistantText(node);
         if (!text?.trim()) continue;
+        if (baseline.has(node) && baseline.get(node) === text) continue;
         const previous = observed.get(node);
         if (previous?.text === text) continue;
         const event = {
@@ -199,6 +275,7 @@
         try {
           if (!replaySend(editor)) throw new Error('No se encontró el control de envío.');
         } finally { replaying = false; }
+        startGenerationTracking();
       } catch {
         if (researchAttempt) report('send_failed');
       } finally { sending = false; }
@@ -221,7 +298,8 @@
 
   api.runtime.onMessage.addListener((input, _sender, reply) => {
     if (input.type === 'RESEARCH_PREPARE') {
-      baseline = new WeakSet(assistantNodes());
+      clearGenerationTracking();
+      resetBaseline();
       scopePath = location.pathname;
       submittedCount = 0;
       scopeInterrupted = false;
@@ -249,6 +327,7 @@
     if (input.type === 'RESEARCH_STOP') {
       recording = false; paused = false;
       clearTimeout(timer);
+      clearGenerationTracking();
       notice?.dispose();
       reply({ stopped: true });
       return;
@@ -259,6 +338,7 @@
       recording = false;
       paused = false;
       clearTimeout(timer);
+      clearGenerationTracking();
       inFlight.then(snapshotAssistants).then(() => {
         notice?.dispose();
         reply({ flushed: true });
@@ -276,6 +356,7 @@
   const observer = new MutationObserver(records => {
     if (!recording || records.every(noticeNodes)) return;
     if (!checkScope()) return;
+    checkGenerationState();
     clearTimeout(timer);
     timer = setTimeout(() => snapshotAssistants().catch(() => report('send_failed')), 250);
   });
@@ -283,7 +364,7 @@
   message({ type: 'RESEARCH_STATUS', documentNonce, path: location.pathname }).then(state => {
     if (state.adopted) {
       // The provider navigated to the conversation it assigned.
-      baseline = new WeakSet(assistantNodes());
+      resetBaseline();
       scopePath = location.pathname;
       submittedCount = 0;
       sentText = '';

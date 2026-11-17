@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Synthetic research chat - new ChatGPT layout</title>
+<body>
+  <div id="history">
+    <div data-chatgpt-search-unit-key="1:assistant">
+      <div data-markdown-text-style="assistant-message"></div>
+    </div>
+  </div>
+  <form data-chatgpt-composer id="chat">
+    <div id="prompt-textarea" data-research-editor contenteditable="true" role="textbox" aria-label="Prompt"></div>
+    <button id="composer-submit-button" data-research-send type="submit">Send</button>
+    <button id="stop-button" data-testid="stop-button" type="button" hidden>Stop</button>
+  </form>
+  <script>
+    window.sentPrompts = [];
+    const form = document.querySelector('form');
+    const editor = document.querySelector('#prompt-textarea');
+    const answer = document.querySelector('[data-markdown-text-style="assistant-message"]');
+    const stop = document.querySelector('#stop-button');
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const text = editor.innerText;
+      window.sentPrompts.push(text);
+      stop.hidden = false;
+      let turn = document.querySelector('[data-chatgpt-search-unit-key$=":user"]');
+      let user = document.querySelector('[data-user-message-bubble="true"]');
+      if (!turn) {
+        turn = document.createElement('div');
+        turn.dataset.chatgptSearchUnitKey = '0:user';
+        user = document.createElement('div');
+        user.dataset.userMessageBubble = 'true';
+        turn.append(user);
+        document.querySelector('#history').prepend(turn);
+      }
+      user.textContent = text;
+      answer.textContent = 'Partial';
+      setTimeout(() => { answer.textContent = 'Synthetic complete reply'; }, 30);
+      setTimeout(() => { stop.hidden = true; }, 300);
+      editor.innerText = '';
+    });
+  </script>
+</body>
+</html>

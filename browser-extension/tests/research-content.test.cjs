@@ -54,6 +54,8 @@ function harness(options = {}) {
     crypto: { randomUUID: () => `uuid-${Math.random().toString(16).slice(2)}` },
     setTimeout,
     clearTimeout,
+    setInterval: () => 0,
+    clearInterval: () => {},
     TextEncoder,
     console,
     createResearchNotice: () => ({
