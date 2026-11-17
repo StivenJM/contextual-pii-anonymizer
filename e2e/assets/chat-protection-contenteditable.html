@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Synthetic chat protection - contenteditable</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; }
+  #prompt { min-height: 5rem; width: 28rem; border: 1px solid #555; padding: 8px; }
+</style>
+<body>
+  <h1>Fake chat protection - contenteditable</h1>
+  <div id="prompt" contenteditable="true" data-research-editor role="textbox" aria-label="Prompt"></div>
+  <button id="send" data-research-send type="button">Send</button>
+  <script>
+    window.sentPrompts = [];
+    const editor = document.querySelector('#prompt');
+    document.querySelector('#send').addEventListener('click', event => {
+      event.preventDefault();
+      window.sentPrompts.push(editor.innerText);
+      editor.innerText = '';
+    });
+    editor.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        document.querySelector('#send').click();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -14,6 +14,8 @@ def test_content_script_is_declared_in_main_world() -> None:
     assert "bridge.js" not in entries[0]["js"]
     assert "attachment-status.js" not in entries[0]["js"]
     assert "attachment-status.js" in manifest["content_scripts"][0]["js"]
+    assert "chat-protection.js" not in entries[0]["js"]
+    assert "chat-protection.js" in manifest["content_scripts"][0]["js"]
     assert entries[0]["matches"] == manifest["content_scripts"][0]["matches"]
     background = (extension / "background.js").read_text(encoding="utf-8")
     assert re.search(r"\.registerContentScripts\s*\(", background) is None

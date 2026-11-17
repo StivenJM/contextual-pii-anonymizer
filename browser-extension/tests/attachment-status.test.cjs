@@ -103,6 +103,7 @@ test('shows one non-blocking processing status after a short delay', () => {
 
   status.start('informe.pdf');
   assert.equal(document.body.children.length, 0);
+  assert.equal(status.state, 'processing');
 
   clock.advance(149);
   assert.equal(document.body.children.length, 0);
