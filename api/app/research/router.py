@@ -66,13 +66,10 @@ def configuration() -> dict:
     try:
         key = secret_value("RESEARCH_API_KEY")
         enrollment = secret_value("RESEARCH_ENROLLMENT_KEY")
-        require_enrollment = os.getenv("RESEARCH_REQUIRE_ENROLLMENT", "false").lower()
-        if require_enrollment not in ("true", "false"):
-            raise ValueError("Invalid enrollment mode")
-        if enrollment and secrets.compare_digest(enrollment.encode(), key.encode()):
-            raise ValueError("Enrollment must be distinct")
-        if require_enrollment == "true" and not enrollment:
+        if not enrollment:
             raise ValueError("Enrollment is required")
+        if secrets.compare_digest(enrollment.encode(), key.encode()):
+            raise ValueError("Enrollment must be distinct")
         days = int(os.getenv("RESEARCH_RETENTION_DAYS", "30"))
     except ValueError, OSError, UnicodeError:
         raise HTTPException(503, "Research configuration is incomplete") from None
@@ -81,7 +78,6 @@ def configuration() -> dict:
     return {
         "key": key,
         "enrollment": enrollment,
-        "require_enrollment": require_enrollment == "true",
         "path": path,
         "days": days,
         "protocol": os.getenv("RESEARCH_PROTOCOL_VERSION", "research-v1"),
@@ -100,14 +96,9 @@ def researcher(config: Config, x_research_key: Annotated[str, Header()] = "") ->
 def participant(
     config: Config,
     x_research_enrollment: Annotated[str, Header()] = "",
-    x_research_key: Annotated[str, Header()] = "",
 ) -> dict:
     if config["enrollment"] and secrets.compare_digest(
         x_research_enrollment.encode(), config["enrollment"].encode()
-    ):
-        return config
-    if not config["require_enrollment"] and secrets.compare_digest(
-        x_research_key.encode(), config["key"].encode()
     ):
         return config
     raise HTTPException(401, "Research enrollment required")

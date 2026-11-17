@@ -4,7 +4,7 @@ La implementación es un piloto local, no una aprobación institucional para tra
 
 Usa la API de investigación local independiente y la extensión del navegador existente. Esta guía no despliega un servicio, no crea un Google Form, no recluta estudiantes ni autoriza la recolección de datos personales reales.
 
-Para la topología confirmada de equipos propiedad de los estudiantes, sigue el [despliegue en la red universitaria](research-campus-deployment.md). Añade un código de solo inscripción, HTTPS de confianza sobre IP privada y una copia generada de la extensión; no distribuyas la clave local del investigador a los estudiantes.
+La extensión usa un único flujo de participación en todos los entornos: el **Código de participación**. `RESEARCH_API_KEY` es exclusiva del personal investigador y nunca se introduce en la extensión ni se distribuye a estudiantes. Un despliegue remoto exige HTTPS de confianza sobre una IP privada y una copia generada de la extensión.
 
 Para habilitar este mismo router dentro del stack local de Docker, con la API principal y el volumen persistente `research_archive`, consulta la sección 3.1 de [instalar la extensión y arrancar el sistema de desarrollo](developer-startup.md). Esa variante mantiene la inferencia en ejecución por el flujo de adjuntos, pero las peticiones de investigación no la invocan.
 
@@ -16,6 +16,7 @@ Desde la raíz del repositorio en PowerShell:
 uv sync --directory api --frozen
 $env:RESEARCH_ENABLED = "true"
 $env:RESEARCH_API_KEY = (& api\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
+$env:RESEARCH_ENROLLMENT_KEY = (& api\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
 $env:RESEARCH_STORAGE_PATH = Join-Path (Get-Location).Path "workspace\research\capture.sqlite3"
 $env:RESEARCH_PROTOCOL_VERSION = "research-v1"
 $env:RESEARCH_RETENTION_DAYS = "30"
@@ -24,20 +25,33 @@ uv run --directory api --no-sync python -m uvicorn app.research.application:app 
 
 El primer comando instala las dependencias de desarrollo fijadas y puede contactar registros de paquetes. El último comando ejecuta el listener local en primer plano; no arranca PostgreSQL, BentoML, Docker ni el conversor. Detenlo con Ctrl+C. El puerto 8000 debe estar libre; no detengas un proceso ajeno de forma automática. El `compose.yaml` ordinario conserva su flujo respaldado por el modelo; esta aplicación independiente no lo modifica.
 
-Mantén la clave en el canal seguro de configuración del operador y pégala en el campo de contraseña de la extensión. No la imprimas ni la envíes a un chat de IA, y no la pongas en Forms. El popup no la guarda después de iniciar. La extensión sí conserva una capacidad de sesión distinta para reintentos y retiro. Configura una retención aprobada antes de usar datos reales; «30» es un ejemplo de piloto, no una aprobación institucional.
+Mantén `RESEARCH_API_KEY` en el canal seguro de configuración del operador: solo autoriza exportación, eliminación mediada por el investigador y purga. No la imprimas, no la envíes a un chat de IA, no la pongas en Forms y **no la pegues en la extensión**. El único valor que se escribe en el campo de contraseña de la extensión es `RESEARCH_ENROLLMENT_KEY`, el código de participación del estudio. El popup no guarda ese código después de iniciar. La extensión sí conserva una capacidad de sesión distinta para reintentos y retiro. Configura una retención aprobada antes de usar datos reales; «30» es un ejemplo de piloto, no una aprobación institucional.
 
 El archivo de ejemplo está dentro del directorio `workspace/` ya ignorado. No muevas archivos reales a rutas versionadas. La API además exige una ruta absoluta. Usa almacenamiento local cifrado y aprobado por la institución y restringe los permisos; la aplicación por sí misma no ofrece cifrado en reposo. Para una operación supervisada y persistente, define estas variables en la configuración de secretos de la cuenta de servicio aprobada, no en archivos `.env` versionados.
 
 Abre [la documentación local de la API](http://127.0.0.1:8000/docs). La aplicación independiente expone a propósito solo las rutas de investigación; `/api/research/health` comprueba la configuración del recolector y el acceso al archivo, mientras que `/api/health` y `/api/interactions/protect` no forman parte de ese punto de entrada. El mismo router `/api/research` también está montado en la aplicación principal ordinaria, pero esa aplicación conserva su requisito habitual de arranque con PostgreSQL.
 
+## Migración sin respaldo silencioso
+
+La versión actual del servidor acepta solo `X-Research-Enrollment` en `POST /api/research/sessions` y exige un `RESEARCH_ENROLLMENT_KEY` no vacío y distinto de `RESEARCH_API_KEY`. La versión anterior aceptaba la clave del investigador en esa ruta cuando la inscripción no era obligatoria. Para cerrar ese camino sin dejar una ventana en la que siga disponible:
+
+1. Provisiona un `RESEARCH_ENROLLMENT_KEY` distinto en cada entorno. Es un cambio de configuración y no modifica el comportamiento del servidor anterior.
+2. Despliega primero el servidor actual con la captura habilitada. Desde ese momento `X-Research-Key` no inicia sesiones (`401`) y una configuración ausente, inválida o idéntica falla cerrada (`503`). Las extensiones antiguas no pueden iniciar sesiones durante esta ventana; es el coste de compatibilidad deliberado.
+3. Despliega después la extensión unificada, que envía solo `X-Research-Enrollment`. Los participantes pueden volver a iniciar. Las sesiones ya iniciadas conservan su capacidad de sesión para completarse o retirarse.
+4. Verifica y elimina `RESEARCH_REQUIRE_ENROLLMENT` de las configuraciones. El servidor actual ya no lo lee; conservarlo no restaura el modo anterior y solo induce a error.
+
+No despliegues la extensión antes que el servidor actual: mientras el servidor anterior siga activo con la captura habilitada, su respaldo heredado acepta la clave del investigador para iniciar una sesión. Si necesitas una ventana de mantenimiento, detén el arranque de sesiones o deshabilita la captura; no mantengas el servidor anterior como «compatibilidad».
+
+Rollback: no vuelvas a desplegar la versión anterior con la captura habilitada, porque reabre el respaldo privilegiado. Las opciones seguras son mantener el servidor actual y revertir solo la extensión (las antiguas fallan cerradas con `401`), o poner `RESEARCH_ENABLED=false` en el servidor actual para devolver `404` y deshabilitar la captura hasta corregir. No restaures `RESEARCH_REQUIRE_ENROLLMENT` esperando el modo antiguo; el código actual lo ignora. Las rutas privilegiadas conservan `X-Research-Key` y rechazan el código de participación.
+
 ## Extensión: ensayo sintético
 
 1. Recarga `browser-extension/extension` como extensión descomprimida en un perfil de prueba dedicado de Chromium o Chrome. Los permisos de host existentes ya cubren los tres sitios comerciales compatibles y la API de loopback.
 2. Abre un chat compatible nuevo y vacío, sin historial personal ni adjuntos cargados. Confirma manualmente el adaptador actual de editor, envío y respuesta antes de invitar estudiantes. Este trabajo no inició sesión ni operó una cuenta real de proveedor.
-3. Abre la ventana de la extensión desde su icono o, si no está fijado, desde el menú de extensiones. Puedes fijar el icono a la barra del navegador; la ventana no se fija sola. En **Captura de chats**, introduce **Clave local del investigador** y el protocolo. La interfaz de investigación usa etiquetas y mensajes en español; la documentación técnica canónica sigue en inglés. Lee la advertencia de recolección sin procesar, marca el consentimiento de forma explícita y deja sin marcar el permiso opcional de entrenamiento salvo que se haya acordado aparte.
+3. Abre la ventana de la extensión desde su icono o, si no está fijado, desde el menú de extensiones. Puedes fijar el icono a la barra del navegador; la ventana no se fija sola. En **Captura de chats**, introduce el **Código de participación** y el protocolo. La interfaz de investigación usa etiquetas y mensajes en español; la documentación técnica canónica sigue en inglés. Lee la advertencia de recolección sin procesar, marca el consentimiento de forma explícita y deja sin marcar el permiso opcional de entrenamiento salvo que se haya acordado aparte.
    Estos campos de configuración y consentimiento se deshabilitan al iniciar la sesión: cambiar una casilla no puede modificar en silencio un acuerdo ya almacenado. Usa **Descartar sesión** y el proceso aprobado del investigador para un cambio de consentimiento.
 4. Pulsa **Iniciar en esta pestaña**. Cuando el controlador confirma la activación aparece un único aviso **Captura activa** en la página, con un botón **×** de cierre. El aviso desaparece solo tras unos seis segundos y suspende su cuenta atrás mientras el puntero o el foco están dentro. Cerrarlo no detiene, pausa, guarda ni descarta la sesión, y no vuelve a aparecer al enviar mensajes, al actualizar respuestas ni al abrir o cerrar la ventana. No deja burbujas ni controles flotantes: el estado se consulta solo desde la ventana de la extensión. La preferencia de protección de adjuntos se conserva; la protección se pausa solo en esa pestaña seleccionada mientras la captura graba o está en pausa. Las demás pestañas mantienen su comportamiento anterior.
-   El popup muestra el progreso y los errores junto a la acción de inicio. Un inicio fallido conserva los campos actuales del formulario; una activación correcta limpia la clave. La clave no se persiste en el almacenamiento del navegador y cerrar el popup descarta los campos transitorios. El rechazo por historial y la ausencia de editor tienen mensajes separados. Un editor vacío puede no mostrar Enviar hasta que escribas; el arranque lo permite, pero el envío real sigue bloqueado salvo que exista un control de envío visible, habilitado y compatible, y el almacenamiento local confirme el prompt.
+   El popup muestra el progreso y los errores junto a la acción de inicio. Un inicio fallido conserva los campos actuales del formulario; una activación correcta limpia el código. El código de participación no se persiste en el almacenamiento del navegador y cerrar el popup descarta los campos transitorios. El rechazo por historial y la ausencia de editor tienen mensajes separados. Un editor vacío puede no mostrar Enviar hasta que escribas; el arranque lo permite, pero el envío real sigue bloqueado salvo que exista un control de envío visible, habilitado y compatible, y el almacenamiento local confirme el prompt.
 5. Define **Identificador de tarea** como A y pulsa **Asignar tarea**; después usa los identificadores de tarea siguientes que correspondan. Envía solo texto ficticio. El envío compatible espera el almacenamiento local; las respuestas se observan como instantáneas renderizadas. Espera a que termine la respuesta antes de cambiar de tarea o finalizar.
 6. Pulsa **Finalizar y guardar**. Solo una respuesta confirmada de la API muestra el identificador guardado. Cópialo con el botón de copiar que está junto al identificador; el icono cambia a un visto durante unos segundos y vuelve a su forma normal. Hazlo **antes** de iniciar otra sesión, porque al empezar una nueva el identificador deja de mostrarse y no se podrá recuperar después. Si el portapapeles falla, la ventana deja el identificador seleccionado para copiarlo manualmente. Guárdalo en un lugar seguro y pégalo en el último elemento del formulario aprobado del estudio.
 7. Si la API no responde, la ventana muestra **Pendiente de guardar** y el motivo. Los datos permanecen en el navegador: usa **Reintentar guardado** sin volver a recolectar y sin borrar el perfil.
@@ -83,7 +97,7 @@ Los casos de navegador de investigación arrancan un proceso real de API sin mod
 
 Verificación funcional final el 2026-10-30:
 
-La tabla siguiente registra el hito anterior de implementación local. Después de la adaptación al campus, la suite de la API pasó **70 pruebas con 2 omisiones por PostgreSQL local**, Node pasó **14**, y las comprobaciones de navegador y preparación sin contenedores pasaron **21 con 3 casos de Docker deseleccionados**. Un ensayo separado de Docker/TLS de producción también pasó. Consulta el [límite de prueba del despliegue en campus](research-campus-deployment.md#verificación-y-límites); las pruebas locales no establecen la preparación real de la universidad ni del proveedor.
+La tabla siguiente registra el hito anterior de implementación local. No cubre un despliegue de producción: este checkout no incluye el Compose de producción, la guía de campus ni el empaquetado de la extensión, y las pruebas locales no establecen la preparación real de la universidad ni del proveedor.
 
 | Comprobación | Resultado observado |
 |---|---|
@@ -95,21 +109,22 @@ La tabla siguiente registra el hito anterior de implementación local. Después 
 | Diferencial base frente a eccf825 | Resultados idénticos en 4 comprobaciones de estado, 4 de mensajes de adjuntos y 4 de normalización de Markdown usando una copia temporal externa |
 | Superficies Python modificadas | Lint de Ruff y comprobación de formato pasaron |
 | JavaScript | El background y los tres scripts de investigación pasaron las comprobaciones de sintaxis |
-| Documentación | 19 páginas Markdown nuevas o modificadas revisadas, cero destinos locales faltantes; 32 claves bibliográficas únicas con llaves BibTeX balanceadas |
+| Documentación | Páginas modificadas revisadas; los enlaces a artefactos de campus ausentes en este checkout no se conservan |
 
 El popup también se renderizó con datos sintéticos y se inspeccionó visualmente. No se lanzó ningún trabajador ni revisor de IA independiente, siguiendo la instrucción explícita del usuario de trabajar solo en línea; no se afirma una aprobación de revisión nativa.
 
 Durante el desarrollo, la preparación de pruebas encontró primero acceso restringido al directorio temporal, una espera de cadena en una página de extensión que chocaba con la CSP y un doble de prueba de dos pestañas al que le faltaba un permiso de host en la copia de prueba. Se corrigieron en la preparación de pruebas sin debilitar la CSP ni los permisos del producto. Se reprodujeron con pruebas de regresión y se corrigieron un defecto real de mezcla de historial de conversación y defectos de aislamiento de la protección global y de estado pendiente. Los resultados finales anteriores superan esos fallos intermedios.
 
-Sin verificar hasta que se autorice o realice por separado: adaptadores de proveedores reales y el comportamiento actual de las interfaces en la nube, Firefox, despliegue universitario real, confianza de clientes, enrutamiento, cifrado y política de respaldos, vinculación con Google Forms en vivo, estudiantes reales y comparaciones con modelos entrenados. Los comandos locales anteriores siguen apuntando a una sola estación de trabajo y un solo perfil. Los [artefactos separados de despliegue en campus](research-campus-deployment.md) preparan el recolector compartido con IP privada y la extensión específica del endpoint; no lo despliegan automáticamente en un equipo universitario.
+Sin verificar hasta que se autorice o realice por separado: adaptadores de proveedores reales y el comportamiento actual de las interfaces en la nube, Firefox, despliegue universitario real, confianza de clientes, enrutamiento, cifrado y política de respaldos, vinculación con Google Forms en vivo, estudiantes reales y comparaciones con modelos entrenados. Los comandos locales anteriores siguen apuntando a una sola estación de trabajo y un solo perfil. Este checkout no contiene artefactos separados de despliegue en campus; un recolector compartido, HTTPS sobre IP privada y un paquete de extensión para participantes requieren una decisión y preparación separadas.
 
 ## Diagnóstico
 
 | Síntoma | Acción |
 |---|---|
 | 404 en rutas de investigación | Confirma `RESEARCH_ENABLED=true` en el proceso en ejecución; las rutas de salud normales no existen en la aplicación independiente |
-| 503 de configuración | Usa una clave de al menos 32 caracteres, una ruta absoluta del archivo y una retención entre 1 y 365 días |
-| 401 al crear o exportar una sesión | Revisa la clave de configuración; nunca la pegues en el chatbot |
+| 503 de configuración | Define `RESEARCH_API_KEY` y un `RESEARCH_ENROLLMENT_KEY` distinto, ambos de al menos 32 caracteres; usa una ruta absoluta del archivo y una retención entre 1 y 365 días |
+| 401 al crear una sesión | Revisa el código de participación; no uses la clave del investigador ni la pegues en la extensión |
+| 401 al exportar, eliminar o purgar | Usa `RESEARCH_API_KEY` desde el canal del investigador; el código de participación no autoriza estas rutas |
 | El inicio se queda en `starting` | La autorización o la activación se interrumpió; descarta esa configuración y empieza una sesión nueva y vacía |
 | Adaptador no disponible | Usa una conversación nueva y revisa los selectores actuales del sitio; detén el piloto si no puedes verificar la captura |
 | Pendiente / API inalcanzable | Arranca la misma API y el mismo archivo locales y reintenta la subida congelada; no borres el estado local |

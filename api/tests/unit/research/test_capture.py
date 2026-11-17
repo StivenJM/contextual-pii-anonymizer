@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from app.research.application import create_research_app
 
 KEY = "test-research-key-with-at-least-32-characters"
+ENROLLMENT = "test-enrollment-code-distinct-from-the-research-key"
 TOKEN = "test-session-capability-with-at-least-32-characters"
 
 
@@ -19,13 +20,12 @@ TOKEN = "test-session-capability-with-at-least-32-characters"
 def client(monkeypatch, tmp_path):
     for name in (
         "RESEARCH_API_KEY_FILE",
-        "RESEARCH_ENROLLMENT_KEY",
         "RESEARCH_ENROLLMENT_KEY_FILE",
-        "RESEARCH_REQUIRE_ENROLLMENT",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("RESEARCH_ENABLED", "true")
     monkeypatch.setenv("RESEARCH_API_KEY", KEY)
+    monkeypatch.setenv("RESEARCH_ENROLLMENT_KEY", ENROLLMENT)
     monkeypatch.setenv("RESEARCH_STORAGE_PATH", str(tmp_path / "capture.sqlite3"))
     with TestClient(create_research_app()) as client:
         yield client
@@ -41,7 +41,9 @@ def start(client, **overrides):
         "provider": "chatgpt",
     } | overrides
     response = client.post(
-        "/api/research/sessions", json=body, headers={"X-Research-Key": KEY}
+        "/api/research/sessions",
+        json=body,
+        headers={"X-Research-Enrollment": ENROLLMENT},
     )
     assert response.status_code == 201, response.text
     return body["session_id"]
@@ -139,7 +141,9 @@ def test_authorization_and_consent_are_required(client):
     }
     assert (
         client.post(
-            "/api/research/sessions", json=body, headers={"X-Research-Key": KEY}
+            "/api/research/sessions",
+            json=body,
+            headers={"X-Research-Enrollment": ENROLLMENT},
         ).status_code
         == 422
     )
@@ -211,7 +215,9 @@ def test_start_is_idempotent_but_does_not_change_existing_consent(client):
     }
     assert (
         client.post(
-            "/api/research/sessions", json=conflicting, headers={"X-Research-Key": KEY}
+            "/api/research/sessions",
+            json=conflicting,
+            headers={"X-Research-Enrollment": ENROLLMENT},
         ).status_code
         == 409
     )
@@ -238,9 +244,17 @@ def test_normal_api_mount_keeps_existing_health_contract(client):
     }
     assert (
         normal.post(
-            "/api/research/sessions", json={}, headers={"X-Research-Key": KEY}
+            "/api/research/sessions",
+            json={},
+            headers={"X-Research-Enrollment": ENROLLMENT},
         ).status_code
         == 422
+    )
+    assert (
+        normal.post(
+            "/api/research/sessions", json={}, headers={"X-Research-Key": KEY}
+        ).status_code
+        == 401
     )
 
 
@@ -313,20 +327,90 @@ def test_enrollment_can_start_but_cannot_administer_records(client, monkeypatch)
     )
 
 
-def test_production_requires_distinct_enrollment_and_does_not_accept_admin_start(
-    client, monkeypatch
-):
-    monkeypatch.setenv("RESEARCH_REQUIRE_ENROLLMENT", "true")
-    assert client.get("/api/research/health").status_code == 503
-    monkeypatch.setenv("RESEARCH_ENROLLMENT_KEY", KEY)
-    assert client.get("/api/research/health").status_code == 503
-    monkeypatch.setenv(
-        "RESEARCH_ENROLLMENT_KEY", "distinct-synthetic-enrollment-secret-32chars"
-    )
-    assert client.get("/api/research/health").json() == {"status": "ready"}
+def test_enrollment_is_never_accepted_from_query_or_body(client):
+    body = {
+        "session_id": str(uuid4()),
+        "upload_token": TOKEN,
+        "protocol_version": "research-v1",
+        "consent": True,
+        "provider": "chatgpt",
+    }
     assert (
         client.post(
-            "/api/research/sessions", json={}, headers={"X-Research-Key": KEY}
+            "/api/research/sessions",
+            params={"enrollment": ENROLLMENT},
+            json=body,
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/research/sessions", json=body | {"enrollment": ENROLLMENT}
+        ).status_code
+        == 401
+    )
+
+
+def test_enrollment_and_researcher_key_are_not_written_to_the_archive(client, tmp_path):
+    start(client)
+    raw = (tmp_path / "capture.sqlite3").read_bytes()
+    assert ENROLLMENT.encode() not in raw
+    assert KEY.encode() not in raw
+
+
+def test_enrollment_configuration_is_required_and_distinct(client, monkeypatch):
+    monkeypatch.delenv("RESEARCH_ENROLLMENT_KEY")
+    missing = client.get("/api/research/health")
+    assert missing.status_code == 503
+    assert ENROLLMENT not in missing.text
+    assert KEY not in missing.text
+    monkeypatch.setenv("RESEARCH_ENROLLMENT_KEY", KEY)
+    identical = client.get("/api/research/health")
+    assert identical.status_code == 503
+    assert KEY not in identical.text
+    monkeypatch.setenv("RESEARCH_ENROLLMENT_KEY", "short-enrollment")
+    invalid = client.get("/api/research/health")
+    assert invalid.status_code == 503
+    assert "short-enrollment" not in invalid.text
+    monkeypatch.setenv("RESEARCH_ENROLLMENT_KEY", ENROLLMENT)
+    assert client.get("/api/research/health").json() == {"status": "ready"}
+
+
+def test_session_start_rejects_researcher_key_even_when_valid(client):
+    body = {
+        "session_id": str(uuid4()),
+        "upload_token": TOKEN,
+        "protocol_version": "research-v1",
+        "consent": True,
+        "provider": "chatgpt",
+    }
+    assert (
+        client.post(
+            "/api/research/sessions", json=body, headers={"X-Research-Key": KEY}
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/research/sessions",
+            json=body,
+            headers={"X-Research-Key": KEY, "X-Research-Enrollment": "incorrect"},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/research/sessions",
+            json=body,
+            headers={"X-Research-Enrollment": KEY},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/research/sessions",
+            json=body,
+            headers={"X-Research-Enrollment": "incorrect"},
         ).status_code
         == 401
     )

@@ -12,13 +12,13 @@ Para la secuencia completa, empieza por [instalar la extensión y arrancar el si
 | `converter` | Conversión de adjuntos PDF/Office a Markdown | Loopback `127.0.0.1:5000` |
 | `pgadmin`, perfil `dev` | Administración de desarrollo opcional | Loopback `127.0.0.1:9001` |
 
-El conversor es su propio proceso dentro del Compose de desarrollo; no está fusionado con la API ni llama a la API de privacidad. Las rutas de investigación están habilitadas por defecto mediante `api/.api.dev.env`, y `compose.yaml` monta el volumen nombrado `research_archive` en `/data/research` para conservar el archivo SQLite. Habilitar la API no inicia una grabación; cada sesión requiere consentimiento en la extensión. El despliegue de campus sigue usando un punto de entrada y un Compose separados, y SQLite, no esta base de datos PostgreSQL.
+El conversor es su propio proceso dentro del Compose de desarrollo; no está fusionado con la API ni llama a la API de privacidad. Las rutas de investigación están habilitadas por defecto mediante `api/.api.dev.env`, y `compose.yaml` monta el volumen nombrado `research_archive` en `/data/research` para conservar el archivo SQLite. Habilitar la API no inicia una grabación; cada sesión requiere consentimiento en la extensión. Este checkout no incluye un despliegue de producción separado; el Compose de desarrollo y su PostgreSQL no son ese despliegue.
 
 ## Configuración
 
 Las plantillas versionadas actuales son `api/.api.dev.env` y `api/.db.dev.env`. Las sobreescrituras opcionales e ignoradas son `api/.api.env` y `api/.db.env`, que se cargan después de las plantillas. Créalas sin sobrescribir archivos locales existentes, siguiendo la guía de arranque, y elige credenciales solo locales.
 
-Para investigación, sobrescribe `RESEARCH_API_KEY` con una clave privada aleatoria de al menos 32 caracteres en `api/.api.env`. También puedes ajustar `RESEARCH_PROTOCOL_VERSION` y `RESEARCH_RETENTION_DAYS` (por defecto, `research-v1` y 7 días de desarrollo). La ruta dentro del contenedor es `RESEARCH_STORAGE_PATH=/data/research/capture.sqlite3`. Para deshabilitar estas rutas, define `RESEARCH_ENABLED=false`; responderán con 404. Aplica los cambios con `docker compose up -d api`; `docker compose restart` no actualiza las variables de entorno del contenedor.
+Para investigación, sobrescribe en `api/.api.env` dos secretos distintos de al menos 32 caracteres: `RESEARCH_API_KEY`, exclusiva del personal investigador, y `RESEARCH_ENROLLMENT_KEY`, el código de participación que se escribe en la extensión. La API falla cerrada si falta el código o si coincide con la clave del investigador. También puedes ajustar `RESEARCH_PROTOCOL_VERSION` y `RESEARCH_RETENTION_DAYS` (por defecto, `research-v1` y 7 días de desarrollo). La ruta dentro del contenedor es `RESEARCH_STORAGE_PATH=/data/research/capture.sqlite3`. Para deshabilitar estas rutas, define `RESEARCH_ENABLED=false`; responderán con 404. Aplica los cambios con `docker compose up -d api`; `docker compose restart` no actualiza las variables de entorno del contenedor.
 
 La raíz del repositorio también usa un `.env` privado e ignorado por Git para `EXTENSION_ID_CHROME` y, si cambia, `MIDDLEWARE_SECRET`. El ID es el de la extensión descomprimida cargada en el navegador; el token de desarrollo debe coincidir con `SECRET_TOKEN` en `browser-extension/extension/background.js`. Sin `EXTENSION_ID_CHROME`, Compose detiene el arranque en lugar de iniciar el conversor con un origen permitido vacío.
 
@@ -71,6 +71,6 @@ Los datos de PostgreSQL, la caché del modelo y el archivo de investigación del
 
 - [Pruebas de integración](integration-testing.md) usan recursos de prueba aislados y con nombres separados. No apuntes fixtures destructivos a la base de datos de desarrollo ordinaria.
 - [Captura sin modelo](research-capture.md) arranca sin PostgreSQL ni inferencia y usa el mismo puerto de host 8000 por defecto; no arranques las dos APIs locales en ese puerto.
-- [Despliegue de investigación en campus](research-campus-deployment.md) es la configuración separada con HTTPS y CA interna. El Compose de desarrollo, su proceso de recarga y su Admin API local sin autenticación no son un despliegue de producción de campus.
+- El despliegue de producción no está incluido en este checkout. El Compose de desarrollo, su proceso de recarga y su Admin API local sin autenticación no son un despliegue de producción de campus.
 
 Estas instrucciones se conciliaron con `compose.yaml`, las dos plantillas de entorno versionadas y la configuración de Compose. Se validó la resolución de los archivos de Compose con `docker compose config`; no se inició ningún servicio, migración ni descarga de modelo para esta actualización.

@@ -63,7 +63,7 @@ These are required institutional decisions, not approvals that software can gran
 
 Verified initial inspection: the delivered extension currently processes attachments, while architecture pages also describe target text protection. The API lifespan constructs an inference client without calling it, but the normal Compose API waits for healthy inference. Study pages describe intended capabilities, not evidence that study-session persistence exists.
 
-Implementation update (2026-10-30): the independent capture API, opt-in extension, bounded archive and investigator-review study kit now exist with synthetic verification. Student-owned computers and a campus-private fixed IP were confirmed. Separate [university-network deployment artifacts](../../guides/research-campus-deployment.md) provide internal-CA HTTPS, enrollment-only access and a narrow-host extension copy without replacing the development Compose. Actual campus deployment, browser trust provisioning and provider/institutional fieldwork checks remain unperformed; consult the linked guide rather than treating the initial inspection above as the current implementation state.
+Implementation update (2026-10-30): the independent capture API, opt-in extension, bounded archive and investigator-review study kit now exist with synthetic verification. This checkout does not include production collector, private-IP HTTPS/CA, browser-trust or participant-packaging artifacts; the former university-network deployment path is absent. Actual campus deployment, browser trust provisioning and provider/institutional fieldwork checks remain unperformed and require a separate product and institutional decision.
 
 The student package will be **ready for investigator review and a synthetic pilot**, not an assertion of ethics approval or production readiness. A results document will contain literature findings and an empty empirical reporting structure until observations exist.
 
@@ -72,4 +72,4 @@ The student package will be **ready for investigator review and a synthetic pilo
 - [Study kit](research-study/README.md)
 - [Architecture and decisions](../../architecture/backend/privacy-middleware/research-capture.md)
 - [Operation and verification](../../guides/research-capture.md)
-- [Private-network deployment and participant setup](../../guides/research-campus-deployment.md)
+- Production deployment and participant setup: not included in this checkout; a separate approved design is required.

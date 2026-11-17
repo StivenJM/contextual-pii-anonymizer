@@ -121,12 +121,12 @@ uv run --directory e2e ruff format --check .
 
 - Los sitios de chat reales siguen siendo manuales. La suite verifica la frontera, no el DOM del sitio ni su comportamiento anti-bot.
 - Firefox sigue siendo manual. Playwright no puede cargar extensiones en Firefox; la extensión conserva su manifest multiplataforma, pero esa ruta no está cubierta por esta suite.
-- La protección ordinaria sigue centrada en adjuntos. Los casos separados de investigación, que se activan de forma explícita, cubren la captura de envíos de texto y respuestas renderizadas contra fixtures sintéticos de chat, incluida una API en modo campus que solo admite inscripción. Esto no valida los adaptadores de DOM de proveedores reales.
+- La protección ordinaria sigue centrada en adjuntos. Los casos separados de investigación, que se activan de forma explícita, cubren la captura de envíos de texto y respuestas renderizadas contra fixtures sintéticos de chat, incluida una API remota que usa el mismo código de participación que la API local. Esto no valida los adaptadores de DOM de proveedores reales.
 - El stub de inferencia es determinista por diseño. No mide la calidad del modelo; conserva el contrato que consume el middleware.
 
 ## Relacionado
 
-- [Despliegue de investigación en la red universitaria](research-campus-deployment.md): ensayo de Docker/TLS de producción, empaquetado de la extensión con IP exacta e instalación de confianza en participantes. Sus pruebas por CLI y Docker no arrancan el fixture heredado del navegador. La sustitución opcional `research_origin` de la copia de prueba ejercita la inscripción por loopback sin cambiar la configuración de origen ni las cinco comprobaciones originales de conteo de reemplazos.
+- Despliegue de producción: no incluido en este checkout. Esta suite es local y sintética; no valida HTTPS de producción, confianza de clientes ni empaquetado de extensión. La sustitución opcional `research_origin` de la copia de prueba ejercita un origen remoto por loopback sin cambiar la configuración de origen del producto.
 
 - [`Verificación automática de la extensión del navegador`](../architecture/frontend/browser-extension/decisions/verificacion-automatica.md): base de evidencia y justificación de cada decisión anterior.
 - [`Infraestructura local con Docker`](infraestructura-local-con-docker.md): entorno de desarrollo, que esta guía no reemplaza.

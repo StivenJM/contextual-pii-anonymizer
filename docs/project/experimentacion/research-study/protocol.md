@@ -43,7 +43,7 @@ This is an English master script. Do not read it verbatim to someone who does no
 | Stage | Actions and observable record |
 |---|---|
 | Consent, 5–8 min | Read information; record consent separately; training opt-in starts unchecked; decline ends research without penalty |
-| Setup, 3–5 min | Enable local API; open a fresh chat; enter researcher key in extension; participant explicitly checks consent and starts |
+| Setup, 3–5 min | Enable local API; open a fresh chat; enter the study participation code in the extension; participant explicitly checks consent and starts |
 | Task loop, 24 min | Set the card's Task ID before its first prompt; read only that card; allow natural wording and optional follow-ups; wait for reply completion before changing tasks |
 | Finish, 2–3 min | Participant clicks Finish and save, waits for confirmed identifier, copies it, and pastes it into the form |
 | Debrief, 5–8 min | Complete optional background and perception items; explain receipt and withdrawal; confirm no real third-party data were intentionally requested |

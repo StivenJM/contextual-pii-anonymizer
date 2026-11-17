@@ -78,7 +78,7 @@ Los flujos disponibles son:
 
 - **Anonimización:** Conversión y protección de adjuntos, es el flujo por defecto de este apartado. Necesita el stack local completo.
   - **Captura de chats:** Captura para investigación opcional, se habilita en la sección 3. No se inicia sola al arrancar el stack.
-- **Captura de chats sin anonimización:** usa la aplicación independiente o el recolector de campus de la sección 5.
+- **Captura de chats sin anonimización:** usa la aplicación independiente de la sección 5.1. No hay un recolector de producción incluido en este checkout.
 
 ### 2.1 Un comando para el flujo ordinario
 
@@ -133,14 +133,26 @@ La captura está habilitada por defecto, pero se puede desactivar sin consecuenc
 
 Las variables de entorno en la sección `Research` de `./api/.api.dev.env` habilita el router existente en la API. Además, los chats se guardan en SQLite en el volumen nombrado `research_archive`, sin fusionar servicios ni mover datos existentes.
 
-Para generar una clave segura se puede usar los siguientes comandos, despues copiar y pegar en `RESEARCH_API_KEY` de `api/.api.env`:
+Define en `api/.api.env` dos secretos distintos de al menos 32 caracteres:
+
+- `RESEARCH_API_KEY`: exclusiva del personal investigador autorizado; habilita exportación, eliminación mediada por el investigador y purga.
+- `RESEARCH_ENROLLMENT_KEY`: código de participación que se entrega a estudiantes y se escribe en la extensión.
+
+Nunca uses la clave del investigador como código de participación ni la pegues en la extensión. Genera ambos valores por separado:
 
 ```powershell
-$Bytes = New-Object byte[] 32
-[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
-$ResearchKey = [Convert]::ToBase64String($Bytes).Replace('+','-').Replace('/','_').TrimEnd('=')
+$NewSecret = {
+  $Bytes = New-Object byte[] 32
+  [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
+  [Convert]::ToBase64String($Bytes).Replace('+','-').Replace('/','_').TrimEnd('=')
+}
+$EnrollmentKey = & $NewSecret
+$ResearchKey = & $NewSecret
+$EnrollmentKey
 $ResearchKey
 ```
+
+Copia `$EnrollmentKey` en `RESEARCH_ENROLLMENT_KEY` y `$ResearchKey` en `RESEARCH_API_KEY`. La API rechaza el arranque de investigación si falta el código de participación o si ambos valores coinciden.
 
 Confirma la disponibilidad:
 
@@ -151,14 +163,14 @@ Invoke-RestMethod http://127.0.0.1:8000/api/research/health
 Debes obtener `status: ready`. El archivo queda en `/data/research/capture.sqlite3` dentro del volumen `research_archive`; `docker compose down` lo conserva y `down --volumes` lo elimina. No es el mismo archivo que la ruta `workspace/research/` de la aplicación independiente de la sección 5.1.
 
 > [!note] Nota
-> Si solo necesitas captura sin modelo, usa la aplicación independiente o el recolector de campus de la sección 5.
+> Si solo necesitas captura sin modelo, usa la aplicación independiente de la sección 5.1. No hay un recolector de producción incluido en este checkout.
 
 ### 3.2 Flujo en la extensión
 
 1. Abre un chat compatible nuevo; usa las [tarjetas de escenario ficticias](../project/experimentacion/research-study/scenario-cards.md).
-2. Abre el popup de la extensión. Introduce la **Clave local del investigador** y `research-v1`, y revisa explícitamente el consentimiento de recolección.
+2. Abre el popup de la extensión. Introduce el **Código de participación** y `research-v1`, y revisa explícitamente el consentimiento de recolección. La clave del investigador nunca se escribe en este campo.
 3. Pulsa **Iniciar en esta pestaña**. Confirma el aviso **Captura activa** antes de enviar nada; se cierra con **×** o solo tras unos segundos, y cerrarlo no detiene la captura. El modo de investigación graba texto sin procesar; no lo desidentifica antes de que el chatbot externo lo reciba. Solo pausa la protección ordinaria de adjuntos en la pestaña seleccionada mientras graba o está en pausa.
-   El progreso y los errores aparecen justo encima de ese botón. Una conversación existente se rechaza de forma explícita: abre un chat nuevo y vacío en lugar de intentar importar su historial. Un editor vacío visible puede no mostrar el botón de envío hasta que escribas; eso no impide la activación. Un editor o adaptador de página ausente es un error distinto. Los inicios fallidos conservan los campos de configuración en el popup actual; la clave solo se limpia después de una activación confirmada y nunca se guarda como configuración del popup. Cerrar el popup del navegador descarta sus campos transitorios.
+   El progreso y los errores aparecen justo encima de ese botón. Una conversación existente se rechaza de forma explícita: abre un chat nuevo y vacío en lugar de intentar importar su historial. Un editor vacío visible puede no mostrar el botón de envío hasta que escribas; eso no impide la activación. Un editor o adaptador de página ausente es un error distinto. Los inicios fallidos conservan los campos de configuración en el popup actual; el código de participación solo se limpia después de una activación confirmada y nunca se guarda como configuración del popup. Cerrar el popup del navegador descarta sus campos transitorios.
 4. Define **Identificador de tarea** y pulsa **Asignar tarea**; envía texto ficticio y espera a que termine la respuesta. El modo de investigación es solo texto: no adjuntes archivos.
 5. Pulsa **Finalizar y guardar**. Una confirmación de la API debe mostrar un identificador. Cópialo antes de iniciar otra sesión.
 6. Si la subida falla, conserva el perfil y la extensión y usa **Reintentar guardado**. No borres el almacenamiento del navegador para resolver el error. **Descartar sesión** es la ruta explícita de eliminación antes de guardar, con su propia confirmación y semántica de reintento; un registro ya guardado queda cerrado desde la extensión.
@@ -203,6 +215,7 @@ uv sync --directory api --locked
 $RepoRoot = (Get-Location).Path
 $env:RESEARCH_ENABLED = "true"
 $env:RESEARCH_API_KEY = (& api/.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
+$env:RESEARCH_ENROLLMENT_KEY = (& api/.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))").Trim()
 $env:RESEARCH_STORAGE_PATH = Join-Path $RepoRoot "workspace/research/capture.sqlite3"
 $env:RESEARCH_PROTOCOL_VERSION = "research-v1"
 $env:RESEARCH_RETENTION_DAYS = "7"
@@ -210,15 +223,15 @@ $env:RESEARCH_RETENTION_DAYS = "7"
 
 Siete días es un **ejemplo ficticio de desarrollo**, no un periodo de retención aprobado para un estudio real. La ruta del archivo es absoluta y está dentro de `workspace/`, que ya está ignorado; la documentación del proyecto sigue en `docs/`.
 
-Usa una terminal dedicada y limpia. Si ya hay fuentes de secretos `_FILE` de investigación o ajustes de solo inscripción configurados, no mezcles fuentes de secretos en conflicto; usa la [guía detallada de captura](research-capture.md) o el runbook de campus. No sobrescribas credenciales institucionales para un ensayo local.
+Usa una terminal dedicada y limpia. Si ya hay fuentes de secretos `_FILE` de investigación o códigos de participación configurados, no mezcles fuentes de secretos en conflicto; usa la [guía detallada de captura](research-capture.md). No sobrescribas credenciales institucionales para un ensayo local.
 
-Solo para este ensayo local sintético, copia la clave de operador generada en el campo **Clave local del investigador** de la extensión. Transferirla por el portapapeles de PowerShell evita imprimirla en los logs del servicio:
+En este ensayo local sintético, el único valor que se escribe en la extensión es el código de participación. Transfierelo por el portapapeles de PowerShell para no imprimirlo en los logs del servicio:
 
 ```powershell
-Set-Clipboard -Value $env:RESEARCH_API_KEY
+Set-Clipboard -Value $env:RESEARCH_ENROLLMENT_KEY
 ```
 
-Pégala únicamente en ese campo de la extensión, nunca en el chatbot ni en Forms. Esto coloca a propósito una credencial de desarrollo en el portapapeles; no uses historial ni sincronización en la nube para credenciales reales, y limpia el portapapeles y su historial después de transferirla. Este atajo de clave de operador local **no** debe distribuirse a estudiantes. Un paquete de campus usa un código de inscripción aparte.
+Pégalo únicamente en el campo **Código de participación** de la extensión, nunca en el chatbot ni en Forms. No pegues `RESEARCH_API_KEY` en la extensión: esa clave queda en el canal del operador y solo se usa para exportar, eliminar registros de forma mediada o purgar. Esto coloca a propósito un código de desarrollo en el portapapeles; no uses historial ni sincronización en la nube para credenciales reales, y limpia el portapapeles y su historial después de transferirlo. El código de participación **no** debe reutilizarse como clave de investigador.
 
 Después arranca el recolector en la terminal A:
 
@@ -234,9 +247,9 @@ Invoke-RestMethod http://127.0.0.1:8000/api/research/health
 
 Debes obtener `status: ready`. La documentación interactiva local está en `http://127.0.0.1:8000/docs`. La aplicación independiente no expone las rutas originales `/api/health` ni `/api/interactions/protect`. No la arranques al mismo tiempo que el stack local ni otra API en el puerto 8000.
 
-### 5.2 Recolector de campus
+### 5.2 Despliegue fuera de este checkout
 
-El despliegue de campus conserva su Compose separado, su imagen restringida, HTTPS de confianza sobre una IP privada y una copia de extensión generada aparte. No arranca PostgreSQL, inferencia ni conversor, y no se reemplaza por el stack de desarrollo. Sigue el [despliegue en la red universitaria](research-campus-deployment.md); no uses el stack de desarrollo para desplegar con estudiantes.
+Este checkout no incluye el Compose de producción, la guía de campus, la configuración TLS/CA ni el comando de empaquetado de la extensión. No los infieras del Compose de desarrollo. Desplegar en equipos de estudiantes, con HTTPS sobre IP privada, confianza de clientes y distribución de secretos, requiere una decisión de producto e institucional separada y un procedimiento aprobado.
 
 ## 6. Detención segura y diagnóstico
 
@@ -246,7 +259,7 @@ El despliegue de campus conserva su Compose separado, su imagen restringida, HTT
 |---|---|
 | Stack local (incluido el conversor y la investigación habilitada) | Ctrl+C para detener la sesión en primer plano; después `docker compose down` desde la raíz del repositorio |
 | Aplicación independiente de investigación | Ctrl+C en su propia terminal; el archivo de `workspace/research/` permanece |
-| Recolector de campus | Sigue el procedimiento del runbook de campus; no lo detengas desde este checkout de desarrollo |
+| Despliegue de producción | No incluido en este checkout; usa el procedimiento aprobado fuera de este repositorio y no detengas servicios de producción desde aquí |
 
 No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o el archivo de investigación para diagnosticar un despliegue del estudio. El `docker compose down` ordinario conserva los volúmenes nombrados `postgres_data`, `huggingface_cache` y `research_archive`. Los logs y el historial del navegador no son un procedimiento de respaldo del archivo.
 
@@ -269,15 +282,15 @@ No uses `down --volumes`, poda de volúmenes ni borres el perfil del navegador o
 | La API principal sigue arrancando | Revisa `docker compose logs --tail 50 inference api converter`; la primera preparación del modelo puede tardar; no registres prompts reales |
 | Falla la autenticación de la base de datos tras editar `.db.env` | Las credenciales del volumen existente pueden ser distintas; no borres la base de datos para resolver un desajuste de contraseña |
 | El archivo de investigación desapareció tras `down` | `down --volumes` elimina el volumen `research_archive`; no lo uses para conservar datos y restaura solo desde un respaldo aprobado |
-| El paquete de campus falla desde casa o fuera de la red | Es privado del campus a propósito; sigue el procedimiento aprobado de red y TLS, no desactives advertencias de certificado |
+| Un despliegue remoto no arranca o no está definido | Este checkout no incluye artefactos de producción; no desactives advertencias de certificado para improvisar uno y usa el procedimiento aprobado cuando exista |
 
 ## 7. Verificación y lecturas siguientes
 
-Los nombres de servicios, rutas, variables y comandos de esta guía se contrastaron con los archivos de Compose, la configuración de la API y la extensión. Las pruebas de configuración de Compose, las pruebas de la API y las pruebas de estado de la extensión son sintéticas; no demuestran el comportamiento de una cuenta real de proveedor, un host universitario ni un adaptador de campus. Las instrucciones de prueba de humo del conversor y del proveedor real siguen requiriendo que el desarrollador haga el ensayo.
+Los nombres de servicios, rutas, variables y comandos de esta guía se contrastaron con los archivos de Compose, la configuración de la API y la extensión. Las pruebas de configuración de Compose, las pruebas de la API y las pruebas de estado de la extensión son sintéticas; no demuestran el comportamiento de una cuenta real de proveedor, un host universitario ni un despliegue de producción. Las instrucciones de prueba de humo del conversor y del proveedor real siguen requiriendo que el desarrollador haga el ensayo.
 
 - [Revisión de riesgos para el propietario del proyecto](../project/experimentacion/research-study/security-risk-review.md): riesgos condicionales, controles existentes y decisiones pendientes; no es aceptación de riesgo.
 - [Captura local sin modelo](research-capture.md): ciclo de vida detallado, pruebas de API y procedimientos de acceso.
-- [Despliegue en la red universitaria](research-campus-deployment.md): recolector de producción, HTTPS de confianza sobre IP privada y extensión de campus generada. No uses el stack de desarrollo para desplegar con estudiantes.
+- Despliegue de producción: no incluido en este checkout. Un recolector compartido, HTTPS sobre IP privada y un paquete de extensión para estudiantes requieren una decisión y preparación separadas.
 - [Infraestructura con Docker](infraestructura-local-con-docker.md): límites actuales de red, entorno y persistencia.
 - [Pruebas de integración](integration-testing.md): verificación sintética real y requisitos del runner de pruebas.
 - [README de la API](../../api/README.md): rutas y estructura del componente.
