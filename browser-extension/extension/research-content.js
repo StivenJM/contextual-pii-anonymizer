@@ -65,13 +65,21 @@
   function normalizeForMatch(value) {
     return normalizeText(value).replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim();
   }
+  function conversationRoot() {
+    return document.querySelector('main, [role="main"]') || document;
+  }
+  function visibleUserNodes() {
+    const root = conversationRoot();
+    return [...root.querySelectorAll(userNodeSelector)]
+      .filter(node => node.getClientRects?.().length && !node.closest?.('form'));
+  }
   function transcriptReadable() {
-    return document.querySelectorAll(userNodeSelector).length > 0;
+    return visibleUserNodes().length > 0;
   }
   function stillShowsSentMessage() {
     const wanted = normalizeForMatch(sentText).slice(0, 80);
     if (!wanted) return false;
-    return [...document.querySelectorAll(userNodeSelector)]
+    return visibleUserNodes()
       .some(node => normalizeForMatch(textOf(node)).includes(wanted));
   }
   function acceptsAssignment(next) {
@@ -117,9 +125,12 @@
     return message({ type: 'RESEARCH_APPEND', documentNonce, event });
   }
   function assistantNodes() {
-    const directText = [...document.querySelectorAll('[data-markdown-text-style="assistant-message"]')];
+    const root = conversationRoot();
+    const visible = nodes => nodes.filter(node => node.getClientRects?.().length);
+    const directText = visible([...root.querySelectorAll('[data-markdown-text-style="assistant-message"]')]);
     if (directText.length) return directText;
-    return [...document.querySelectorAll(assistantSelector)].filter(node => !node.parentElement?.closest(assistantSelector));
+    return visible([...root.querySelectorAll(assistantSelector)]
+      .filter(node => !node.parentElement?.closest(assistantSelector)));
   }
   function assistantText(node) {
     const answer = node.matches?.('[data-markdown-text-style="assistant-message"]')
@@ -128,7 +139,7 @@
     return (answer || node).innerText || '';
   }
   function currentUserNode() {
-    const nodes = [...document.querySelectorAll(userNodeSelector)];
+    const nodes = visibleUserNodes();
     const wanted = normalizeForMatch(sentText).slice(0, 80);
     if (wanted) {
       const matches = nodes.filter(node => normalizeForMatch(textOf(node)).includes(wanted));
@@ -304,7 +315,7 @@
       submittedCount = 0;
       scopeInterrupted = false;
       sentText = '';
-      const hasHistory = document.querySelector(userNodeSelector);
+      const hasHistory = visibleUserNodes().length > 0;
       // Empty editors may show a voice control instead of Send until typing.
       // Sending still requires a visible enabled send control in intercept().
       const reason = hasHistory ? 'history' : (!visible(editorSelector) ? 'editor_unavailable' : null);

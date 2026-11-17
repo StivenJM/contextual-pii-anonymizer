@@ -78,5 +78,8 @@ Implement chat-message protection in the browser extension: independent switch, 
 - Replaced fixed 1.2 s/4 s snapshots with provider streaming/Stop detection: the observer updates the current response, and the transition back to idle triggers a short final settle snapshot. The finish path still takes a last snapshot; no fixed post-send timer decides completion.
 - Assistant captures are now bounded to nodes **after the last matching user turn**. Surveys, virtualized history, and re-mounted old assistant messages above that anchor are ignored instead of being appended again. If no user anchor exists and generation is idle, no assistant snapshot is taken.
 - Added an E2E regression that prepends an old assistant message (survey-like remount) before finishing; the record still contains exactly the current user/assistant pair.
+- History detection and assistant anchoring are scoped to the visible conversation (`main` when present), ignore hidden nodes and nodes inside forms, and require a visible user anchor. A fresh ChatGPT page with hidden/reused user-message nodes no longer reports `Esta conversación ya tiene mensajes`.
+- Added an E2E fixture/scenario with a hidden historical user marker; capture starts successfully and stores the visible current turn.
 - Documentation states that both the submitted message and the rendered assistant reply are stored.
+- Final checks: extension 91 passed; research browser tests 18 passed; full non-integration E2E 38 passed, 6 deselected; `git diff --check` clean.
 - Final checks: extension 91 passed; research browser tests 17 passed; full non-integration E2E 37 passed, 6 deselected; `git diff --check` clean.

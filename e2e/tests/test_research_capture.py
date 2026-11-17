@@ -91,6 +91,7 @@ def research_api(tmp_path):
         "mobile_composer",
         "mobile_composer_enter",
         "assistant_placeholder",
+        "hidden_history",
     ],
 )
 def test_research_session_roundtrip_without_inference(
@@ -114,6 +115,14 @@ def test_research_session_roundtrip_without_inference(
                 const placeholder = document.createElement('div');
                 placeholder.dataset.researchRole = 'assistant';
                 document.querySelector('#history').append(placeholder);
+            }""")
+        if scenario == "hidden_history":
+            page.evaluate("""() => {
+                const hidden = document.createElement('div');
+                hidden.dataset.userMessageBubble = 'true';
+                hidden.textContent = 'Hidden historical user message';
+                hidden.style.display = 'none';
+                document.querySelector('#history').append(hidden);
             }""")
         if scenario in ("mobile_composer", "mobile_composer_enter"):
             # Reproduce the semantic attributes supplied from the live composer.
