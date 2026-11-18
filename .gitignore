@@ -1,6 +1,7 @@
 #  Personal ignore
 workspace/
 .atl
+.playwright-mcp/
 
 # Local Compose interpolation values (extension ID, development token).
 .env

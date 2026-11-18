@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <style>
     :root {
+      color-scheme: dark;
       --bg: #1a1b1e;
       --card: #26272b;
       --texto: #e8e8ea;
@@ -11,7 +12,9 @@
       --acento: #4f8cff;
       --acento-off: #4a4b52;
       --verde: #3ecf8e;
-      --rojo: #e05c5c;
+      /* Verdict hues clear AA as fills and borders; 13px status text needs the lighter step. */
+      --rojo-texto: #e87070;
+      --chip-texto: #a6a7ae;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,6 +28,8 @@
     }
 
     [hidden] { display: none !important; }
+
+    ::selection { background: rgba(79, 140, 255, 0.35); color: #ffffff; }
 
     .header {
       display: flex;
@@ -58,7 +63,7 @@
 
     .estado-texto { font-size: 13px; font-weight: 600; }
     .estado-texto.on { color: var(--verde); }
-    .estado-texto.off { color: var(--rojo); }
+    .estado-texto.off { color: var(--rojo-texto); }
     .estado-etiqueta { font-size: 12px; color: var(--texto-suave); margin-bottom: 2px; }
     .card[data-disabled="true"] { opacity: 0.55; }
     .card[data-disabled="true"] .switch { pointer-events: none; }
@@ -76,7 +81,7 @@
       cursor: pointer;
       inset: 0;
       background: var(--acento-off);
-      border-radius: 24px;
+      border-radius: 9999px;
       transition: background 0.2s;
     }
     .slider::before {
@@ -92,11 +97,14 @@
     }
     input:checked + .slider { background: var(--acento); }
     input:checked + .slider::before { transform: translateX(20px); }
+    .switch:hover .slider { filter: brightness(1.08); }
+    input:focus-visible + .slider { outline: 2px solid var(--acento); outline-offset: 2px; }
 
     .descripcion {
       font-size: 12px;
       line-height: 1.5;
       color: var(--texto-suave);
+      text-wrap: balance;
     }
     .descripcion strong { color: var(--texto); }
 
@@ -112,49 +120,65 @@
       padding: 2px 8px;
       border-radius: 20px;
       background: #33343a;
-      color: var(--texto-suave);
+      color: var(--chip-texto);
     }
 
-    .research-panel { display: block; }
+    .research-panel { display: block; margin-bottom: 0; }
     .research-summary {
       display: flex; align-items: flex-start; gap: 10px;
       cursor: pointer; list-style: none;
     }
     .research-summary::-webkit-details-marker { display: none; }
     .research-summary-main { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
-    .research-summary-title { font-size: 14px; font-weight: 600; color: var(--texto); }
+    .research-summary-title { font-size: 13px; font-weight: 600; color: var(--texto); }
     .research-summary-status { font-size: 12px; color: var(--texto-suave); }
     .research-chevron {
       flex: 0 0 auto; width: 18px; height: 18px; display: flex;
       align-items: center; justify-content: center;
-      color: var(--texto-suave); transition: transform 0.15s;
+      color: var(--texto-suave); transition: transform 0.15s, color 0.15s;
     }
+    .research-chevron svg { width: 18px; height: 18px; display: block; }
+    .research-summary:hover .research-chevron { color: var(--texto); }
     .research-panel[open] .research-chevron { transform: rotate(180deg); }
     .research-summary:focus-visible { outline: 2px solid var(--acento); outline-offset: 3px; border-radius: 6px; }
     .research-panel-body { display: grid; gap: 8px; margin-top: 10px; }
-    .research-block { display: grid; gap: 8px; margin-top: 8px; }
+    .research-block { display: grid; gap: 8px; }
     .research-panel p { line-height: 1.5; }
     .research-panel label { display: block; }
     .research-panel input:not([type="checkbox"]) {
       width: 100%; padding: 7px; margin-top: 4px;
       border: 1px solid #656873; border-radius: 5px;
-      background: #18191c; color: var(--texto); font-size: 13px;
+      background: #18191c; color: var(--texto);
+      font-family: inherit; font-size: 13px;
+      caret-color: var(--acento);
+    }
+    .research-panel input:not([type="checkbox"]):focus-visible {
+      border-color: var(--acento); outline: none;
     }
     .research-panel input[type="checkbox"] { accent-color: var(--acento); }
+    .research-panel input[type="checkbox"]:focus-visible {
+      outline: 2px solid var(--acento); outline-offset: 2px;
+    }
     .research-panel button {
       width: 100%; min-height: 32px; padding: 6px 8px;
+      font-family: inherit; font-size: 12px; line-height: 1.2;
       border: 1px solid #527bbd; border-radius: 5px;
       background: #295eb0; color: white; cursor: pointer;
+      transition: filter 0.15s;
     }
-    .research-panel button:disabled {
-      background: #35373e; border-color: #555965;
-      color: #c3c5cb; cursor: default;
-    }
+    .research-panel button:not(:disabled):hover { filter: brightness(1.08); }
+    .research-panel button:disabled { opacity: 0.6; cursor: default; }
+    .research-panel button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
     .research-panel button.secondary { background: #35373e; border-color: #555965; }
     .research-panel button.danger { border-color: #d58686; background: #693333; }
     .research-panel #researchReceipt { font: 12px monospace; }
-    .receipt-row { display: flex; gap: 8px; align-items: center; }
-    .receipt-row #researchReceipt { flex: 1 1 auto; min-width: 0; }
+    .field-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .research-panel .field-row input {
+      flex: 1 1 0; min-width: 0; margin-top: 0;
+      height: 32px; padding-top: 0; padding-bottom: 0;
+    }
+    .research-panel .field-row button:not(.icon-button) { width: auto; flex: 0 0 auto; }
+    .research-panel .field-row .icon-button { min-height: 32px; }
     .research-panel .icon-button {
       width: 38px; min-height: 34px; flex: 0 0 auto;
       display: inline-flex; align-items: center; justify-content: center; padding: 0;
@@ -180,12 +204,19 @@
     .research-facts div { display: flex; justify-content: space-between; gap: 10px; }
     .research-facts dt { color: var(--texto-suave); flex: 0 0 auto; }
     .research-facts dd { color: var(--texto); text-align: right; overflow-wrap: anywhere; }
-    .ayuda { font-size: 11px; line-height: 1.45; color: var(--texto-suave); }
-    .toggle-help { margin-top: 4px; max-width: 220px; }
+    .ayuda {
+      font-size: 12px; line-height: 1.45; color: var(--texto-suave);
+      text-wrap: pretty;
+    }
+    .toggle-help { margin-top: 6px; text-wrap: balance; }
     .error {
       font-size: 12px; line-height: 1.45; padding: 8px;
       border: 1px solid #d58686; border-radius: 5px;
       background: #4a2020; color: #ffd0d0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slider, .slider::before, .research-chevron { transition: none; }
     }
   </style>
 </head>
@@ -193,8 +224,8 @@
   <div class="header">
     <img class="logo" src="icons/icon-32.png" alt="" width="34" height="34">
     <div>
-      <div class="titulo">PDF Middleware</div>
-      <div class="subtitulo">Conversión de documentos para chats de IA</div>
+      <div class="titulo">IA Middleware</div>
+      <div class="subtitulo">Revisa y protege lo que envías al chat</div>
     </div>
   </div>
 
@@ -216,13 +247,13 @@
       <div>
         <div class="estado-etiqueta">Protección de chats</div>
         <span id="estadoChats" class="estado-texto off">Desactivada</span>
-        <p class="ayuda toggle-help">Revisa y protege tus mensajes antes de enviarlos</p>
       </div>
       <label class="switch">
         <input type="checkbox" id="toggleChats">
         <span class="slider"></span>
       </label>
     </div>
+    <p class="ayuda toggle-help">Revisa y protege tus mensajes antes de enviarlos</p>
   </div>
 
   <div class="card descripcion">
@@ -244,11 +275,11 @@
         <span id="researchTitle" class="research-summary-title">Captura de chats</span>
         <span id="researchPhase" class="research-summary-status" role="status" aria-live="polite">Sin captura</span>
       </span>
-      <span class="research-chevron" aria-hidden="true">⌄</span>
+      <span class="research-chevron" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
     </summary>
     <div class="research-panel-body">
-    <p id="researchHint" class="ayuda">Puedes abrir esta ventana desde el menú de extensiones y fijar su icono a la barra del navegador.</p>
-
     <div id="researchSetup" class="research-block">
       <p class="ayuda">Registra los mensajes enviados y las respuestas en una pestaña de chat nueva.</p>
       <p><label><span id="researchKeyLabel">Código de participación</span> <input id="researchKey" type="password" autocomplete="off"></label></p>
@@ -267,7 +298,6 @@
     </div>
 
     <div id="researchActive" class="research-block" hidden>
-      <p class="research-state">Captura activa</p>
       <dl class="research-facts">
         <div><dt>Proveedor</dt><dd id="researchProvider">—</dd></div>
         <div><dt>Pestaña</dt><dd id="researchScope">Esta pestaña</dd></div>
@@ -277,8 +307,13 @@
       <p class="ayuda">El texto se guarda en este navegador hasta que la sesión se guarde o se descarte. Las protecciones de adjuntos y chats están desactivadas en la pestaña capturada.</p>
       <p id="researchTabNotice" class="ayuda" hidden></p>
       <button id="researchGoToTab" class="secondary" type="button" hidden>Ir a la pestaña de captura</button>
-      <p><label>Identificador de tarea <input id="researchTask" value="A" maxlength="64"></label></p>
-      <button id="researchSetTask" class="secondary" type="button">Asignar tarea</button>
+      <p>
+        <label for="researchTask">Identificador de tarea</label>
+        <span class="field-row">
+          <input id="researchTask" value="A" maxlength="64">
+          <button id="researchSetTask" class="secondary" type="button">Asignar tarea</button>
+        </span>
+      </p>
       <p id="researchActionError" class="error" role="alert" hidden></p>
       <button id="researchFinish" type="button">Finalizar y guardar</button>
       <button id="researchDiscard" class="danger" type="button">Descartar sesión</button>
@@ -305,7 +340,7 @@
     <div id="researchSaved" class="research-block" hidden>
       <p class="research-state">Sesión guardada</p>
       <p class="advertencia">Copia y guarda este identificador ahora: no podrás recuperarlo después.</p>
-      <div class="receipt-row">
+      <div class="field-row">
         <input id="researchReceipt" readonly aria-label="Identificador confirmado">
         <button id="researchCopy" class="icon-button" type="button" aria-label="Copiar identificador" title="Copiar identificador" data-state="idle">
           <svg id="researchCopyIcon" class="icon-copy" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 9h10v10H9z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 9V5H5v10h4" fill="none" stroke="currentColor" stroke-width="2"/></svg>

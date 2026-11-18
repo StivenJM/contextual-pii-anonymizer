@@ -78,6 +78,8 @@
   const inFlight = new Set();
   let copiedReceipt = '';
   let lastState = { view: 'idle' };
+  // Once the participant edits the task field, refreshes must not overwrite it.
+  let taskEdited = false;
 
   function messageOf(error) {
     return error?.message || 'No se pudo completar la operación. Vuelve a intentarlo.';
@@ -99,9 +101,13 @@
     }
   }
   async function send(type, values = {}) {
-    const result = await api.runtime.sendMessage({ type, ...values }).catch(() => {
+    let result;
+    try {
+      result = await api.runtime.sendMessage({ type, ...values });
+    } catch {
+      // A missing or reloaded extension throws before any response exists.
       throw new Error('No se pudo comunicar con la extensión. Conserva este perfil y vuelve a intentarlo.');
-    });
+    }
     if (!result?.ok) throw new Error(result?.error || 'El servicio de investigación no está disponible.');
     return result;
   }
@@ -152,6 +158,7 @@
     if (consent) consent.checked = false;
     if (training) training.checked = false;
     if (task) task.value = 'A';
+    taskEdited = false;
     resetCopyFeedback();
     clearError(['researchStartError', 'researchStartingError', 'researchCopyError', 'researchNewSessionError']);
   }
@@ -165,7 +172,7 @@
       element.hidden = !view.sections[key];
     }
     const busy = inFlight.size > 0;
-    setText('researchPhase', view.label);
+    setText('researchPhase', busy ? 'Procesando…' : view.label);
     setText('researchKeyLabel', view.keyLabel);
     setText('researchProvider', view.provider);
     setText('researchScope', view.scope);
@@ -208,30 +215,52 @@
     for (const id of ['researchKey', 'researchProtocol', 'researchConsent', 'researchTraining']) {
       setDisabled(id, busy || !view.sections.setup);
     }
+    // Keep one task value on screen: the field mirrors the assigned task until edited.
+    const taskField = byId('researchTask');
+    if (view.view !== 'recording') {
+      taskEdited = false;
+    } else if (taskField && !taskEdited && state.task && state.task !== 'unassigned') {
+      taskField.value = state.task;
+    }
     setDisabled('toggleActivo', state.view !== 'idle' && state.view !== 'saved');
     setDisabled('toggleChats', state.view !== 'idle' && state.view !== 'saved');
   }
 
   async function refresh() {
-    const state = await send('RESEARCH_STATUS');
+    let state;
+    try {
+      state = await send('RESEARCH_STATUS');
+    } catch {
+      // Never pass a raw browser or transport error to the participant.
+      throw new Error('No se pudo actualizar el estado de la captura. Vuelve a intentarlo.');
+    }
     lastState = state;
     render(state);
     return state;
   }
 
   async function run(key, operation, errorIds) {
-    if (inFlight.has(key)) return;
+    if (inFlight.has(key)) return false;
     inFlight.add(key);
     clearError(errorIds);
     render(lastState);
+    let ok = true;
     try {
       await operation();
     } catch (error) {
+      ok = false;
       showError(errorIds, messageOf(error));
     } finally {
       inFlight.delete(key);
-      await refresh().catch(error => showError(errorIds, messageOf(error)));
+      try {
+        await refresh();
+      } catch (error) {
+        // Keep the action's own message when it already failed.
+        if (ok) showError(errorIds, messageOf(error));
+        render(lastState);
+      }
     }
+    return ok;
   }
 
   function confirmDiscard() {
@@ -251,7 +280,10 @@
   }, ['researchStartError', 'researchStartingError']));
 
   byId('researchSetTask')?.addEventListener('click', () => run('task',
-    () => send('RESEARCH_TASK', { task: byId('researchTask').value }), 'researchActionError'));
+    () => send('RESEARCH_TASK', { task: byId('researchTask').value }), 'researchActionError')
+    .then(ok => { if (ok) taskEdited = false; }));
+
+  byId('researchTask')?.addEventListener('input', () => { taskEdited = true; });
 
   byId('researchFinish')?.addEventListener('click', () => run('save',
     () => send('RESEARCH_FINISH'), 'researchActionError'));

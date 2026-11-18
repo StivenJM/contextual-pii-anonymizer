@@ -33,6 +33,7 @@ async function popup(overrides = {}) {
   let timerSequence = 0;
   let clipboardFails = false;
   let runtimeFails = false;
+  let runtimeThrowsSync = false;
   let startError = null;
   let held = null;
   const advance = ms => {
@@ -55,16 +56,20 @@ async function popup(overrides = {}) {
       if (timer) timer.cancelled = true;
     },
     chrome: {
-      runtime: { sendMessage: async message => {
-        if (runtimeFails) throw new Error('synthetic runtime connection failure');
-        calls.push(JSON.parse(JSON.stringify(message)));
-        if (held && held.type === message.type) await held.promise;
-        if (message.type === 'RESEARCH_RESET') {
-          state = { ...state, view: 'idle', receipt_id: '', has_receipt: false };
-          return { ok: true };
-        }
-        if (message.type === 'RESEARCH_START' && startError) return { ok: false, error: startError };
-        return message.type === 'RESEARCH_STATUS' ? { ok: true, ...state } : { ok: true };
+      runtime: { sendMessage: message => {
+        // A reloaded extension throws before it can answer.
+        if (runtimeThrowsSync) throw new Error("Cannot read properties of undefined (reading 'sendMessage')");
+        return (async () => {
+          if (runtimeFails) throw new Error('synthetic runtime connection failure');
+          calls.push(JSON.parse(JSON.stringify(message)));
+          if (held && held.type === message.type) await held.promise;
+          if (message.type === 'RESEARCH_RESET') {
+            state = { ...state, view: 'idle', receipt_id: '', has_receipt: false };
+            return { ok: true };
+          }
+          if (message.type === 'RESEARCH_START' && startError) return { ok: false, error: startError };
+          return message.type === 'RESEARCH_STATUS' ? { ok: true, ...state } : { ok: true };
+        })();
       } },
       storage: { onChanged: { addListener() {} } }
     },
@@ -80,6 +85,7 @@ async function popup(overrides = {}) {
     elements, calls, copied, dialogs, captureDisabled, advance,
     failClipboard() { clipboardFails = true; },
     failRuntime() { runtimeFails = true; },
+    failRuntimeSynchronously() { runtimeThrowsSync = true; },
     failStart(message) { startError = message; },
     hold(type) {
       let release;
@@ -249,6 +255,49 @@ test('browser messaging failure shows a local Spanish explanation', async () => 
   await settle();
   assert.match(p.elements.get('researchActionError').textContent, /No se pudo comunicar con la extensión/);
   assert.ok(!p.elements.get('researchActionError').textContent.includes('synthetic runtime'));
+});
+
+test('a reloaded extension never shows the raw browser error', async () => {
+  const p = await popup({ view: 'recording', tab: { id: 7, exists: true, active: true } });
+  p.failRuntimeSynchronously();
+  await p.elements.get('researchSetTask').listeners.click();
+  await settle();
+  const text = p.elements.get('researchActionError').textContent;
+  assert.match(text, /No se pudo/);
+  assert.ok(!text.includes('Cannot read properties'));
+});
+
+test('the task field shows the assigned task instead of a stale default', async () => {
+  const p = await popup({ view: 'recording', task: 'Tarea 2', tab: { id: 7, exists: true, active: true } });
+  assert.equal(p.elements.get('researchTaskValue').textContent, 'Tarea 2');
+  assert.equal(p.elements.get('researchTask').value, 'Tarea 2');
+});
+
+test('a task being edited is not replaced by a state refresh', async () => {
+  const p = await popup({ view: 'recording', task: 'Tarea 2', tab: { id: 7, exists: true, active: true } });
+  const field = p.elements.get('researchTask');
+  const release = p.hold('RESEARCH_TASK');
+  field.value = 'B';
+  field.listeners.input();
+  const click = p.elements.get('researchSetTask').listeners.click();
+  await settle();
+  assert.equal(field.value, 'B');
+  release();
+  await click;
+  await settle();
+  assert.equal(p.calls.find(call => call.type === 'RESEARCH_TASK').task, 'B');
+});
+
+test('the phase line reports work in progress while an action runs', async () => {
+  const p = await popup({ view: 'recording', task: 'Tarea 2', tab: { id: 7, exists: true, active: true } });
+  const release = p.hold('RESEARCH_FINISH');
+  const click = p.elements.get('researchFinish').listeners.click();
+  await settle();
+  assert.equal(p.elements.get('researchPhase').textContent, 'Procesando…');
+  release();
+  await click;
+  await settle();
+  assert.equal(p.elements.get('researchPhase').textContent, 'Captura activa');
 });
 
 test('a failed clipboard copy selects the identifier and explains the manual path', async () => {
